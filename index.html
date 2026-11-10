@@ -404,6 +404,7 @@ function insStage(e){if(!insNeed(e))return '';const i=e.ins||{};
   return i.got?'ถือบัตรอยู่':'รอแจกบัตร'}
 const depSum=id=>S.dep.filter(d=>d.emp===id).reduce((a,d)=>a+d.amt,0);
 const held=id=>S.assets.filter(a=>a.emp===id&&!a.returned);
+const selfPend=a=>a.by==='พนักงานแจ้งเอง'&&!a.ok&&!a.returned;
 const blackOf=id=>S.black.find(b=>b.idCard===id);const isBlack=id=>!!blackOf(id);
 
 // ---------- render ----------
@@ -458,8 +459,8 @@ function empView(){
     <div class="mecard"><div><span class="muted">รหัส</span><b>${e.id}</b></div><div><span class="muted">JMS</span><b>${esc(e.jms||'-')}</b></div><div><span class="muted">อายุงาน</span><b>${tenure(e)}</b></div><div><span class="muted">สถานะ</span><b>${e.pos==='พาร์ทไทม์'?'พาร์ทไทม์':probation(e)}</b></div><div><span class="muted">เงินประกันสะสม</span><b>${money(depSum(e.id))}</b></div>${hasLeave(e)?`<div><span class="muted">ลากิจคงเหลือ</span><b>${Math.max(0,quota(e,'personal')-leaveUsed(e.id,'personal',TODAY.getFullYear()))} วัน</b></div>`:''}</div>
     <div><h1>เมนูพนักงาน</h1></div>${noticeOk(e.id)?'':'<div class="note warn">บริษัทมีประกาศความเป็นส่วนตัว (PDPA) ฉบับใหม่ กรุณาอ่านและกดรับทราบ <button class="back" data-go="pdpa">อ่านเลย</button></div>'}
     <div class="grid">
-      ${tile('me','ข้อมูลของฉัน','ดูข้อมูลทั้งหมด','ข้อมูลส่วนตัว การทำงาน เงินประกัน สิทธิ์ลา ของที่ถืออยู่ และเอกสารที่ลงนาม')}
-      ${tile('update','แก้ไขข้อมูล','อัปเดตข้อมูล','เปลี่ยนเบอร์ ที่อยู่ บัญชี รหัส JMS ใบขับขี่ ทะเบียนรถ แนบเอกสารใหม่')}
+      ${tile('me','ข้อมูลของฉัน','ดูข้อมูลทั้งหมด','ข้อมูลส่วนตัว การทำงาน เงินประกัน สิทธิ์ลา ของที่ถืออยู่')}
+      ${tile('update','แก้ไขข้อมูล','อัปเดตข้อมูล','เปลี่ยนเบอร์ ที่อยู่ บัญชี รหัส JMS ใบขับขี่ ทะเบียนรถ เพิ่ม/แก้ของที่ถืออยู่')}
       ${hasLeave(e)?tile('leave','การลา','ยื่นใบลา','ดูสิทธิ์ลาคงเหลือ ลาขั้นต่ำครึ่งวัน'):tile('leave','วันหยุด','แจ้งขอหยุด','แจ้งวันที่จะหยุดล่วงหน้า ให้หัวหน้าจัดคนแทน')}
       ${tile('resign','ลาออก','ยื่นใบลาออก','แจ้งล่วงหน้า 30 วัน')}
       ${insNeed(e)?tile('card','บัตรประกัน','ยืนยันรับบัตรประกัน','ถ่ายรูปคู่บัตรตอนรับบัตร'):''}
@@ -487,8 +488,11 @@ const defAmt=t=>t==='รายเดือน'?13500:t==='รายชิ้น'
 const payOf=e=>{const t=e.payType||defPay(e.pos);const amt=e.payAmt!=null?e.payAmt:(t==='รายเดือน'?Math.round((e.dailyRate||450)*30):e.dailyRate||0);return{t,amt}};
 const toDaily=(t,amt)=>t==='รายเดือน'?Math.round(amt/30*100)/100:amt;
 const payText=e=>{const p=payOf(e);return p.t==='รายชิ้น'?`รายชิ้น (ตามอัตราที่บริษัทประกาศ) · ค่าเฉลี่ยคิดหักวันลา ${money(p.amt)} บาท/วัน`:`${p.t} ${money(p.amt)} ${PAY_TYPES[p.t]}${p.t==='รายเดือน'?' (≈ '+money(toDaily('รายเดือน',p.amt))+' บาท/วัน)':''}`};
-const DOC_LABELS={f1:'รูปถ่ายหน้าตรง',f2:'บัตรประชาชน',f3:'ทะเบียนบ้าน',f4:'หน้าสมุดบัญชีกสิกร',f5:'ใบขับขี่',f6:'Resume',card:'บัตรประชาชน',bank:'หน้าสมุดบัญชี'};
-async function readDocs(){const o={};for(const i of [1,2,3,4,5,6]){const el=$('#a-f'+i);if(el&&el.files.length)o['f'+i]=await readImg(el.files[0])}return o}
+const ageOf=d=>{if(!d)return null;const b=D(d);let a=TODAY.getFullYear()-b.getFullYear();if(TODAY.getMonth()<b.getMonth()||(TODAY.getMonth()===b.getMonth()&&TODAY.getDate()<b.getDate()))a--;return a};
+const age18=d=>{const b=D(d);return iso(new Date(b.getFullYear()+18,b.getMonth(),b.getDate()))};
+const MINOR_RULES='ห้ามทำงานเวลา 22.00–06.00 น. · ห้ามทำงานล่วงเวลาและทำงานในวันหยุด · ทำงานติดกัน 4 ชั่วโมงต้องได้พักไม่น้อยกว่า 1 ชั่วโมง · ห้ามทำงานอันตราย/ยกของหนักเกินกำหนด · นายจ้างต้องแจ้งพนักงานตรวจแรงงานภายใน 15 วันนับจากวันเริ่มงาน';
+const DOC_LABELS={f7:'บัตรประชาชนผู้ปกครอง',f1:'รูปถ่ายหน้าตรง',f2:'บัตรประชาชน',f3:'ทะเบียนบ้าน',f4:'หน้าสมุดบัญชีกสิกร',f5:'ใบขับขี่',f6:'Resume',card:'บัตรประชาชน',bank:'หน้าสมุดบัญชี'};
+async function readDocs(){const o={};for(const i of [1,2,3,4,5,6,7]){const el=$('#a-f'+i);if(el&&el.files.length)o['f'+i]=await readImg(el.files[0])}return o}
 function attachGrid(docs,extra){const items=Object.entries(docs||{}).filter(([k,v])=>v&&v!=='x').map(([k,v])=>({t:DOC_LABELS[k]||k,v}));(extra||[]).forEach(x=>items.push(x));
   if(!items.length)return '<p class="muted">ยังไม่มีไฟล์แนบ (ข้อมูลตัวอย่างไม่มีรูป · ระบบจริงเก็บไฟล์ในโฟลเดอร์ Drive ของพนักงาน)</p>';
   return `<div class="attach">${items.map(x=>String(x.v).startsWith('drive:')?`<button type="button" class="att" data-dzoom="${x.v}"><span>${esc(x.t)}</span><img data-drive="${x.v}" alt="${esc(x.t)}"></button>`:`<button type="button" class="att" data-zoom="${x.v.startsWith('data:image')?'img':'file'}" data-src="${x.v}"><span>${esc(x.t)}</span>${x.v.startsWith('data:image')?`<img src="${x.v}" alt="${esc(x.t)}">`:'<b>PDF</b>'}</button>`).join('')}</div>`}
@@ -525,6 +529,15 @@ function applyView(mode){
     <label class="f">ชื่อ-นามสกุล *<input id="a-ename"></label>
     <label class="f">ความสัมพันธ์<select id="a-erel"><option>พ่อ</option><option>แม่</option><option>สามี/ภรรยา</option><option>พี่น้อง</option><option>ญาติ</option><option>เพื่อน</option></select></label>
     <label class="f">เบอร์โทร *<input id="a-ephone" inputmode="tel" maxlength="10"></label>`)}
+  <div id="a-guard" hidden>${sec('3ก','ผู้ปกครองให้ความยินยอม (อายุต่ำกว่า 18 ปี)',`
+    <div class="note warn full">ผู้สมัครอายุต่ำกว่า 18 ปี ต้องให้บิดา มารดา หรือผู้ปกครองตามกฎหมายกรอกส่วนนี้และลงลายมือชื่อ<br><small>${MINOR_RULES}</small></div>
+    <label class="f">ชื่อ-นามสกุลผู้ปกครอง *<input id="g-name"></label>
+    <label class="f">เกี่ยวข้องเป็น *<select id="g-rel"><option>บิดา</option><option>มารดา</option><option>ผู้ปกครองตามกฎหมาย</option></select></label>
+    <label class="f">เลขบัตรประชาชนผู้ปกครอง *<input id="g-id" inputmode="numeric" maxlength="13"></label>
+    <label class="f">เบอร์โทรผู้ปกครอง *<input id="g-phone" inputmode="tel" maxlength="10"></label>
+    <label class="f">รูปบัตรประชาชนผู้ปกครอง *<input type="file" id="a-f7" accept="image/*,application/pdf"></label>
+    <label class="f full" style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="g-ok" style="width:auto;margin-top:4px"> ข้าพเจ้าในฐานะผู้แทนโดยชอบธรรม ยินยอมให้ผู้สมัครทำงานกับ บริษัท พราวเอ็กซ์เพรส จำกัด ในตำแหน่งที่สมัคร และรับทราบเงื่อนไขการทำงานของลูกจ้างอายุต่ำกว่า 18 ปีข้างต้นแล้ว</label>
+    <div class="full">${sigPad('sg-guard','ลายมือชื่อผู้ปกครอง')}</div>`)}</div>
   <div id="a-veh">${sec(4,'รถและใบขับขี่',`
     <label class="f">เลขใบขับขี่ *<input id="a-lic"></label>
     <label class="f">ใบขับขี่หมดอายุ *<input type="date" id="a-licexp"></label>
@@ -560,7 +573,7 @@ function loginView(){return realLoginEmp();
   </section>`;
 }
 function updateView(e,who){
-  const isNew=e.status==='ลงทะเบียนใหม่';
+  const isNew=e.status==='ลงทะเบียนใหม่',isPend=e.status==='รอตรวจสอบ';const h=held(e.id);
   return `<section class="panel"><h2>${isNew?'ลงทะเบียนพนักงานเดิม':'อัปเดตข้อมูลของฉัน'}</h2>${isNew?'':who}
   <p class="muted">แก้เฉพาะช่องที่เปลี่ยน ระบบเก็บประวัติการแก้ไขทุกครั้ง${isNew?' · จำวันเริ่มงานไม่ได้ใส่โดยประมาณได้':''}</p>
   <div class="fields">
@@ -569,7 +582,13 @@ function updateView(e,who){
       <label class="f">ตำแหน่ง<select id="u-pos">${POSITIONS.map(p=>`<option>${p}</option>`).join('')}</select></label>
       <label class="f">ประเภทรถ (นำจ่าย)<select id="u-type"><option value="">-</option><option>SPT</option><option>SPT+C</option></select></label>
       <label class="f">วันเริ่มงาน (ประมาณได้)<input type="date" id="u-start"></label>
-      `:''}
+      `:''}${isPend?`<div class="note warn full">ข้อมูลยังรอหัวหน้าตรวจ แก้ชื่อ สาขา ตำแหน่ง วันเริ่มงานได้จนกว่าหัวหน้าจะยืนยัน</div>
+      <label class="f">ชื่อ-นามสกุล (มีคำนำหน้า)<input id="u-name" value="${esc(e.name)}"></label>
+      <label class="f">วันเกิด<input type="date" id="u-dob" value="${esc(e.dob||'')}"></label>
+      <label class="f">สาขา<select id="u-branch">${BRANCHES.map(b=>`<option ${b===e.branch?'selected':''}>${b}</option>`).join('')}</select></label>
+      <label class="f">ตำแหน่ง<select id="u-pos">${POSITIONS.map(p=>`<option ${p===e.pos?'selected':''}>${esc(p)}</option>`).join('')}</select></label>
+      <label class="f">ประเภทรถ (นำจ่าย)<select id="u-type">${['','SPT','SPT+C'].map(t=>`<option value="${t}" ${t===(e.type||'')?'selected':''}>${t||'-'}</option>`).join('')}</select></label>
+      <label class="f">วันเริ่มงาน<input type="date" id="u-start" value="${esc(e.start||'')}"></label>`:''}
     <label class="f">รหัส J&T (JMS)${JMS_POS.test(e.pos)||isNew?' *':''}<input id="u-jms" value="${esc(e.jms||'')}" placeholder="เช่น 301714T000118"></label>
     <label class="f">ชื่อในระบบ JMS${JMS_POS.test(e.pos)||isNew?' *':''}<input id="u-jmsname" value="${esc(e.jmsName||'')}" placeholder="ชื่อตามที่ขึ้นในระบบ J&T"></label>
     <label class="f">เบอร์โทร<input id="u-phone" value="${esc(e.phone)}" inputmode="tel"></label>
@@ -583,6 +602,9 @@ function updateView(e,who){
     <label class="f">ภาษีรถ/พ.ร.บ. หมดอายุ<input type="date" id="u-taxexp" value="${esc(e.taxExp)}"></label>
     <label class="f">แนบรูปเอกสารใหม่ (บัตร/สมุดบัญชี/ใบขับขี่)<input type="file" id="u-files" accept="image/*,application/pdf" multiple></label>
   </div>
+  ${isNew?'':`<h3>ของบริษัทที่ถืออยู่</h3><p class="muted">ลืมแจ้ง หรือแจ้งจำนวนผิด แก้ตรงนี้ได้ รายการที่หัวหน้ายืนยันแล้วแก้เองไม่ได้ ถ้าผิดให้แจ้งหัวหน้า</p>
+  <div class="tablewrap"><table><tr><th>ของ</th><th>รายละเอียด</th><th class="num">จำนวน</th><th>สถานะ</th><th></th></tr>${h.map(a=>selfPend(a)?`<tr><td>${esc(a.type)}</td><td><input class="ua-d" data-no="${a.no}" value="${esc(a.detail==='พนักงานแจ้งเอง รอหัวหน้าตรวจ'?'':a.detail)}" placeholder="SN / ไซซ์ (ถ้ามี)"></td><td class="num"><input class="ua-q" data-no="${a.no}" value="${a.qty}" inputmode="numeric" style="width:60px;text-align:right"></td><td><span class="pill p-warn">รอหัวหน้าตรวจ</span></td><td><button class="btn ghost sm" type="button" data-uadel="${a.no}">ลบ</button></td></tr>`:`<tr><td>${esc(a.type)}</td><td>${esc(a.detail)}</td><td class="num">${a.qty}</td><td><span class="pill p-ok">ยืนยันแล้ว</span></td><td></td></tr>`).join('')||'<tr><td colspan="5" class="muted">ยังไม่มีรายการ</td></tr>'}</table></div>
+  <div class="row"><select id="ua-type" style="max-width:200px">${[...new Set([...OLD_ASSETS,...ASSET_TYPES])].map(t=>`<option>${esc(t)}</option>`).join('')}</select><input id="ua-qty" inputmode="numeric" placeholder="จำนวน" style="max-width:90px"><button class="btn ghost sm" type="button" id="ua-add">+ เพิ่มของที่ถืออยู่</button></div>`}
   ${sigPad('sg-upd','ลายมือชื่อผู้แก้ไขข้อมูล')}
   <div class="row"><button class="btn" id="u-save">${isNew?'ส่งลงทะเบียน':'บันทึกข้อมูล'}</button></div></section>`;
 }
@@ -765,7 +787,7 @@ function appsAdm(){
   return `<h2>ผู้สมัคร</h2><p class="muted">กดชื่อเพื่อดูใบสมัคร · อนุมัติแล้วระบบออกรหัส PE และเพิ่มเข้าทะเบียนพนักงานทันที</p>
   <div class="tablewrap"><table><tr><th>เลขที่</th><th>วันที่สมัคร</th><th>ชื่อ</th><th>ตำแหน่ง</th><th>สาขา</th><th>เบอร์</th><th>เอกสาร</th><th>สถานะ</th></tr>${rows||'<tr><td colspan="8" class="muted">ไม่มีใบสมัครในสาขานี้</td></tr>'}</table></div>
   ${a?`<div class="panel" style="background:var(--bg)"><div class="row"><h3>${esc(a.title+a.name)}</h3><span class="muted">${a.no}</span></div>
-    ${isBlack(a.idCard)||a.blocked?`<div class="note"><b>ติดแบล็กลิสต์</b> · ${esc(blackOf(a.idCard)?blackOf(a.idCard).reason:a.blocked)}</div>`:''}${prev?`<div class="note warn">เคยทำงานแล้ว: ${prev.id} ${esc(prev.pos)} สาขา ${prev.branch} · ${prev.status}${prev.endDate?' ออก '+th(prev.endDate):''}</div>`:''}
+    ${guardKv(a)}${isBlack(a.idCard)||a.blocked?`<div class="note"><b>ติดแบล็กลิสต์</b> · ${esc(blackOf(a.idCard)?blackOf(a.idCard).reason:a.blocked)}</div>`:''}${prev?`<div class="note warn">เคยทำงานแล้ว: ${prev.id} ${esc(prev.pos)} สาขา ${prev.branch} · ${prev.status}${prev.endDate?' ออก '+th(prev.endDate):''}</div>`:''}
     <dl class="kv"><dt>ตำแหน่ง</dt><dd>${esc(a.pos)} · สาขา ${a.branch} · เริ่มได้ ${th(a.avail)}</dd><dt>อายุ</dt><dd>${age(a.dob)} ปี (เกิด ${th(a.dob)})</dd><dt>เลขบัตร (ที่พิมพ์)</dt><dd>${a.idCard}</dd><dt>เลขจากรูปบัตร</dt><dd>${!a.ocrId||/^\d{13}$/.test(a.ocrId)===false?esc(a.ocrId||'-'):a.ocrId===a.idCard?a.ocrId+' <span class="pill p-ok">ตรงกัน</span>':a.ocrId+' <span class="pill p-bad">ไม่ตรงกับที่พิมพ์</span>'}${a.ocrId&&isBlack(a.ocrId)?' <span class="pill p-bad">ติดแบล็กลิสต์</span>':''}</dd><dt>เบอร์</dt><dd>${a.phone}</dd>
     <dt>ที่อยู่</dt><dd>${esc(a.addr)}${a.pin?` · <a href="${esc(a.pin)}" target="_blank" rel="noopener">ดูแผนที่</a>`:''}</dd><dt>ฉุกเฉิน</dt><dd>${esc(a.emerg)}</dd><dt>บัญชีกสิกร</dt><dd>${a.acct}</dd>
     <dt>ลายเซ็น</dt><dd>${sigImg(a.sign)}</dd>${a.licNo?`<dt>ใบขับขี่</dt><dd>${a.licNo} หมด ${th(a.licExp)} · รถ ${esc(a.plate)}</dd>`:''}${a.military?`<dt>ทหาร</dt><dd>${a.military}</dd>`:''}</dl>
@@ -949,6 +971,8 @@ function empEditForm(e){const o=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>
   </div>
   <div class="row"><button class="btn" data-eesave="${e.id}">บันทึกการแก้ไข</button><button class="btn ghost" data-empedit="${e.id}">ยกเลิก</button></div>
   ${(e.editLog||[]).length?`<p class="muted">ประวัติการแก้ไข: ${e.editLog.slice(-5).reverse().map(l=>th(l.date)+' '+esc(l.by)+' ('+esc(l.f)+')').join(' · ')}</p>`:''}</section>`}
+function guardKv(x){if(!x||!x.dob)return '';const ag=ageOf(x.dob);if(ag===null||(ag>=18&&!x.guardian))return '';
+  return `<div class="note ${ag<18?'warn':''}"><b>${ag<18?'ลูกจ้างอายุต่ำกว่า 18 ปี':'เคยเป็นลูกจ้างอายุต่ำกว่า 18 ปี'}</b> · อายุ ${ag} ปี · ครบ 18 ปีวันที่ ${th(age18(x.dob))}${x.guardian?`<br>ผู้ปกครอง: ${esc(x.guardian.name)} (${esc(x.guardian.rel)}) · โทร ${esc(x.guardian.phone)} · เลขบัตร ${esc(x.guardian.idCard)} · ยินยอมเมื่อ ${esc(x.guardian.at||'')}<br>${sigImg(x.guardian.sign)}`:'<br><b>ยังไม่มีหนังสือยินยอมจากผู้ปกครอง</b>'}${ag<18?`<br><small>${MINOR_RULES}</small>`:''}</div>`}
 function regTable(){
   const list=S.emp.filter(e=>inScope(e.branch));
   const sel=S.selEmp&&list.find(e=>e.id===S.selEmp);
@@ -961,8 +985,8 @@ function regTable(){
   return `${mvP.length?`<div class="note warn"><b>คำขอโยกย้าย / เปลี่ยนตำแหน่งรออนุมัติ ${mvP.length} รายการ</b> · ดูและอนุมัติที่แท็บ "โยกย้าย / เปลี่ยนตำแหน่ง"</div>`:''}<div class="row"><h2>ทะเบียนพนักงาน</h2><span class="muted">${list.length} คน · กดชื่อเพื่อดูรายละเอียด</span></div>${regSearch}${regFilters}<p class="muted" id="reg-count"></p>
   <div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ</th><th>สถานะ</th><th>สาขา</th><th>ตำแหน่ง</th><th>เริ่มงาน</th><th>อายุงาน</th><th>ทดลองงาน</th><th>ที่มา</th><th>แก้ไขล่าสุด</th></tr>${rows}</table></div>
   ${sel?`<div class="panel" style="background:var(--bg)"><div class="row"><h3>${esc(sel.name)}</h3>${statusPill(sel.status)}${sel.status==='รอตรวจสอบ'?`<button class="btn ok sm" data-verify="${sel.id}">ยืนยันเข้าทะเบียน</button>`:''}
-      ${isBlack(sel.idCard)?'<span class="pill p-bad">แบล็กลิสต์</span>':''}${can('import')?`<button class="btn sm" data-empedit="${sel.id}">${S.empEdit===sel.id?'ปิดหน้าแก้ไข':'แก้ไขข้อมูลพนักงาน'}</button>`:''}</div>
-    ${S.empEdit===sel.id&&can('import')?empEditForm(sel):''}
+      ${isBlack(sel.idCard)?'<span class="pill p-bad">แบล็กลิสต์</span>':''}${sel.dob&&ageOf(sel.dob)<18?'<span class="pill p-warn">อายุต่ำกว่า 18</span>':''}${can('import')?`<button class="btn sm" data-empedit="${sel.id}">${S.empEdit===sel.id?'ปิดหน้าแก้ไข':'แก้ไขข้อมูลพนักงาน'}</button>`:''}</div>
+    ${guardKv(sel)}${S.empEdit===sel.id&&can('import')?empEditForm(sel):''}
     ${sel.status==='ทำงาน'?`<div class="row"><button class="btn ghost sm" data-towarn="${sel.id}">ออกใบเตือน</button><button class="btn ghost sm" data-tm2="${sel.id}">เลิกจ้าง / ตัดออก</button><button class="btn ghost sm" data-tomove="${sel.id}">โยกย้าย / เปลี่ยนตำแหน่ง</button></div>`:''}
     ${S.moveEmp===sel.id?moveForm(sel):''}
     ${S.tmEmp===sel.id?termForm(sel):''}
@@ -1135,13 +1159,13 @@ function depAdm(){
   </div>`:''}`;
 }
 function assetIssued(){
-  const f=S.asF||'ค้างคืนจากคนออก';
   const all=S.assets.filter(a=>inScope(E(a.emp).branch));
-  const filt={'ค้างคืนจากคนออก':a=>!a.returned&&E(a.emp).status==='พ้นสภาพ','ถืออยู่ทั้งหมด':a=>!a.returned,'คืนแล้ว':a=>!!a.returned,'ทั้งหมด':()=>true};
+  const f=S.asF||(all.some(selfPend)?'พนักงานแจ้งเอง รอตรวจ':'ค้างคืนจากคนออก');
+  const filt={'พนักงานแจ้งเอง รอตรวจ':selfPend,'ค้างคืนจากคนออก':a=>!a.returned&&E(a.emp).status==='พ้นสภาพ','ถืออยู่ทั้งหมด':a=>!a.returned,'คืนแล้ว':a=>!!a.returned,'ทั้งหมด':()=>true};
   const list=all.filter(filt[f]);
   const out={};ASSET_TYPES.forEach(t=>out[t]=0);all.filter(a=>!a.returned).forEach(a=>out[a.type]+=a.qty);
   const active=S.emp.filter(e=>inScope(e.branch)&&e.status==='ทำงาน');
-  const rows=list.map(a=>{const e=E(a.emp);return `<tr><td>${a.no}</td><td>${esc(e.name)}</td><td>${e.branch}</td><td>${statusPill(e.status)}</td><td>${a.type}</td><td>${esc(a.detail)}</td><td class="num">${a.qty}</td><td>${th(a.issued)}</td><td>${esc(a.by)}</td><td>${a.returned?th(a.returned):(can('card')?`<button class="btn sm ${e.status==='พ้นสภาพ'?'':'ghost'}" data-aret="${a.no}">รับคืนแล้ว</button>`:'-')}</td></tr>`}).join('');
+  const rows=list.map(a=>{const e=E(a.emp);return `<tr><td>${a.no}</td><td>${esc(e.name)}</td><td>${e.branch}</td><td>${statusPill(e.status)}</td><td>${a.type}</td><td>${esc(a.detail)}</td><td class="num">${a.qty}</td><td>${th(a.issued)}</td><td>${esc(a.by)}</td><td>${selfPend(a)&&can('card')?`<button class="btn ok sm" data-aok="${a.no}">ยืนยันถูกต้อง</button> <button class="btn ghost sm" data-ano="${a.no}">ไม่ถูกต้อง ลบ</button>`:a.returned?th(a.returned):(can('card')?`<button class="btn sm ${e.status==='พ้นสภาพ'?'':'ghost'}" data-aret="${a.no}">รับคืนแล้ว</button>`:'-')}</td></tr>`}).join('');
   return `<p class="muted">บันทึกทุกครั้งที่แจกของให้พนักงาน (ตัดจากสต็อกคลังสาขาอัตโนมัติ) · ตอนอนุมัติใบลาออก ระบบจะขึ้นรายการที่คนนั้นรับไปให้หัวหน้าตรวจรับคืนก่อน</p>
   <div class="stats">${ASSET_TYPES.filter(t=>out[t]).map(t=>`<div class="stat"><b>${out[t]}</b><span>${t} อยู่กับพนักงาน</span></div>`).join('')}</div>
   <div class="tabs" role="group" aria-label="ตัวกรอง">${Object.keys(filt).map(k=>`<button data-asf="${k}" aria-pressed="${f===k}">${k} (${all.filter(filt[k]).length})</button>`).join('')}</div>
@@ -1702,6 +1726,8 @@ function bindAdm(){
     r.cleared=iso(TODAY);r.clearedBy=S.role.name;if(e.status==='ทำงาน'){e.status='พ้นสภาพ';e.endDate=r.lastDay}e.updated=iso(TODAY);S.rsSel=null;
     const n=held(e.id).length+(e.ins&&e.ins.got&&!e.ins.returned?1:0);
     toast('เคลียร์วันออกแล้ว · '+(e.depDecision.refund?'คืนเงินประกัน':'ไม่คืนเงินประกัน')+(n?` · ยังค้างคืน ${n} รายการ`:' · คืนของครบ')+(e.jms&&!e.jmsClosed?' · ต้องแจ้งปิดรหัส J&T':''));render()});
+  document.querySelectorAll('[data-aok]').forEach(b=>b.onclick=()=>{const a=S.assets.find(a=>a.no===b.dataset.aok);a.ok={by:S.role.name,date:iso(TODAY)};if(a.detail==='พนักงานแจ้งเอง รอหัวหน้าตรวจ')a.detail='พนักงานแจ้งเอง · '+S.role.name+' ตรวจแล้ว';toast('ยืนยันแล้ว');render()});
+  document.querySelectorAll('[data-ano]').forEach(b=>b.onclick=()=>{const a=S.assets.find(a=>a.no===b.dataset.ano);S.assets.splice(S.assets.indexOf(a),1);toast('ลบรายการที่แจ้งผิดแล้ว');render()});
   document.querySelectorAll('[data-aret]').forEach(b=>b.onclick=()=>{const a=S.assets.find(a=>a.no===b.dataset.aret);a.returned=iso(TODAY);addStk(E(a.emp).branch,a.type,a.qty);toast('บันทึกรับคืนแล้ว');render()});
   document.querySelectorAll('[data-asv]').forEach(b=>b.onclick=()=>{S.asView=b.dataset.asv;render()});
   on('#sk-addtype',()=>{const t=$('#sk-newtype').value.trim();if(!t||ASSET_TYPES.includes(t)){toast('ใส่ชื่อประเภทใหม่');return}ASSET_TYPES.splice(ASSET_TYPES.length-1,0,t);toast('เพิ่มประเภท '+t+' แล้ว');render()});
@@ -2286,12 +2312,12 @@ function bind(){
     if(HC_POS[pos]){const h=hcStatus(br0,pos);if(!h.canAdd){toast('สาขา '+br0+' '+HC_POS[pos]+'เกินเกณฑ์ ต้องขอเพิ่มคนก่อน');return}if(h.act>=h.allow&&!(($('#ap-req')||{}).value)){toast('สาขาเต็มเกณฑ์ ต้องเลือกคำขอเพิ่มคนที่อนุมัติแล้ว');return}}
     const n=seq.pe++;
     const e=mk(n,{name:a.title+a.name,phone:a.phone,sex:a.sex,branch:$('#ap-br').value,pos,type,start:$('#ap-start').value,acct:a.acct,bk2:a.bk2||null,address:a.addr,emerg:a.emerg,licNo:a.licNo||'',licExp:a.licExp||'',plate:a.plate||'',taxExp:a.taxExp||'',payType:$('#ap-paytype').value,payAmt:+$('#ap-rate').value||0,dailyRate:toDaily($('#ap-paytype').value,+$('#ap-rate').value||0),source:'สมัครใหม่ ('+a.no+')',updated:iso(TODAY)});
-    e.idCard=a.idCard;e.docs=Object.assign({},a.docs);e.appNo=a.no;e.sign=a.sign;e.profileDone=true;S.emp.push(e);a.status='อนุมัติ';a.empId=e.id;if(a.ackAt)ackRec(e.id,a.sign,a.ackAt);
+    e.idCard=a.idCard;e.docs=Object.assign({},a.docs);e.appNo=a.no;if(a.guardian)e.guardian=a.guardian;e.sign=a.sign;e.profileDone=true;S.emp.push(e);a.status='อนุมัติ';a.empId=e.id;if(a.ackAt)ackRec(e.id,a.sign,a.ackAt);
     const rq=($('#ap-req')||{}).value;if(rq){const r=S.hcReq.find(x=>x.no===rq);r.fills=r.fills||[];r.fills.push({emp:e.id,date:iso(TODAY),app:a.no})}
     toast('อนุมัติแล้ว ออกรหัส '+e.id+(rq?' · ปิดคำขอ '+rq:'')+(type?' · เพิ่มในรายชื่อรับบัตรประกัน':''));render()});
   if($('#a-pos')){
-    const sync=()=>{const p=$('#a-pos').value,veh=NEEDS_VEHICLE(p);$('#a-veh').hidden=!veh;$('#a-f5w').hidden=!veh;$('#a-milwrap').hidden=$('#a-title').value!=='นาย'};
-    $('#a-pos').onchange=sync;$('#a-title').onchange=sync;sync();
+    const sync=()=>{const p=$('#a-pos').value,veh=NEEDS_VEHICLE(p);$('#a-veh').hidden=!veh;$('#a-f5w').hidden=!veh;$('#a-milwrap').hidden=$('#a-title').value!=='นาย';const ag=ageOf($('#a-dob').value);$('#a-guard').hidden=!(ag!==null&&ag<18)};
+    $('#a-pos').onchange=sync;$('#a-title').onchange=sync;$('#a-dob').addEventListener('change',sync);$('#a-dob').addEventListener('input',sync);sync();
     $('#a-id').oninput=()=>{const v=$('#a-id').value.trim();const bl=idValid(v)&&isBlack(v);$('#a-idmsg').textContent=v.length<13?'':(bl?'เลขบัตรนี้ติดแบล็กลิสต์ ไม่สามารถสมัครงานได้':idValid(v)?'✓ เลขบัตรถูกต้อง':'เลขบัตรไม่ถูกต้อง');$('#a-idmsg').style.color=idValid(v)&&!bl?'var(--ok)':'var(--bad)';$('#a-send').disabled=bl};
     $('#a-gps').onclick=()=>{$('#a-pin').value='https://maps.google.com/?q=13.7206,100.6215';toast('ทดลอง: ใส่ตำแหน่งจำลองแล้ว (ระบบจริงใช้ GPS มือถือ)')};
     $('#a-fill').onclick=()=>{const v={'#a-name':'ทดสอบ ใจสู้','#a-dob':'1997-02-14','#a-id':idCheck('110080000009'),'#a-phone':'0830000099','#a-addr':'12/3 ถ.เฉลิมพระเกียรติ ร.9 แขวงดอกไม้ เขตประเวศ กทม.','#a-ename':'นางใจดี ใจสู้','#a-ephone':'0830000098','#a-lic':'65001234','#a-licexp':'2030-02-13','#a-plate':'2กง 5521 กรุงเทพฯ','#a-acct':'0142223334'};
@@ -2301,12 +2327,15 @@ function bind(){
       if(veh)[['#a-lic','ใบขับขี่'],['#a-licexp','วันหมดอายุใบขับขี่'],['#a-plate','ทะเบียนรถ']].forEach(([k,t])=>{if(!g(k))miss.push(t)});
       if(!idValid(g('#a-id')))miss.push('เลขบัตรประชาชนที่ถูกต้อง');
       if(g('#a-phone')&&!/^0\d{9}$/.test(g('#a-phone')))miss.push('เบอร์โทร 10 หลัก');
-      if(g('#a-dob')&&daysBetween(D(g('#a-dob')),TODAY)<18*365.25)miss.push('อายุ 18 ปีขึ้นไป');
+      const ag=g('#a-dob')?ageOf(g('#a-dob')):null;if(ag!==null&&ag<15){$('#a-msg').textContent='อายุต่ำกว่า 15 ปี กฎหมายห้ามจ้างงาน';$('#a-msg').style.color='var(--bad)';return}
+      const minor=ag!==null&&ag<18;
+      if(minor){if(!g('#g-name'))miss.push('ชื่อผู้ปกครอง');if(!idValid(g('#g-id')))miss.push('เลขบัตรผู้ปกครองที่ถูกต้อง');if(!/^0\d{9}$/.test(g('#g-phone')))miss.push('เบอร์ผู้ปกครอง 10 หลัก');if(!$('#a-f7').files.length&&!$('#a-fill').dataset.used)miss.push('รูปบัตรประชาชนผู้ปกครอง');if(!$('#g-ok').checked)miss.push('ติ๊กยินยอมของผู้ปกครอง')}
       if(![...document.querySelectorAll('.a-con')].every(c=>c.checked))miss.push('ติ๊กยอมรับครบ 6 ข้อ');
       if(isBlack(g('#a-id'))){S.apps.push({no:'AP-69-'+String(seq.ap++).padStart(4,'0'),date:iso(TODAY),pos:p,branch:g('#a-branch'),title:g('#a-title'),name:g('#a-name'),idCard:g('#a-id'),phone:g('#a-phone'),files:0,status:'บล็อก',blocked:'เลขที่พิมพ์ติดแบล็กลิสต์'});$('#a-msg').textContent='เลขบัตรนี้ติดแบล็กลิสต์ ไม่สามารถสมัครงานได้';$('#a-msg').style.color='var(--bad)';return}
       if(miss.length){$('#a-msg').textContent='ยังขาด: '+miss.join(', ');$('#a-msg').style.color='var(--bad)';return}
       if(!$('#a-ack').checked){$('#a-msg').textContent='ยังไม่ได้ติ๊กรับทราบ "เอกสารที่ต้องรับทราบ" (หัวข้อ 7)';$('#a-msg').style.color='var(--bad)';return}
       const sg=needSig('sg-apply');if(!sg)return;
+      let guardian=null;if(minor){const gs=needSig('sg-guard');if(!gs)return;guardian={name:g('#g-name'),rel:g('#g-rel'),idCard:g('#g-id'),phone:g('#g-phone'),sign:gs,at:nowStamp()}}
       if(S.page==='oldreg'||S.page==='oldentry'){const st=g('#a-start');if(!st||D(st)>TODAY){$('#a-msg').textContent='ใส่วันที่เริ่มงาน (ไม่เกินวันนี้)';$('#a-msg').style.color='var(--bad)';return}const id=g('#a-id');let e=S.emp.find(x=>x.idCard===id);
         if(e&&e.profileDone){$('#a-msg').textContent='เลขบัตรนี้มีข้อมูลในระบบแล้ว ('+e.id+') ไม่ต้องกรอกซ้ำ · เข้าสู่ระบบที่ "พนักงานปัจจุบัน" แล้วใช้เมนูอัปเดตข้อมูล';$('#a-msg').style.color='var(--bad)';return}
         if(!S.who&&S.page==='oldentry'&&!oldRegOpen()){$('#a-msg').textContent='ช่วงเพิ่มข้อมูลพนักงานเดิมปิดแล้ว';return}
@@ -2317,12 +2346,12 @@ function bind(){
         Object.assign(e,{name:g('#a-title')+g('#a-name'),sex:g('#a-title')==='นาย'?'ชาย':'หญิง',dob:g('#a-dob'),phone:g('#a-phone'),branch:g('#a-branch'),pos,type,start:g('#a-start'),jms,jmsSelf:jms?iso(TODAY):'',acct:g('#a-acct'),bk2:readBk2('a'),jmsName:g('#a-jmsname'),address:g('#a-addr'),emerg:g('#a-ename')+' ('+g('#a-erel')+') '+g('#a-ephone'),status:merged&&e.status==='ทำงาน'?'ทำงาน':'รอตรวจสอบ',source:merged&&e.source?e.source:'พนักงานเดิม (กรอกย้อนหลัง)',profileDone:true,updated:iso(TODAY)});
         if(veh)Object.assign(e,{licNo:g('#a-lic'),licExp:g('#a-licexp'),plate:g('#a-plate'),taxExp:g('#a-taxexp')});
         document.querySelectorAll('.a-asset').forEach(i=>{const n=+i.value||0;if(n>0)S.assets.push({no:'AS-'+String(seq.as++).padStart(4,'0'),emp:e.id,type:i.dataset.t,detail:'พนักงานแจ้งเอง รอหัวหน้าตรวจ',qty:n,issued:e.start,by:'พนักงานแจ้งเอง',returned:''})});
-        e.sign=sg;e.docs=Object.assign({},e.docs,await readDocs());ackRec(e.id,sg,nowStamp());pdpaRec(e.id,e.name,'ลงทะเบียนพนักงานเดิม');delete S.sigs['sg-apply'];S.who=e.id;S.newReg=null;S.page='oldreg';S.oldDone={name:e.name,id:e.id,merged};render();scrollTo(0,0);return}
+        if(guardian)e.guardian=guardian;e.sign=sg;e.docs=Object.assign({},e.docs,await readDocs());delete S.sigs['sg-guard'];ackRec(e.id,sg,nowStamp());pdpaRec(e.id,e.name,'ลงทะเบียนพนักงานเดิม');delete S.sigs['sg-apply'];S.who=e.id;S.newReg=null;S.page='oldreg';S.oldDone={name:e.name,id:e.id,merged};render();scrollTo(0,0);return}
       if(S.apps.some(a=>a.idCard===g('#a-id')&&a.status!=='ไม่ผ่าน'&&a.status!=='สละสิทธิ์')){$('#a-msg').textContent='เลขบัตรนี้สมัครไว้แล้ว รอเจ้าหน้าที่ติดต่อกลับ';return}
       const files=[1,2,3,4,5,6].filter(i=>$('#a-f'+i)&&$('#a-f'+i).files.length).length;
       const a={no:'AP-69-'+String(seq.ap++).padStart(4,'0'),date:iso(TODAY),pos:p,branch:g('#a-branch'),avail:g('#a-avail'),title:g('#a-title'),name:g('#a-name'),sex:g('#a-title')==='นาย'?'ชาย':'หญิง',dob:g('#a-dob'),idCard:g('#a-id'),phone:g('#a-phone'),addr:g('#a-addr'),pin:g('#a-pin'),emerg:g('#a-ename')+' ('+g('#a-erel')+') '+g('#a-ephone'),acct:g('#a-acct'),bk2:readBk2('a'),military:g('#a-title')==='นาย'?g('#a-mil'):'',files,status:'รอพิจารณา',ocrId:'รออ่านจากรูปบัตร'};
       if(veh)Object.assign(a,{licNo:g('#a-lic'),licExp:g('#a-licexp'),plate:g('#a-plate'),taxExp:g('#a-taxexp')});
-      a.sign=sg;a.ackAt=nowStamp();a.docs=await readDocs();pdpaRec(a.no,a.title+a.name,'ใบสมัคร',{keepApp:$('#a-keep')&&$('#a-keep').checked});delete S.sigs['sg-apply'];S.apps.push(a);S.applied=a;render();scrollTo(0,0)}}
+      if(guardian)a.guardian=guardian;a.sign=sg;a.ackAt=nowStamp();a.docs=await readDocs();delete S.sigs['sg-guard'];pdpaRec(a.no,a.title+a.name,'ใบสมัคร',{keepApp:$('#a-keep')&&$('#a-keep').checked});delete S.sigs['sg-apply'];S.apps.push(a);S.applied=a;render();scrollTo(0,0)}}
   on('#a-again','onclick',()=>{S.applied=null;render()});
   document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>{const x=DEMO_ACC()[+b.dataset.demo];$('#lg-id').value=x[1];$('#lg-ph').value=x[2];$('#lg-msg').textContent='';});
   on('#logout','onclick',()=>{S.who=null;S.newReg=null;S.photo=null;S.shot=null;S.page='home';render()});
@@ -2347,9 +2376,13 @@ function bind(){
     if(jm){const dup=S.emp.find(x=>x.jms===jm&&x.id!==e.id);if(dup){toast('รหัส JMS นี้มีคนใช้แล้ว ตรวจสอบอีกครั้ง หรือติดต่อหัวหน้างาน');return}}
     const sg=needSig('sg-upd');if(!sg)return;e.sign=sg;delete S.sigs['sg-upd'];{const fl=[...($('#u-files')?$('#u-files').files:[])];for(const f of fl)(e.upl=e.upl||[]).push({t:'อัปเดต '+th(TODAY)+' · '+f.name,v:await readImg(f)})}
     if(jm&&(jm!==e.jms||jn!==e.jmsName)){if(e.jms&&e.jms!==jm)(e.jmsOld=e.jmsOld||[]).push({code:e.jms,closed:iso(TODAY)});e.jms=jm;e.jmsName=jn;e.jmsSelf=iso(TODAY);e.jmsMove=null}
+    if(e.status==='รอตรวจสอบ'&&$('#u-name')){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}Object.assign(e,{name:g('#u-name'),dob:g('#u-dob'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start')})}
+    document.querySelectorAll('.ua-q').forEach(i=>{const a=S.assets.find(x=>x.no===i.dataset.no);if(!a||!selfPend(a))return;const n=parseInt(i.value)||0;const d=(document.querySelector('.ua-d[data-no="'+a.no+'"]')||{}).value||'';if(n<=0){S.assets.splice(S.assets.indexOf(a),1);return}a.qty=n;a.detail=d.trim()||'พนักงานแจ้งเอง รอหัวหน้าตรวจ'});
     if(e.status==='ลงทะเบียนใหม่'){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}Object.assign(e,{name:g('#u-name'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start'),status:'รอตรวจสอบ'})}
     Object.assign(e,{phone:g('#u-phone'),acct:g('#u-acct'),bk2:readBk2('u'),address:g('#u-addr'),emerg:g('#u-emerg'),licNo:g('#u-lic'),licExp:g('#u-licexp'),plate:g('#u-plate'),taxExp:g('#u-taxexp'),updated:iso(TODAY)});
-    toast(e.status==='รอตรวจสอบ'?'ส่งลงทะเบียนแล้ว รอหลังบ้านตรวจยืนยัน':'บันทึกข้อมูลแล้ว');S.who=null;S.page='home';render()});
+    const wasNew=$('#u-name')&&!$('#u-dob');toast(wasNew?'ส่งลงทะเบียนแล้ว รอหลังบ้านตรวจยืนยัน':'บันทึกข้อมูลแล้ว');if(wasNew){S.who=null;S.page='home'}else S.page='me';render();scrollTo(0,0)});
+  on('#ua-add','onclick',()=>{const e=E(S.who);const n=parseInt($('#ua-qty').value)||0;if(n<=0){toast('ใส่จำนวน');return}S.assets.push({no:'AS-'+String(seq.as++).padStart(4,'0'),emp:e.id,type:$('#ua-type').value,detail:'พนักงานแจ้งเอง รอหัวหน้าตรวจ',qty:n,issued:iso(TODAY),by:'พนักงานแจ้งเอง',returned:''});toast('เพิ่มแล้ว · รอหัวหน้าตรวจ');render()});
+  document.querySelectorAll('[data-uadel]').forEach(b=>b.onclick=()=>{const a=S.assets.find(x=>x.no===b.dataset.uadel);if(a&&selfPend(a)){S.assets.splice(S.assets.indexOf(a),1);toast('ลบแล้ว');render()}});
   if($('#l-type')){const calc=()=>{const e=E(S.who),t=$('#l-type').value,f=$('#l-from').value,to=$('#l-to').value,p=$('#l-part').value;
       $('#l-part').disabled=f!==to;const days=countDays(f,to,f===to?p:'full');const r=LEAVE[t];
       if(!days){$('#l-calc').className='note warn';$('#l-calc').textContent='วันที่ไม่ถูกต้อง';return}
