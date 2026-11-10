@@ -426,8 +426,6 @@ function meView(e,who){const p=payOf(e);const h=held(e.id);const y=TODAY.getFull
   <h3>ของบริษัทที่ถืออยู่</h3>${h.length||(e.ins&&e.ins.got&&!e.ins.returned)?`<ul class="doc-ol">${h.map(a=>`<li>${a.type} ${esc(a.detail)} × ${a.qty} (รับ ${th(a.issued)})</li>`).join('')}${e.ins&&e.ins.got&&!e.ins.returned?`<li>บัตรประกันอุบัติเหตุ (รับ ${th(e.ins.got)})</li>`:''}</ul>`:'<p class="muted">ไม่มี</p>'}
   ${insNeed(e)?`<p class="muted">บัตรประกันอุบัติเหตุ: ${st==='ยังไม่ครบ 119 วัน'?'จะได้รับเมื่อทำงานครบ '+INS_WAIT+' วัน ('+th(eligDate(e))+')':st}</p>`:''}
   ${warnsOf(e.id).length?`<h3>ใบเตือนใน 12 เดือน</h3><ul class="doc-ol">${warnsOf(e.id).map(w=>`<li>${th(w.date)} · ${w.level} · ${w.cat}</li>`).join('')}</ul>`:''}
-  <h3>เอกสารของฉัน</h3><div class="row">${docs.map(([k,t])=>`<button class="btn ghost sm" data-doc="${k}:${e.id}">${t}</button>`).join('')}</div>
-  ${S.doc&&S.doc.endsWith(':'+e.id)?docPreview(S.doc):''}
   <div class="row"><button class="btn" data-go="update">แก้ไขข้อมูล</button></div></section>`}
 function empView(){
   if(S.page==='home')return `
