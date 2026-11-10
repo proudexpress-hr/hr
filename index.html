@@ -209,15 +209,15 @@ function idValid(v){return /^\d{13}$/.test(v)&&idCheck(v.slice(0,12))===v}
 const readImg=f=>readImgReal(f);const _readImgDemo=f=>new Promise(r=>{if(!f)return r('');const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)});
 
 // ---------- settings (ในระบบจริงอยู่ในชีต "ตั้งค่า") ----------
-const BRANCHES=['301675','301710','301714','301717'];
-const POSITIONS=['RM','SPV','ADMIN','ประสานงาน','คัดแยก','พนักงานนำจ่ายพัสดุ','พนักงานขับรถบริษัท','พนักงานรับพัสดุ','พาร์ทไทม์'];
+const BRANCHES=['301675','301710','301714','301717','ออฟฟิศ'];
+const POSITIONS=['RM','SPV','ADMIN','ประสานงาน','บัญชี','การตลาด','คัดแยก','พนักงานนำจ่ายพัสดุ','พนักงานขับรถบริษัท','พนักงานรับพัสดุ','พาร์ทไทม์'];
 const DELIVERY_TYPES=['SPT','SPT+C'];
 // ตำแหน่งที่เปิดรับสมัคร → ตำแหน่ง/ประเภทในทะเบียน
 const APPLY_POS={
   'แอดมินธุรการ':['ADMIN',''],'ประสานงาน':['ประสานงาน',''],'คัดแยกพัสดุ':['คัดแยก',''],
   'นำจ่ายพัสดุรถมอเตอร์ไซค์':['พนักงานนำจ่ายพัสดุ','SPT'],'นำจ่ายพัสดุรถยนต์หรือสี่ล้อ':['พนักงานนำจ่ายพัสดุ','SPT+C'],
   'รับพัสดุรถมอเตอร์ไซค์':['พนักงานรับพัสดุ',''],'รับพัสดุรถยนต์หรือสี่ล้อ':['พนักงานรับพัสดุ',''],
-  'พนักงานขับรถบริษัท':['พนักงานขับรถบริษัท',''],'พาร์ทไทม์':['พาร์ทไทม์','']};
+  'พนักงานขับรถบริษัท':['พนักงานขับรถบริษัท',''],'พาร์ทไทม์':['พาร์ทไทม์',''],'บัญชี':['บัญชี',''],'การตลาด':['การตลาด','']};
 const BANK2=['กรุงเทพ','กรุงไทย','ไทยพาณิชย์','กรุงศรีอยุธยา','ทหารไทยธนชาต (ttb)','ออมสิน','ธ.ก.ส.','ยูโอบี','ซีไอเอ็มบี','อื่น ๆ'];
 const bk2Fields=(pre,v={})=>`<label class="f">บัญชีสำรอง: ธนาคาร (ไม่บังคับ)<select id="${pre}-bk2b"><option value="">ไม่มี</option>${BANK2.map(b=>`<option ${v.bank===b?'selected':''}>${b}</option>`).join('')}</select></label><label class="f">บัญชีสำรอง: เลขบัญชี<input id="${pre}-bk2n" inputmode="numeric" value="${esc(v.no||'')}"></label><label class="f">บัญชีสำรอง: ชื่อบัญชี<input id="${pre}-bk2a" value="${esc(v.name||'')}" placeholder="ต้องเป็นชื่อตัวเอง"></label>`;
 const readBk2=pre=>{const b=$('#'+pre+'-bk2b').value,n=$('#'+pre+'-bk2n').value.trim();return b&&n?{bank:b,no:n,name:$('#'+pre+'-bk2a').value.trim()}:null};
@@ -513,14 +513,14 @@ function applyView(mode){
     <label class="f">เริ่มงานได้วันที่ *<input type="date" id="a-avail" value="${iso(addDays(TODAY,3))}"></label>
     <label class="f">ทำงานวันหยุด/กะดึกได้<select id="a-shift"><option>ได้</option><option>ได้บางวัน</option><option>ไม่ได้</option></select></label>`)}
   ${sec(2,'ข้อมูลส่วนตัว',`
-    <label class="f">คำนำหน้า *<select id="a-title"><option>นาย</option><option>นาง</option><option>นางสาว</option></select></label>
+    <label class="f">คำนำหน้า *<select id="a-title"><option value="">เลือก</option><option>นาย</option><option>นาง</option><option>นางสาว</option></select></label>
     <label class="f">ชื่อ-นามสกุล *<input id="a-name" autocomplete="name"></label>
     <label class="f">ชื่อเล่น<input id="a-nick"></label>
     <label class="f">วันเกิด *<input type="date" id="a-dob"></label>
     <label class="f">สัญชาติ<select id="a-nat"><option>ไทย</option><option>เมียนมา</option><option>กัมพูชา</option><option>ลาว</option><option>อื่น ๆ</option></select></label>
     <label class="f">เลขบัตรประชาชน 13 หลัก *<input id="a-id" inputmode="numeric" maxlength="13"><small id="a-idmsg"></small></label>
     <label class="f">เบอร์โทร *<input id="a-phone" inputmode="tel" maxlength="10"></label>
-    <label class="f" id="a-milwrap">สถานะทางทหาร<select id="a-mil"><option>ผ่านการเกณฑ์แล้ว</option><option>ได้รับการยกเว้น</option><option>เรียน รด.</option><option>ยังไม่ถึงเกณฑ์</option></select></label>
+    <label class="f" id="a-milwrap" hidden>สถานะทางทหาร (เฉพาะผู้ชาย)<select id="a-mil"><option>ผ่านการเกณฑ์แล้ว</option><option>ได้รับการยกเว้น</option><option>เรียน รด.</option><option>ยังไม่ถึงเกณฑ์</option></select></label>
     <label class="f full">ที่อยู่ปัจจุบัน *<textarea id="a-addr" rows="2"></textarea></label>
     <label class="f full">ลิงก์ตำแหน่งบ้าน (Google Maps)<input id="a-pin" placeholder="วางลิงก์ หรือกดปุ่มใช้ตำแหน่งปัจจุบัน"><button class="btn ghost sm" id="a-gps" type="button" style="align-self:flex-start;margin-top:4px">ใช้ตำแหน่งปัจจุบัน</button></label>`)}
   ${sec(3,'ผู้ติดต่อฉุกเฉิน',`
@@ -697,6 +697,9 @@ const statusPill=s=>`<span class="pill ${s==='อนุมัติ'||s==='ท�
 // ---------- admin ----------
 const ROLE_NAME={admin:'แอดมินบริษัท',hr:'HR',rm:'RM (ดูแลทุกสาขา)',spv:'หัวหน้างานสาขา (SPV)'};
 const inScope=b=>!S.role||!S.role.branch||b===S.role.branch;
+function orgFix(){if(typeof ATT==='undefined')return;ATT.geo=ATT.geo||{};BRANCHES.forEach(b=>{if(!ATT.geo[b])ATT.geo[b]={lat:0,lng:0,r:200};S.stock=S.stock||{};if(!S.stock[b])S.stock[b]={}})}
+function applyOrg(o){if(!o)return;if(Array.isArray(o.branches)&&o.branches.length)BRANCHES.splice(0,BRANCHES.length,...o.branches);if(Array.isArray(o.positions)&&o.positions.length)POSITIONS.splice(0,POSITIONS.length,...o.positions);if(o.apply&&typeof o.apply==='object'){Object.keys(APPLY_POS).forEach(k=>delete APPLY_POS[k]);Object.assign(APPLY_POS,o.apply)}orgFix()}
+function saveOrg(){S.org={branches:[...BRANCHES],positions:[...POSITIONS],apply:JSON.parse(JSON.stringify(APPLY_POS))};orgFix()}
 const can=x=>{const r=S.role&&S.role.role;if(r==='admin')return true;if(r==='hr')return x!=='users';return ['approve','card'].includes(x)};
 function admLogin(){return realLoginBo();
   return `<div><h1>หลังบ้าน</h1><p class="muted">เฉพาะผู้ที่ได้รับสิทธิ์เท่านั้น</p></div>
@@ -924,6 +927,30 @@ function dismissDoc(r){const e=E(r.emp),g=gOf(r.ground)||TERM_GROUNDS[7];const w
   ${r.absent?'<p class="muted" style="font-size:.85rem">กรณีติดต่อตัวไม่ได้ บริษัทส่งหนังสือฉบับนี้ทางไปรษณีย์ลงทะเบียนตอบรับไปยังที่อยู่ตามทะเบียน และทางช่องทางที่ติดต่อได้</p>':''}`,
   [['ผู้มีอำนาจลงนาม'],['ผู้บันทึก ('+esc(r.by)+')',r.sign],['ผู้รับหนังสือ ('+esc(e.name)+')'],['พยาน']])}
 function absentDoc(r){const e=E(r.emp);return paper('บันทึกการละทิ้งหน้าที่และการติดต่อพนักงาน',r.no+'-A',r.submitted,`${kv([['พนักงาน',esc(e.name)+' ('+e.id+') '+esc(e.pos)+' สาขา '+e.branch],['เบอร์โทรตามทะเบียน',e.phone],['ที่อยู่ตามทะเบียน',esc(e.address||'-')],['วันที่ไม่มาทำงานโดยไม่แจ้ง',(r.absent||[]).map(th).join(', ')],['การติดต่อ',esc(r.contact||'-')],['ข้อเท็จจริงเพิ่มเติม',esc(r.facts)]])}<p style="text-indent:2.5em">ข้าพเจ้าขอรับรองว่าข้อความข้างต้นเป็นความจริง และพนักงานไม่ได้ยื่นใบลาหรือแจ้งเหตุจำเป็นต่อหัวหน้างานในวันดังกล่าว</p>`,[['ผู้บันทึก ('+esc(r.by)+')',r.sign],['พยาน'],['พยาน']])}
+function empEditForm(e){const o=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
+  return `<section class="panel"><h3>แก้ไขข้อมูล ${esc(e.id)}</h3><p class="muted">เฉพาะแอดมิน / HR · ทุกครั้งที่บันทึก ระบบเก็บประวัติว่าใครแก้ช่องไหน · ย้ายสาขาหรือเปลี่ยนตำแหน่งของคนที่ทำงานอยู่ ควรใช้ปุ่ม "โยกย้าย / เปลี่ยนตำแหน่ง" เพื่อให้มีหนังสือและประวัติ ช่องนี้ใช้แก้ข้อมูลที่กรอกผิดหรือยังไม่ครบ เช่น รายชื่อที่นำเข้าจากไฟล์ประกัน</p>
+  <div class="fields">
+    <label class="f">ชื่อ-นามสกุล (มีคำนำหน้า)<input id="ee-name" value="${esc(e.name)}"></label>
+    <label class="f">เพศ<select id="ee-sex">${o(['ชาย','หญิง'],e.sex)}</select></label>
+    <label class="f">วันเกิด<input type="date" id="ee-dob" value="${esc(e.dob||'')}"></label>
+    <label class="f">เบอร์โทร<input id="ee-phone" value="${esc(e.phone||'')}" inputmode="tel"></label>
+    <label class="f">เลขบัตรประชาชน<input id="ee-id" inputmode="numeric" maxlength="13" placeholder="เว้นว่าง = ไม่เปลี่ยน"></label>
+    <label class="f">เลขบัญชีกสิกรไทย<input id="ee-acct" inputmode="numeric" placeholder="เว้นว่าง = ไม่เปลี่ยน"></label>
+    <label class="f">สาขา<select id="ee-br"><option value="-" ${!BRANCHES.includes(e.branch)?'selected':''}>ยังไม่ระบุ</option>${o(BRANCHES,e.branch)}</select></label>
+    <label class="f">ตำแหน่ง<select id="ee-pos">${o(POSITIONS.includes(e.pos)?POSITIONS:[e.pos,...POSITIONS],e.pos)}</select></label>
+    <label class="f">ประเภทรถ (นำจ่าย)<select id="ee-type">${o(['','SPT','SPT+C'],e.type||'')}</select></label>
+    <label class="f">วันเริ่มงาน<input type="date" id="ee-start" value="${esc(e.start||'')}"></label>
+    <label class="f">รหัส J&T (JMS)<input id="ee-jms" value="${esc(e.jms||'')}"></label>
+    <label class="f">ชื่อในระบบ JMS<input id="ee-jmsname" value="${esc(e.jmsName||'')}"></label>
+    <label class="f full">ที่อยู่ปัจจุบัน<input id="ee-addr" value="${esc(e.address||'')}"></label>
+    <label class="f">ผู้ติดต่อฉุกเฉิน / เบอร์<input id="ee-emerg" value="${esc(e.emerg||'')}"></label>
+    <label class="f">เลขใบขับขี่<input id="ee-lic" value="${esc(e.licNo||'')}"></label>
+    <label class="f">ใบขับขี่หมดอายุ<input type="date" id="ee-licexp" value="${esc(e.licExp||'')}"></label>
+    <label class="f">ทะเบียนรถ<input id="ee-plate" value="${esc(e.plate||'')}"></label>
+    <label class="f">ภาษีรถ/พ.ร.บ. หมดอายุ<input type="date" id="ee-taxexp" value="${esc(e.taxExp||'')}"></label>
+  </div>
+  <div class="row"><button class="btn" data-eesave="${e.id}">บันทึกการแก้ไข</button><button class="btn ghost" data-empedit="${e.id}">ยกเลิก</button></div>
+  ${(e.editLog||[]).length?`<p class="muted">ประวัติการแก้ไข: ${e.editLog.slice(-5).reverse().map(l=>th(l.date)+' '+esc(l.by)+' ('+esc(l.f)+')').join(' · ')}</p>`:''}</section>`}
 function regTable(){
   const list=S.emp.filter(e=>inScope(e.branch));
   const sel=S.selEmp&&list.find(e=>e.id===S.selEmp);
@@ -936,7 +963,8 @@ function regTable(){
   return `${mvP.length?`<div class="note warn"><b>คำขอโยกย้าย / เปลี่ยนตำแหน่งรออนุมัติ ${mvP.length} รายการ</b> · ดูและอนุมัติที่แท็บ "โยกย้าย / เปลี่ยนตำแหน่ง"</div>`:''}<div class="row"><h2>ทะเบียนพนักงาน</h2><span class="muted">${list.length} คน · กดชื่อเพื่อดูรายละเอียด</span></div>${regSearch}${regFilters}<p class="muted" id="reg-count"></p>
   <div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ</th><th>สถานะ</th><th>สาขา</th><th>ตำแหน่ง</th><th>เริ่มงาน</th><th>อายุงาน</th><th>ทดลองงาน</th><th>ที่มา</th><th>แก้ไขล่าสุด</th></tr>${rows}</table></div>
   ${sel?`<div class="panel" style="background:var(--bg)"><div class="row"><h3>${esc(sel.name)}</h3>${statusPill(sel.status)}${sel.status==='รอตรวจสอบ'?`<button class="btn ok sm" data-verify="${sel.id}">ยืนยันเข้าทะเบียน</button>`:''}
-      ${isBlack(sel.idCard)?'<span class="pill p-bad">แบล็กลิสต์</span>':''}</div>
+      ${isBlack(sel.idCard)?'<span class="pill p-bad">แบล็กลิสต์</span>':''}${can('import')?`<button class="btn sm" data-empedit="${sel.id}">${S.empEdit===sel.id?'ปิดหน้าแก้ไข':'แก้ไขข้อมูลพนักงาน'}</button>`:''}</div>
+    ${S.empEdit===sel.id&&can('import')?empEditForm(sel):''}
     ${sel.status==='ทำงาน'?`<div class="row"><button class="btn ghost sm" data-towarn="${sel.id}">ออกใบเตือน</button><button class="btn ghost sm" data-tm2="${sel.id}">เลิกจ้าง / ตัดออก</button><button class="btn ghost sm" data-tomove="${sel.id}">โยกย้าย / เปลี่ยนตำแหน่ง</button></div>`:''}
     ${S.moveEmp===sel.id?moveForm(sel):''}
     ${S.tmEmp===sel.id?termForm(sel):''}
@@ -984,7 +1012,7 @@ function leaveAdm(){
 function rsStage(r){if(r.status!=='อนุมัติ')return{t:r.status,c:r.status==='รออนุมัติ'?'p-warn':r.status.startsWith('ยกเลิก')?'p-n':'p-bad'};
   if(r.cleared)return{t:'เคลียร์ครบ ปิดงานแล้ว',c:'p-ok'};const n=daysBetween(TODAY,D(r.lastDay));
   return n>0?{t:`อนุมัติแล้ว · รอวันออก (อีก ${n} วัน)`,c:'p-n'}:{t:`รอเคลียร์วันออก${n<0?' · เลยมา '+(-n)+' วัน':' · วันนี้'}`,c:'p-bad'}}
-function syncResign(){S.resign.forEach(r=>{if(r.status!=='อนุมัติ')return;const e=E(r.emp);if(e.status==='ทำงาน'&&D(r.lastDay)<=TODAY){e.status='พ้นสภาพ';e.endDate=r.lastDay;e.updated=iso(TODAY)}})}
+function syncResign(){orgFix();S.resign.forEach(r=>{if(r.status!=='อนุมัติ')return;const e=E(r.emp);if(e.status==='ทำงาน'&&D(r.lastDay)<=TODAY){e.status='พ้นสภาพ';e.endDate=r.lastDay;e.updated=iso(TODAY)}})}
 function resignAdm(){
   const rows=S.resign.filter(r=>inScope(E(r.emp).branch)).slice().reverse().map(r=>{const e=E(r.emp);const st=insStage(e);
     const card=!insNeed(e)&&!(e.ins&&e.ins.got)?'<span class="muted">ไม่มีบัตร</span>':(e.ins&&e.ins.got&&!e.ins.returned?'<span class="pill p-bad">ยังไม่คืนบัตร</span>':(e.ins&&e.ins.returned?'<span class="pill p-ok">คืนแล้ว</span>':'<span class="muted">ยังไม่ได้รับบัตร</span>'));
@@ -1291,6 +1319,20 @@ function bindHr2(){
     const m={no:'MV-'+String(seq.mv++).padStart(4,'0'),emp:e.id,from:e.branch,to,fromPos:e.pos,toPos:pos,date:$('#mv-date').value,reason:rs,by:S.role.name,status:'รออนุมัติ'};S.moves.push(m);S.moveEmp=null;
     if(can('import')){applyMove(m);toast('ย้ายไปสาขา '+to+' แล้ว'+(e.jmsMove?' · ต้องขอรหัส J&T สาขาใหม่':''))}else toast('ส่งคำขอโยกย้ายให้ HR/แอดมินแล้ว');render()});
   document.querySelectorAll('[data-mvok]').forEach(b=>b.onclick=()=>{const m=S.moves.find(x=>x.no===b.dataset.mvok);if(b.dataset.s==='ok'){applyMove(m);toast('อนุมัติโยกย้ายแล้ว')}else{m.status='ไม่อนุมัติ';toast('ไม่อนุมัติแล้ว')}render()});
+  document.querySelectorAll('[data-empedit]').forEach(b=>b.onclick=()=>{S.empEdit=S.empEdit===b.dataset.empedit?null:b.dataset.empedit;render()});
+  document.querySelectorAll('[data-eesave]').forEach(b=>b.onclick=()=>{if(!can('import'))return;const e=E(b.dataset.eesave),v=id=>$('#'+id).value.trim();
+    const nid=v('ee-id').replace(/\D/g,''),nac=v('ee-acct').replace(/\D/g,'');
+    if(!v('ee-name'))return toast('กรอกชื่อ-นามสกุล');
+    if(nid&&!idValid(nid))return toast('เลขบัตรประชาชนไม่ถูกต้อง');
+    if(nid&&nid!==e.idCard&&S.emp.some(x=>x.id!==e.id&&x.idCard===nid))return toast('เลขบัตรนี้มีในทะเบียนแล้ว ('+S.emp.find(x=>x.id!==e.id&&x.idCard===nid).id+')');
+    const nv={name:v('ee-name'),sex:v('ee-sex'),dob:v('ee-dob'),phone:v('ee-phone').replace(/[^\d]/g,''),branch:v('ee-br'),pos:v('ee-pos'),type:v('ee-type'),start:v('ee-start'),jms:v('ee-jms'),jmsName:v('ee-jmsname'),address:v('ee-addr'),emerg:v('ee-emerg'),licNo:v('ee-lic'),licExp:v('ee-licexp'),plate:v('ee-plate'),taxExp:v('ee-taxexp')};
+    if(nid)nv.idCard=nid;if(nac)nv.acct=nac;
+    const LB={name:'ชื่อ',sex:'เพศ',dob:'วันเกิด',phone:'เบอร์',branch:'สาขา',pos:'ตำแหน่ง',type:'ประเภทรถ',start:'วันเริ่มงาน',jms:'รหัส JMS',jmsName:'ชื่อ JMS',address:'ที่อยู่',emerg:'ผู้ติดต่อฉุกเฉิน',licNo:'ใบขับขี่',licExp:'ใบขับขี่หมดอายุ',plate:'ทะเบียนรถ',taxExp:'ภาษีรถ',idCard:'เลขบัตร',acct:'บัญชี'};
+    const ch=Object.keys(nv).filter(k=>String(nv[k]||'')!==String(e[k]||''));
+    if(!ch.length){S.empEdit=null;toast('ไม่มีข้อมูลเปลี่ยน');return render()}
+    ch.forEach(k=>e[k]=nv[k]);e.updated=iso(TODAY);(e.editLog=e.editLog||[]).push({date:iso(TODAY),by:S.role.name,f:ch.map(k=>LB[k]).join(', ')});
+    if(ch.includes('idCard')||ch.includes('acct'))Object.keys(S.reveal||{}).forEach(k=>{if(k.startsWith(e.id+'|'))delete S.reveal[k]});
+    S.empEdit=null;toast('บันทึกแล้ว · แก้ '+ch.length+' ช่อง');render()});
   document.querySelectorAll('[data-payedit]').forEach(b=>b.onclick=()=>{S.payEdit=S.payEdit===b.dataset.payedit?null:b.dataset.payedit;render()});
   document.querySelectorAll('[data-paysave]').forEach(b=>b.onclick=()=>{const e=E(b.dataset.paysave),t=$('#pe-type').value,a=+$('#pe-amt').value||0;e.payType=t;e.payAmt=a;e.dailyRate=toDaily(t,a);e.updated=iso(TODAY);S.payEdit=null;toast('บันทึกค่าตอบแทนแล้ว');render()});
   document.querySelectorAll('[data-towarn]').forEach(b=>b.onclick=()=>{S.admTab='warn';S.warnEmp=b.dataset.towarn;render()});
@@ -1586,9 +1628,19 @@ function timeAdm(){
   <h3>รายการลงเวลา</h3><p class="muted">เวลาทุกช่องคือเวลาที่ระบบบันทึกตอนกดถ่ายรูป พนักงานแก้ไม่ได้ · วันที่ไม่ได้ลงออกหรือลงนอกพื้นที่ ต้องให้ SPV ตรวจรูปแล้วยืนยันก่อนนับชั่วโมง</p>
   <div class="tablewrap"><table><tr><th>วันที่</th><th>ชื่อ</th><th>สาขา</th><th>เข้า</th><th>ออก</th><th class="num">ชม.</th><th>รูป</th><th>ลายเซ็น เข้า/ออก</th></tr>${rows}</table></div>`;
 }
+function orgPanel(){
+  const nB=b=>S.emp.filter(e=>e.branch===b&&e.status!=='พ้นสภาพ').length+S.users.filter(u=>u.branch===b).length;
+  const nP=p=>S.emp.filter(e=>e.pos===p&&e.status!=='พ้นสภาพ').length;
+  const appOn=p=>Object.values(APPLY_POS).some(v=>v[0]===p);
+  return `<section class="panel"><h2>สาขาและตำแหน่ง</h2><p class="muted">เฉพาะแอดมิน · ลบได้เฉพาะสาขา/ตำแหน่งที่ไม่มีพนักงานที่ยังทำงานอยู่ (ย้ายคนออกก่อน) · เพิ่มสาขาใหม่แล้ว ต้องไปตั้งพิกัดและรัศมีที่แท็บลงเวลาทำงาน ไม่งั้นลงเวลาที่สาขานั้นไม่ได้</p>
+  <h3>สาขา</h3><div class="row" style="flex-wrap:wrap;gap:6px">${BRANCHES.map(b=>`<span class="pill p-n">${esc(b)} · ${nB(b)} คน ${nB(b)?'':`<button class="back" data-orgdelb="${esc(b)}" title="ลบ">✕</button>`}</span>`).join('')}</div>
+  <div class="row"><input id="org-br" placeholder="รหัสหรือชื่อสาขาใหม่ เช่น 301720" style="max-width:260px"><button class="btn sm" id="org-addb">เพิ่มสาขา</button></div>
+  <h3>ตำแหน่ง</h3><div class="tablewrap"><table><tr><th>ตำแหน่ง</th><th class="num">คนทำงาน</th><th>ให้เลือกในใบสมัคร / ลงทะเบียนพนักงานเดิม</th><th></th></tr>${POSITIONS.map(p=>`<tr><td>${esc(p)}</td><td class="num">${nP(p)}</td><td><label><input type="checkbox" data-orgapp="${esc(p)}" ${appOn(p)?'checked':''} style="width:auto"> ${appOn(p)?Object.entries(APPLY_POS).filter(([k,v])=>v[0]===p).map(([k])=>esc(k)).join(', '):'ไม่แสดง'}</label></td><td>${nP(p)?'':`<button class="btn ghost sm" data-orgdelp="${esc(p)}">ลบ</button>`}</td></tr>`).join('')}</table></div>
+  <div class="row"><input id="org-pos" placeholder="ชื่อตำแหน่งใหม่" style="max-width:260px"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="org-posapp" checked style="width:auto"> เปิดให้เลือกในใบสมัคร</label><button class="btn sm" id="org-addp">เพิ่มตำแหน่ง</button></div>
+  <p class="muted">ตำแหน่งใหม่ยังไม่อยู่ในกลุ่ม "ต้องลงเวลา" "มีวันลา" หรือ "สลับกะได้" ไปติ๊กเพิ่มที่แท็บลงเวลาทำงานและตั้งค่าการลา</p></section>`}
 function usersAdm(){
   const rows=S.users.map((u,i)=>`<tr><td>${esc(u.email)}</td><td>${esc(u.name)}</td><td><select data-urole="${i}" style="width:auto">${Object.entries(ROLE_NAME).map(([k,v])=>`<option value="${k}" ${u.role===k?'selected':''}>${v}</option>`).join('')}</select></td><td><select data-ubr="${i}" style="width:auto" ${u.role!=='spv'?'disabled':''}><option value="">ทุกสาขา</option>${BRANCHES.map(b=>`<option ${u.branch===b?'selected':''}>${b}</option>`).join('')}</select></td><td>${S.users.length>1?`<button class="btn ghost sm" data-udel="${i}">ลบสิทธิ์</button>`:''}</td></tr>`).join('');
-  return `${S.upwUser?`<section class="panel"><b>ตั้งรหัสผ่านชั่วคราวให้ ${esc(S.upwUser)}</b><div class="fields"><label class="f">รหัสผ่านชั่วคราว (อย่างน้อย 8 ตัว)<input id="upw-p" autocomplete="off"></label></div><div class="row"><button class="btn" id="upw-save">บันทึก</button><button class="btn ghost" id="upw-cancel">ยกเลิก</button></div><p class="muted">ผู้ใช้ต้องเปลี่ยนเป็นรหัสของตัวเองตอนเข้าครั้งแรก · ส่งรหัสให้ทางที่ปลอดภัย</p></section>`:''}<h2>สิทธิ์ผู้ใช้หลังบ้าน</h2><p class="muted">ผู้ใช้ใหม่: เพิ่มด้านล่าง แล้วกด "ตั้งรหัสผ่าน" · ชื่อผู้ใช้คืออีเมลที่กรอก</p><div class="row" style="flex-wrap:wrap">${S.users.map(u=>`<button class="btn ghost sm" data-upw="${esc(String(u.email).toLowerCase())}">ตั้งรหัสผ่าน: ${esc(u.name)}</button>`).join('')}</div>
+  return `${orgPanel()}${S.upwUser?`<section class="panel"><b>ตั้งรหัสผ่านชั่วคราวให้ ${esc(S.upwUser)}</b><div class="fields"><label class="f">รหัสผ่านชั่วคราว (อย่างน้อย 8 ตัว)<input id="upw-p" autocomplete="off"></label></div><div class="row"><button class="btn" id="upw-save">บันทึก</button><button class="btn ghost" id="upw-cancel">ยกเลิก</button></div><p class="muted">ผู้ใช้ต้องเปลี่ยนเป็นรหัสของตัวเองตอนเข้าครั้งแรก · ส่งรหัสให้ทางที่ปลอดภัย</p></section>`:''}<h2>สิทธิ์ผู้ใช้หลังบ้าน</h2><p class="muted">ผู้ใช้ใหม่: เพิ่มด้านล่าง แล้วกด "ตั้งรหัสผ่าน" · ชื่อผู้ใช้คืออีเมลที่กรอก</p><div class="row" style="flex-wrap:wrap">${S.users.map(u=>`<button class="btn ghost sm" data-upw="${esc(String(u.email).toLowerCase())}">ตั้งรหัสผ่าน: ${esc(u.name)}</button>`).join('')}</div>
   <dl class="kv"><dt>แอดมินบริษัท</dt><dd>เห็นทุกสาขา ทุกเมนู จัดการสิทธิ์ผู้ใช้</dd><dt>HR</dt><dd>เห็นทุกสาขา นำเข้าไฟล์เงินเดือน/ประกัน สร้างรายการแจ้งเข้า-ออก บันทึกคืนเงินประกัน</dd><dt>หัวหน้างานสาขา</dt><dd>เห็นเฉพาะสาขาตัวเอง อนุมัติใบสมัคร ใบลา ใบลาออก บันทึกแจก/รับคืนบัตร ดูเงินประกันได้อย่างเดียว ไม่เห็นวันคืนเงินประกัน</dd></dl>
   <div class="tablewrap"><table><tr><th>อีเมล Google</th><th>ชื่อ</th><th>สิทธิ์</th><th>สาขา</th><th></th></tr>${rows}</table></div>
   <div class="fields"><label class="f">อีเมล Google<input id="nu-email" placeholder="name@gmail.com"></label><label class="f">ชื่อ<input id="nu-name"></label>
@@ -1712,6 +1764,11 @@ function bindAdm(){
   document.querySelectorAll('[data-urole]').forEach(s=>s.onchange=()=>{const u=S.users[+s.dataset.urole];u.role=s.value;if(u.role!=='spv')u.branch='';else u.branch=u.branch||BRANCHES[0];render()});
   document.querySelectorAll('[data-ubr]').forEach(s=>s.onchange=()=>{S.users[+s.dataset.ubr].branch=s.value;toast('บันทึกแล้ว')});
   document.querySelectorAll('[data-udel]').forEach(b=>b.onclick=()=>{S.users.splice(+b.dataset.udel,1);toast('ลบสิทธิ์แล้ว');render()});
+  on('#org-addb',()=>{const b=$('#org-br').value.trim();if(!b)return toast('กรอกชื่อสาขา');if(BRANCHES.includes(b))return toast('มีสาขานี้แล้ว');BRANCHES.push(b);saveOrg();toast('เพิ่มสาขา '+b+' แล้ว · อย่าลืมตั้งพิกัดที่แท็บลงเวลาทำงาน');render()});
+  document.querySelectorAll('[data-orgdelb]').forEach(x=>x.onclick=()=>{const b=x.dataset.orgdelb;if(S.emp.some(e=>e.branch===b&&e.status!=='พ้นสภาพ')||S.users.some(u=>u.branch===b))return toast('ยังมีคนอยู่สาขานี้');if(BRANCHES.length<2)return;BRANCHES.splice(BRANCHES.indexOf(b),1);saveOrg();toast('ลบสาขา '+b+' แล้ว');render()});
+  on('#org-addp',()=>{const p=$('#org-pos').value.trim();if(!p)return toast('กรอกชื่อตำแหน่ง');if(POSITIONS.includes(p))return toast('มีตำแหน่งนี้แล้ว');POSITIONS.push(p);if($('#org-posapp').checked&&!APPLY_POS[p])APPLY_POS[p]=[p,''];saveOrg();toast('เพิ่มตำแหน่ง '+p+' แล้ว');render()});
+  document.querySelectorAll('[data-orgdelp]').forEach(x=>x.onclick=()=>{const p=x.dataset.orgdelp;if(S.emp.some(e=>e.pos===p&&e.status!=='พ้นสภาพ'))return toast('ยังมีพนักงานตำแหน่งนี้');POSITIONS.splice(POSITIONS.indexOf(p),1);Object.keys(APPLY_POS).forEach(k=>{if(APPLY_POS[k][0]===p)delete APPLY_POS[k]});saveOrg();toast('ลบตำแหน่ง '+p+' แล้ว');render()});
+  document.querySelectorAll('[data-orgapp]').forEach(x=>x.onchange=()=>{const p=x.dataset.orgapp;if(x.checked){if(!Object.values(APPLY_POS).some(v=>v[0]===p))APPLY_POS[p]=[p,'']}else{if(Object.keys(APPLY_POS).length<=1)return render();Object.keys(APPLY_POS).forEach(k=>{if(APPLY_POS[k][0]===p)delete APPLY_POS[k]})}saveOrg();render()});
   on('#nu-add',()=>{const em=$('#nu-email').value.trim();if(!/^\S+@\S+\.\S+$/.test(em)){toast('ใส่อีเมล Google ให้ถูกต้อง');return}const role=$('#nu-role').value;S.users.push({email:em,name:$('#nu-name').value.trim()||em,role,branch:role==='spv'?$('#nu-br').value:''});toast('เพิ่มสิทธิ์แล้ว');render()});
 }
 function importDep(rows,p){
@@ -2242,7 +2299,7 @@ function bind(){
     $('#a-fill').onclick=()=>{const v={'#a-name':'ทดสอบ ใจสู้','#a-dob':'1997-02-14','#a-id':idCheck('110080000009'),'#a-phone':'0830000099','#a-addr':'12/3 ถ.เฉลิมพระเกียรติ ร.9 แขวงดอกไม้ เขตประเวศ กทม.','#a-ename':'นางใจดี ใจสู้','#a-ephone':'0830000098','#a-lic':'65001234','#a-licexp':'2030-02-13','#a-plate':'2กง 5521 กรุงเทพฯ','#a-acct':'0142223334'};
       Object.entries(v).forEach(([k,x])=>{if(!$(k).readOnly&&!(k==='#a-phone'&&$('#a-id').readOnly))$(k).value=x});if($('#a-start'))$('#a-start').value='2025-08-01';$('#a-pos').value='นำจ่ายพัสดุรถมอเตอร์ไซค์';$('#a-id').oninput();document.querySelectorAll('.a-con').forEach(c=>c.checked=true);if($('#a-ack'))$('#a-ack').checked=true;sync();toast('กรอกตัวอย่างแล้ว (ไฟล์แนบข้ามได้ในโหมดทดลอง)')};
     $('#a-send').onclick=async()=>{const g=k=>$(k).value.trim();const p=g('#a-pos'),veh=NEEDS_VEHICLE(p);const miss=[];
-      [['#a-name','ชื่อ'],['#a-dob','วันเกิด'],['#a-phone','เบอร์โทร'],['#a-addr','ที่อยู่'],['#a-ename','ผู้ติดต่อฉุกเฉิน'],['#a-ephone','เบอร์ฉุกเฉิน'],['#a-acct','บัญชีกสิกร']].forEach(([k,t])=>{if(!g(k))miss.push(t)});
+      [['#a-title','คำนำหน้า'],['#a-name','ชื่อ'],['#a-dob','วันเกิด'],['#a-phone','เบอร์โทร'],['#a-addr','ที่อยู่'],['#a-ename','ผู้ติดต่อฉุกเฉิน'],['#a-ephone','เบอร์ฉุกเฉิน'],['#a-acct','บัญชีกสิกร']].forEach(([k,t])=>{if(!g(k))miss.push(t)});
       if(veh)[['#a-lic','ใบขับขี่'],['#a-licexp','วันหมดอายุใบขับขี่'],['#a-plate','ทะเบียนรถ']].forEach(([k,t])=>{if(!g(k))miss.push(t)});
       if(!idValid(g('#a-id')))miss.push('เลขบัตรประชาชนที่ถูกต้อง');
       if(g('#a-phone')&&!/^0\d{9}$/.test(g('#a-phone')))miss.push('เบอร์โทร 10 หลัก');
@@ -2368,8 +2425,8 @@ const REAL={on:true,api:API_URL,token:'',me:null,snap:null,busy:false,again:fals
 const RC={emp:r=>r.id,leave:r=>r.no,resign:r=>r.no,punch:r=>r.emp+'|'+r.date,apps:r=>r.no,dep:r=>r.emp+'|'+r.period,black:r=>r.idCard,users:r=>String(r.email||'').toLowerCase(),assets:r=>r.no,counts:r=>r.no,repairs:r=>r.no,warn:r=>r.no,blReq:r=>r.emp+'|'+r.date,vol:r=>r.branch+'|'+r.date,hcReq:r=>r.no,moves:r=>r.no,evals:r=>r.no,acks:r=>r.emp+'|'+r.doc+'|'+r.ver,rosterLog:r=>r.emp+'|'+r.date+'|'+r.at,pdpaCons:r=>r.who+'|'+r.kind+'|'+r.date,dsr:r=>r.no,breach:r=>r.no,access:r=>r.at+'|'+r.by+'|'+r.emp+'|'+r.what,pdpaDel:r=>r.at+'|'+r.what};
 const RMAP={mark:()=>ATT.mark,rain:()=>ATT.rain,roster:()=>ATT.roster,depDed:()=>S.depDed,stock:()=>S.stock};
 const attCfgOf=()=>{const o={};Object.keys(ATT).forEach(k=>{if(!['mark','rain','roster'].includes(k))o[k]=ATT[k]});return o};
-const RSET={ATT:attCfgOf,LEAVE_CFG:()=>LEAVE_CFG,LEAVE:()=>LEAVE,PDPA:()=>PDPA,hc:()=>({hcRatio:S.hcRatio,hcDays:S.hcDays,fillSla:S.fillSla}),misc:()=>({dedCap:S.dedCap,oldRegOn:S.oldRegOn,oldRegUntil:S.oldRegUntil,policy:S.policy})};
-function rSetApply(n,v){if(!v)return;if(n==='ATT')Object.assign(ATT,v);else if(n==='LEAVE_CFG')Object.assign(LEAVE_CFG,v);else if(n==='LEAVE')Object.keys(v).forEach(k=>LEAVE[k]=Object.assign(LEAVE[k]||{},v[k]));else if(n==='PDPA')Object.assign(PDPA,v);else Object.assign(S,v)}
+const RSET={ATT:attCfgOf,LEAVE_CFG:()=>LEAVE_CFG,LEAVE:()=>LEAVE,PDPA:()=>PDPA,hc:()=>({hcRatio:S.hcRatio,hcDays:S.hcDays,fillSla:S.fillSla}),misc:()=>({dedCap:S.dedCap,oldRegOn:S.oldRegOn,oldRegUntil:S.oldRegUntil,policy:S.policy,org:S.org||null})};
+function rSetApply(n,v){if(!v)return;if(n==='ATT')Object.assign(ATT,v);else if(n==='LEAVE_CFG')Object.assign(LEAVE_CFG,v);else if(n==='LEAVE')Object.keys(v).forEach(k=>LEAVE[k]=Object.assign(LEAVE[k]||{},v[k]));else if(n==='PDPA')Object.assign(PDPA,v);else{Object.assign(S,v);if(n==='misc'&&v.org)applyOrg(v.org)}}
 async function api(a,p){
   let res;try{res=await fetch(REAL.api,{method:'POST',body:JSON.stringify(Object.assign({a,t:REAL.token},p||{}))});}catch(e){throw new Error('เชื่อมต่อระบบไม่ได้ ตรวจอินเทอร์เน็ต')}
   const j=await res.json();if(!j.ok){if(j.error==='SESSION_EXPIRED'){REAL.logout(true);throw new Error('หมดเวลาการเข้าสู่ระบบ กรุณาเข้าใหม่')}throw new Error(j.error)}return j.r}
