@@ -734,7 +734,7 @@ function admLogin(){return realLoginBo();
    <tr><td>RM</td><td>ทุกสาขา</td><td style="white-space:normal">อนุมัติลา ลาออก ผู้สมัคร ประเมิน เหมือน SPV แต่ครบทุกสาขา</td></tr>
    <tr><td>SPV แต่ละสาขา</td><td>เฉพาะสาขาตัวเอง</td><td style="white-space:normal">พิจารณาใบลา · อนุมัติลาออก/เคลียร์วันออก · ผู้สมัคร · ประเมินทดลองงาน · กรอกยอดพัสดุ · ขอเพิ่มคน · เลิกจ้าง · แจกทรัพย์สิน/ตรวจนับ · ใบเตือน (ทุกสาขามีรายการค้างให้ลอง)</td></tr></table></div></section>`;
 }
-function admView(){if(!S.role)return admLogin();return `<div class="row rl-bar"><span><b>${esc(S.role.name)}</b> · ${ROLE_NAME[S.role.role]||S.role.role}${S.role.branch?' สาขา '+S.role.branch:''}</span><span class="muted" id="rl-status"></span><span style="margin-left:auto"></span><button class="btn ghost sm" id="rl-cp">เปลี่ยนรหัสผ่าน</button><button class="btn ghost sm" id="rl-out">ออกจากระบบ</button></div>${S.cpOpen?`<section class="panel"><div class="fields"><label class="f">รหัสผ่านเดิม<input id="cp-o" type="password"></label><label class="f">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<input id="cp-n" type="password"></label></div><div class="row"><button class="btn" id="cp-save">บันทึก</button></div></section>`:''}`+_admView()}
+function admView(){if(!S.role)return admLogin();return `<div class="row rl-bar"><span><b>${esc(S.role.name)}</b> · ${ROLE_NAME[S.role.role]||S.role.role}${S.role.branch?' สาขา '+S.role.branch:''}</span><span class="muted" id="rl-status"></span><span style="margin-left:auto"></span><button class="btn sm" id="rl-ref">🔄 โหลดข้อมูลใหม่</button>${window.Notification&&Notification.permission!=='granted'?'<button class="btn ghost sm" id="rl-ntf">🔔 เปิดแจ้งเตือน</button>':''}<button class="btn ghost sm" id="rl-cp">เปลี่ยนรหัสผ่าน</button><button class="btn ghost sm" id="rl-out">ออกจากระบบ</button></div>${S.cpOpen?`<section class="panel"><div class="fields"><label class="f">รหัสผ่านเดิม<input id="cp-o" type="password"></label><label class="f">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<input id="cp-n" type="password"></label></div><div class="row"><button class="btn" id="cp-save">บันทึก</button></div></section>`:''}`+_admView()}
 function _admView(){
   if(!S.role)return admLogin();
   const emp=S.emp.filter(e=>inScope(e.branch));
@@ -2486,14 +2486,33 @@ REAL.reset=function(){Object.keys(RC).forEach(c=>S[c]=[]);ATT.mark={};ATT.rain={
 REAL.load=async function(){const since=iso(addDays(periodOf(addDays(periodOf(TODAY).s,-1)).s,0));const r=await api('load',{since});REAL.me=r.me;REAL.reset();
   Object.keys(RC).forEach(c=>S[c]=r.data[c]||[]);Object.entries(r.maps||{}).forEach(([m,o])=>{if(m==='mark')ATT.mark=o;else if(m==='rain')ATT.rain=o;else if(m==='roster')ATT.roster=o;else if(m==='depDed')S.depDed=o;else if(m==='stock')S.stock=Object.assign(Object.fromEntries(BRANCHES.map(b=>[b,{}])),o)});
   Object.entries(r.settings||{}).forEach(([n,v])=>rSetApply(n,v));Object.keys(r.seq||{}).forEach(k=>{seq[k]=Math.max(seq[k]||1,r.seq[k])});
-  REAL.takeSnap();if(r.me.role==='admin')Object.keys(RSET).forEach(n=>{if(!r.settings[n])REAL.snap.s[n]=''});REAL.loaded=true;return r};
+  REAL.markSeen();REAL.takeSnap();if(r.me.role==='admin')Object.keys(RSET).forEach(n=>{if(!r.settings[n])REAL.snap.s[n]=''});REAL.loaded=true;return r};
+// ---------- แจ้งเตือนรายการใหม่ (หลังบ้าน) ----------
+const WATCH={apps:['ใบสมัครงาน'],emp:['พนักงานลงทะเบียน',r=>r.status==='รอตรวจสอบ'],leave:['ใบลา'],resign:['ใบลาออก'],moves:['โยกย้าย'],hcReq:['ขอเพิ่มคน'],dsr:['คำขอข้อมูลส่วนบุคคล'],assets:['แจ้งของที่ถือ',r=>r.by==='พนักงานแจ้งเอง'&&!r.ok]};
+REAL.seen=null;REAL.lastAct=Date.now();REAL.newItems={};
+REAL.markSeen=function(){REAL.seen={};Object.keys(WATCH).forEach(c=>REAL.seen[c]=new Set((S[c]||[]).map(RC[c])));REAL.newItems={};REAL.banner()};
+REAL.isBo=()=>REAL.me&&!['emp','public'].includes(REAL.me.role);
+REAL.poll=async function(){if(!REAL.isBo()||!REAL.token||!REAL.seen||REAL.busy||document.visibilityState!=='visible')return;if(Date.now()-REAL.lastAct>2*3600e3)return;
+  let r;try{r=await api('load',{since:iso(TODAY)})}catch(e){return}
+  const found={};Object.entries(WATCH).forEach(([c,[lab,f]])=>{const local=new Set((S[c]||[]).map(RC[c]));(r.data[c]||[]).forEach(x=>{const k=RC[c](x);if(REAL.seen[c].has(k)||local.has(k))return;if(f&&!f(x))return;(found[lab]=found[lab]||new Set()).add(k)})});
+  const before=Object.values(REAL.newItems).reduce((a,v)=>a+v.size,0);Object.entries(found).forEach(([l,set])=>{REAL.newItems[l]=new Set([...(REAL.newItems[l]||[]),...set])});
+  const after=Object.values(REAL.newItems).reduce((a,v)=>a+v.size,0);
+  if(after>before){const txt=REAL.newText();REAL.banner();try{if(window.Notification&&Notification.permission==='granted')new Notification('ระบบพนักงาน พราวเอ็กซ์เพรส',{body:'มีรายการใหม่: '+txt,tag:'hr-new'})}catch(e){}try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),gn=a.createGain();o.frequency.value=880;gn.gain.value=.08;o.connect(gn);gn.connect(a.destination);o.start();o.stop(a.currentTime+.25)}catch(e){}}};
+REAL.newText=()=>Object.entries(REAL.newItems).filter(([l,v])=>v.size).map(([l,v])=>l+' '+v.size).join(' · ');
+REAL.banner=function(){const n=Object.values(REAL.newItems).reduce((a,v)=>a+v.size,0);document.title=(n?'('+n+') ':'')+'ระบบพนักงาน Proud Express';let b=document.getElementById('rl-new');
+  if(!n){if(b)b.remove();return}if(!b){b=document.createElement('div');b.id='rl-new';b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:999;background:var(--brand,#b0121e);color:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 6px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;max-width:calc(100% - 32px);flex-wrap:wrap';document.body.appendChild(b)}
+  b.innerHTML='<span>🔔 มีรายการใหม่: <b>'+esc(REAL.newText())+'</b></span><button class="btn sm" style="background:#fff;color:#b0121e" id="rl-newgo">โหลดข้อมูลใหม่</button>';document.getElementById('rl-newgo').onclick=()=>REAL.refresh()};
+REAL.refresh=async function(){const st=document.getElementById('rl-status');try{if(st)st.textContent='กำลังโหลด…';await REAL.flush();await REAL.reload();toast('โหลดข้อมูลล่าสุดแล้ว')}catch(e){toast(String(e.message||e))}};
+['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>{REAL.lastAct=Date.now()},{passive:true}));
+setInterval(()=>REAL.poll(),90*1000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')REAL.poll()});
 REAL.reload=async function(){REAL.loaded=false;await REAL.load();_render()};
 REAL.logout=function(silent){const t=REAL.token;REAL.token='';try{sessionStorage.removeItem('hr_t')}catch(e){}if(t&&!silent)api('logout',{t}).catch(()=>{});setTimeout(()=>location.replace(location.pathname+location.hash),50)};
 REAL.boot=async function(){
   S.baseUrl=location.origin+location.pathname;REAL.reset();document.getElementById('app').innerHTML='<section class="panel"><p class="muted">กำลังโหลดระบบ…</p></section>';
   try{REAL.token=sessionStorage.getItem('hr_t')||''}catch(e){}
   try{const r=await REAL.load();if(r.me.role==='emp'){S.view='emp';S.who=r.me.emp;const e=E(S.who);S.page=e&&e.profileDone?'menu':'oldreg'}else if(r.me.role!=='public'){S.view='adm';S.role={email:r.me.user,name:r.me.name,role:r.me.role,branch:r.me.branch}}}
-  catch(e){REAL.token='';try{sessionStorage.removeItem('hr_t')}catch(_){}try{await REAL.load()}catch(e2){document.getElementById('app').innerHTML='<section class="panel"><div class="note warn">'+esc(e2.message)+'</div><p class="muted">ถ้ายังไม่ได้ตั้งค่า ให้ใส่ URL ของ Apps Script ในไฟล์ index.html (บรรทัด API_URL)</p></section>';return}}
+  catch(e){if(REAL.token&&!/หมดเวลา/.test(String(e.message))){document.getElementById('app').innerHTML='<section class="panel"><div class="note warn">โหลดข้อมูลไม่สำเร็จ: '+esc(e.message)+'</div><div class="row"><button class="btn" onclick="location.reload()">ลองใหม่</button><button class="btn ghost" onclick="REAL.logout()">ออกจากระบบ</button></div></section>';return}
+    REAL.token='';try{sessionStorage.removeItem('hr_t')}catch(_){}try{await REAL.load()}catch(e2){document.getElementById('app').innerHTML='<section class="panel"><div class="note warn">'+esc(e2.message)+'</div><p class="muted">ถ้ายังไม่ได้ตั้งค่า ให้ใส่ URL ของ Apps Script ในไฟล์ index.html (บรรทัด API_URL)</p></section>';return}}
   if(!REAL.me||REAL.me.role==='public')fromHash();_render()};
 // ---------- เข้าสู่ระบบ ----------
 function realLoginEmp(){return `<section class="panel"><h2>เข้าสู่ระบบพนักงาน</h2>
@@ -2517,7 +2536,8 @@ REAL.afterBind=function(){
   on('#bo-go',async()=>{const m=t=>{$('#bo-msg').textContent=t;$('#bo-msg').style.color='var(--bad)'};const p={user:$('#bo-u').value.trim(),pass:$('#bo-p').value};
     if(!$('#bo-new').hidden){const a=$('#bo-n1').value;if(a.length<8)return m('รหัสผ่านใหม่อย่างน้อย 8 ตัว');if(a!==$('#bo-n2').value)return m('รหัสผ่าน 2 ช่องไม่ตรงกัน');p.newPass=a}
     m('กำลังตรวจสอบ…');try{const r=await api('loginBo',p);if(r.mustChange){$('#bo-new').hidden=false;m('ตั้งรหัสผ่านใหม่ก่อนใช้งาน');return}REAL.token=r.token;try{sessionStorage.setItem('hr_t',r.token)}catch(e){}await REAL.load();S.view='adm';S.role={email:REAL.me.user,name:REAL.me.name,role:REAL.me.role,branch:REAL.me.branch};_render()}catch(e){m(e.message)}});
-  on('#logout',()=>REAL.logout());on('#rl-out',()=>REAL.logout());
+  on('#logout',()=>REAL.logout());on('#rl-out',()=>REAL.logout());on('#rl-ref',()=>REAL.refresh());
+  on('#rl-ntf',async()=>{if(!window.Notification)return toast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน ระบบจะขึ้นแถบแจ้งในหน้าแทน');const p=await Notification.requestPermission();toast(p==='granted'?'เปิดแจ้งเตือนแล้ว · เปิดหน้านี้ทิ้งไว้ ระบบจะเช็กทุก 1–2 นาที':'ไม่ได้อนุญาต · ยังมีแถบแจ้งในหน้าเหมือนเดิม');_render()});
   if(!REAL.token)document.querySelectorAll('[data-go]').forEach(b=>{const f=b.onclick;b.onclick=ev=>{S.who=null;S.oldDone=null;f&&f(ev)}});
   document.querySelectorAll('[data-rpin]').forEach(b=>b.onclick=async()=>{try{await api('resetPin',{emp:b.dataset.rpin});toast('รีเซ็ต PIN แล้ว พนักงานตั้งใหม่ตอนเข้าครั้งถัดไป')}catch(e){toast(e.message)}});
   document.querySelectorAll('[data-upw]').forEach(b=>b.onclick=()=>{S.upwUser=b.dataset.upw;_render()});
