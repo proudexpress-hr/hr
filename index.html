@@ -494,6 +494,10 @@ const payText=e=>{const p=payOf(e);return p.t==='รายชิ้น'?`รา�
 const ageOf=d=>{if(!d)return null;const b=D(d);let a=TODAY.getFullYear()-b.getFullYear();if(TODAY.getMonth()<b.getMonth()||(TODAY.getMonth()===b.getMonth()&&TODAY.getDate()<b.getDate()))a--;return a};
 const age18=d=>{const b=D(d);return iso(new Date(b.getFullYear()+18,b.getMonth(),b.getDate()))};
 const MINOR_RULES='ห้ามทำงานเวลา 22.00–06.00 น. · ห้ามทำงานล่วงเวลาและทำงานในวันหยุด · ทำงานติดกัน 4 ชั่วโมงต้องได้พักไม่น้อยกว่า 1 ชั่วโมง · ห้ามทำงานอันตราย/ยกของหนักเกินกำหนด · นายจ้างต้องแจ้งพนักงานตรวจแรงงานภายใน 15 วันนับจากวันเริ่มงาน';
+const MIL_OPTS=['ผ่านการเกณฑ์แล้ว','ได้รับการยกเว้น','เรียน รด.','ยังไม่ถึงเกณฑ์'],NAT_OPTS=['ไทย','เมียนมา','กัมพูชา','ลาว','อื่น ๆ'];
+const optsOf=(a,v)=>(v&&!a.includes(v)?[v,...a]:a).map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
+const extraFields=(p,e)=>`<label class="f">ชื่อเล่น<input id="${p}-nick" value="${esc(e.nick||'')}"></label><label class="f">สัญชาติ<select id="${p}-nat">${optsOf(NAT_OPTS,e.nat||'ไทย')}</select></label>${e.sex==='หญิง'?'':`<label class="f">สถานะทางทหาร (ผู้ชาย)<select id="${p}-mil"><option value="">-</option>${optsOf(MIL_OPTS,e.military||'')}</select></label>`}<label class="f">ตำแหน่งบ้าน (ลิงก์ Google Maps)<input id="${p}-pin" value="${esc(e.pin||'')}" placeholder="วางลิงก์จาก Google Maps"></label>`;
+const readExtra=(p,e)=>{const o={nick:($('#'+p+'-nick')||{}).value?.trim()||'',nat:($('#'+p+'-nat')||{}).value||'',pin:($('#'+p+'-pin')||{}).value?.trim()||''};if($('#'+p+'-mil'))o.military=$('#'+p+'-mil').value;return o};
 const LIFE='ตลอดชีพ';const lifeBox=(id,v)=>`<label class="lifechk" style="display:flex;gap:6px;align-items:center;color:var(--fg);font-size:.85rem"><input type="checkbox" id="${id}-life" ${v===LIFE?'checked':''} style="width:auto" onchange="const d=document.getElementById('${id}');if(this.checked){d.value='';d.dispatchEvent(new Event('change'))}const t=d.parentNode.querySelector('input[type=text]');if(t)t.disabled=this.checked"> ใบขับขี่ตลอดชีพ</label>`;
 const licVal=id=>{const c=document.getElementById(id+'-life');return c&&c.checked?LIFE:(document.getElementById(id)||{}).value||''};
 const FIX_ITEMS=[['f1','รูปถ่ายหน้าตรง'],['f2','รูปบัตรประชาชน'],['f3','รูปทะเบียนบ้าน'],['f4','รูปหน้าสมุดบัญชีกสิกร'],['f5','รูปใบขับขี่'],['f8','รูปทะเบียนรถ / ภาษีรถ'],['d:acct','เลขบัญชีธนาคาร'],['d:addr','ที่อยู่'],['d:emerg','ผู้ติดต่อฉุกเฉิน'],['d:jms','รหัส JMS / ชื่อ JMS'],['d:lic','ข้อมูลใบขับขี่ / ทะเบียนรถ'],['d:phone','เบอร์โทร']];
@@ -613,7 +617,7 @@ function updateView(e,who){
     <label class="f">เบอร์โทร<input id="u-phone" value="${esc(e.phone)}" inputmode="tel"></label>
     <label class="f">เลขบัญชีกสิกรไทย<input id="u-acct" value="${esc(e.acct)}" inputmode="numeric"></label>
     ${bk2Fields('u',e.bk2||{})}
-    <label class="f full">ที่อยู่ปัจจุบัน<input id="u-addr" value="${esc(e.address)}"></label>
+    <label class="f full">ที่อยู่ปัจจุบัน<input id="u-addr" value="${esc(e.address)}"></label>${extraFields('u',e)}
     <label class="f">ผู้ติดต่อฉุกเฉิน / เบอร์<input id="u-emerg" value="${esc(e.emerg)}"></label>
     <label class="f">เลขใบขับขี่<input id="u-lic" value="${esc(e.licNo)}"></label>
     <div class="f">ใบขับขี่หมดอายุ<input type="date" id="u-licexp" value="${e.licExp===LIFE?'':esc(e.licExp||'')}">${lifeBox('u-licexp',e.licExp)}</div>
@@ -982,7 +986,7 @@ function empEditForm(e){const o=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>
     <label class="f">วันเริ่มงาน<input type="date" id="ee-start" value="${esc(e.start||'')}"></label>
     <label class="f">รหัส J&T (JMS)<input id="ee-jms" value="${esc(e.jms||'')}"></label>
     <label class="f">ชื่อในระบบ JMS<input id="ee-jmsname" value="${esc(e.jmsName||'')}"></label>
-    <label class="f full">ที่อยู่ปัจจุบัน<input id="ee-addr" value="${esc(e.address||'')}"></label>
+    <label class="f full">ที่อยู่ปัจจุบัน<input id="ee-addr" value="${esc(e.address||'')}"></label>${extraFields('ee',e)}
     <label class="f">ผู้ติดต่อฉุกเฉิน / เบอร์<input id="ee-emerg" value="${esc(e.emerg||'')}"></label>
     <label class="f">เลขใบขับขี่<input id="ee-lic" value="${esc(e.licNo||'')}"></label>
     <div class="f">ใบขับขี่หมดอายุ<input type="date" id="ee-licexp" value="${e.licExp===LIFE?'':esc(e.licExp||'')}">${lifeBox('ee-licexp',e.licExp)}</div>
@@ -1391,9 +1395,9 @@ function bindHr2(){
     if(!v('ee-name'))return toast('กรอกชื่อ-นามสกุล');
     if(nid&&!idValid(nid))return toast('เลขบัตรประชาชนไม่ถูกต้อง');
     if(nid&&nid!==e.idCard&&S.emp.some(x=>x.id!==e.id&&x.idCard===nid))return toast('เลขบัตรนี้มีในทะเบียนแล้ว ('+S.emp.find(x=>x.id!==e.id&&x.idCard===nid).id+')');
-    const nv={name:v('ee-name'),sex:v('ee-sex'),dob:v('ee-dob'),phone:v('ee-phone').replace(/[^\d]/g,''),branch:v('ee-br'),pos:v('ee-pos'),type:v('ee-type'),start:v('ee-start'),jms:v('ee-jms'),jmsName:v('ee-jmsname'),address:v('ee-addr'),emerg:v('ee-emerg'),licNo:v('ee-lic'),licExp:licVal('ee-licexp'),plate:v('ee-plate'),taxExp:v('ee-taxexp')};
+    const nv={name:v('ee-name'),sex:v('ee-sex'),dob:v('ee-dob'),phone:v('ee-phone').replace(/[^\d]/g,''),branch:v('ee-br'),pos:v('ee-pos'),type:v('ee-type'),start:v('ee-start'),jms:v('ee-jms'),jmsName:v('ee-jmsname'),address:v('ee-addr'),emerg:v('ee-emerg'),licNo:v('ee-lic'),licExp:licVal('ee-licexp'),plate:v('ee-plate'),taxExp:v('ee-taxexp'),...readExtra('ee',e)};
     if(nid)nv.idCard=nid;if(nac)nv.acct=nac;
-    const LB={name:'ชื่อ',sex:'เพศ',dob:'วันเกิด',phone:'เบอร์',branch:'สาขา',pos:'ตำแหน่ง',type:'ประเภทรถ',start:'วันเริ่มงาน',jms:'รหัส JMS',jmsName:'ชื่อ JMS',address:'ที่อยู่',emerg:'ผู้ติดต่อฉุกเฉิน',licNo:'ใบขับขี่',licExp:'ใบขับขี่หมดอายุ',plate:'ทะเบียนรถ',taxExp:'ภาษีรถ',idCard:'เลขบัตร',acct:'บัญชี'};
+    const LB={name:'ชื่อ',sex:'เพศ',dob:'วันเกิด',phone:'เบอร์',branch:'สาขา',pos:'ตำแหน่ง',type:'ประเภทรถ',start:'วันเริ่มงาน',jms:'รหัส JMS',jmsName:'ชื่อ JMS',address:'ที่อยู่',emerg:'ผู้ติดต่อฉุกเฉิน',licNo:'ใบขับขี่',licExp:'ใบขับขี่หมดอายุ',plate:'ทะเบียนรถ',taxExp:'ภาษีรถ',idCard:'เลขบัตร',acct:'บัญชี',nick:'ชื่อเล่น',nat:'สัญชาติ',military:'สถานะทหาร',pin:'ตำแหน่งบ้าน'};
     const ch=Object.keys(nv).filter(k=>String(nv[k]||'')!==String(e[k]||''));
     if(!ch.length){S.empEdit=null;toast('ไม่มีข้อมูลเปลี่ยน');return render()}
     ch.forEach(k=>e[k]=nv[k]);e.updated=iso(TODAY);(e.editLog=e.editLog||[]).push({date:iso(TODAY),by:S.role.name,f:ch.map(k=>LB[k]).join(', ')});
@@ -2425,7 +2429,7 @@ function bind(){
     if(e.status==='รอตรวจสอบ'&&$('#u-name')){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}Object.assign(e,{name:g('#u-name'),dob:g('#u-dob'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start')})}
     document.querySelectorAll('.ua-q').forEach(i=>{const a=S.assets.find(x=>x.no===i.dataset.no);if(!a||!selfPend(a))return;const n=parseInt(i.value)||0;const d=(document.querySelector('.ua-d[data-no="'+a.no+'"]')||{}).value||'';if(n<=0){S.assets.splice(S.assets.indexOf(a),1);return}a.qty=n;a.detail=d.trim()||'พนักงานแจ้งเอง รอหัวหน้าตรวจ'});
     if(e.status==='ลงทะเบียนใหม่'){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}Object.assign(e,{name:g('#u-name'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start'),status:'รอตรวจสอบ'})}
-    Object.assign(e,{phone:g('#u-phone'),acct:g('#u-acct'),bk2:readBk2('u'),address:g('#u-addr'),emerg:g('#u-emerg'),licNo:g('#u-lic'),licExp:licVal('u-licexp'),plate:g('#u-plate'),taxExp:g('#u-taxexp'),updated:iso(TODAY)});
+    Object.assign(e,readExtra('u',e),{phone:g('#u-phone'),acct:g('#u-acct'),bk2:readBk2('u'),address:g('#u-addr'),emerg:g('#u-emerg'),licNo:g('#u-lic'),licExp:licVal('u-licexp'),plate:g('#u-plate'),taxExp:g('#u-taxexp'),updated:iso(TODAY)});
     const wasNew=$('#u-name')&&!$('#u-dob');toast(wasNew?'ส่งลงทะเบียนแล้ว รอหลังบ้านตรวจยืนยัน':'บันทึกข้อมูลแล้ว');if(wasNew){S.who=null;S.page='home'}else S.page='me';render();scrollTo(0,0)});
   document.querySelectorAll('[data-fxdone]').forEach(b=>b.onclick=async()=>{const r=S.fixReq.find(x=>x.no===b.dataset.fxdone);const e=E(r.emp);const ins=[...document.querySelectorAll('[data-fxfile="'+r.no+'"]')];
     const miss=ins.filter(i=>!i.files.length).map(i=>fixLabel(i.dataset.k));if(miss.length)return toast('ยังไม่ได้แนบ: '+miss.join(', '));
