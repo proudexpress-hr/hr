@@ -140,6 +140,7 @@ tr.dim td{opacity:.55}
 .lb{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .lb[hidden]{display:none}
 [hidden]{display:none!important}
+@media(max-width:700px){.chat-grid{grid-template-columns:1fr!important}}
 .lb img{max-width:100%;max-height:80vh;border-radius:6px;background:#fff}
 .lb p{color:#fff;margin:0}
 .lb .btn{align-self:flex-end;background:#fff}
@@ -186,7 +187,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 </div></header>
 <main><div class="wrap" id="app"></div></main>
 <div class="toast" id="toast" hidden></div>
-<div class="lb" id="lb" hidden><button class="btn ghost sm" id="lb-x">ปิด</button><img id="lb-img" alt="เอกสาร"><p id="lb-t"></p></div>
+<div class="lb" id="lb" hidden><button class="btn ghost sm" id="lb-x">ปิด</button><a class="btn ghost sm" id="lb-dl" hidden download="file">⬇ ดาวน์โหลด</a><img id="lb-img" alt="เอกสาร"><p id="lb-t"></p></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -452,6 +453,7 @@ function empView(){
   if(S.page==='me')return menu+meView(e,who);
   if(S.page==='update')return menu+updateView(e,who);
   if(S.page==='fix')return menu+fixEmpView(e);
+  if(S.page==='chat')return menu+chatEmpView(e);
   if(S.page==='leave')return menu+leaveView(e,who);
   if(S.page==='resign')return menu+resignView(e,who);
   if(S.page==='card')return menu+cardView(e,who);
@@ -463,6 +465,7 @@ function empView(){
     <div class="grid">
       ${tile('me','ข้อมูลของฉัน','ดูข้อมูลทั้งหมด','ข้อมูลส่วนตัว การทำงาน เงินประกัน สิทธิ์ลา ของที่ถืออยู่')}
       ${fixOpen(e.id).length?tile('fix','เรื่องที่ต้องแก้ไข','มี '+fixOpen(e.id).length+' เรื่อง','บริษัทแจ้งให้ส่งเอกสารหรือแก้ข้อมูลเพิ่ม'):''}
+      ${(()=>{const u=S.msgs.filter(m=>m.emp===e.id).reduce((a,m)=>a+unreadE(m),0);return tile('chat','ติดต่อหัวหน้า / HR',u?'ข้อความใหม่ '+u:'แชท','ถาม แจ้งปัญหา หรือร้องเรียน · เลือกส่งถึง HR ได้ถ้าไม่อยากให้หัวหน้าเห็น')})()}
       ${tile('update','แก้ไขข้อมูล','อัปเดตข้อมูล','เปลี่ยนเบอร์ ที่อยู่ บัญชี รหัส JMS ใบขับขี่ ทะเบียนรถ เพิ่ม/แก้ของที่ถืออยู่')}
       ${hasLeave(e)?tile('leave','การลา','ยื่นใบลา','ดูสิทธิ์ลาคงเหลือ ลาขั้นต่ำครึ่งวัน'):tile('leave','วันหยุด','แจ้งขอหยุด','แจ้งวันที่จะหยุดล่วงหน้า ให้หัวหน้าจัดคนแทน')}
       ${tile('resign','ลาออก','ยื่นใบลาออก','แจ้งล่วงหน้า 30 วัน')}
@@ -587,6 +590,43 @@ function loginView(){return realLoginEmp();
   </section>`;
 }
 function readDocFile(f){return readImg(f)}
+// ---------- แชทพนักงาน ↔ หัวหน้า / HR ----------
+const MSG_TO={spv:'หัวหน้างานสาขา',hr:'ฝ่าย HR (หัวหน้าไม่เห็น)'};
+const unreadE=m=>(m.log||[]).slice(m.seenE||0).filter(l=>l.t==='adm').length,unreadA=m=>(m.log||[]).slice(m.seenA||0).filter(l=>l.t==='emp').length;
+const msgVisible=m=>!(S.role&&['spv','rm'].includes(S.role.role)&&m.to==='hr')&&inScope(E(m.emp).branch);
+const bubbles=(m,me)=>(m.log||[]).map(l=>`<div style="display:flex;justify-content:${l.t===me?'flex-end':'flex-start'};margin:6px 0"><div style="max-width:82%;background:${l.t===me?'var(--brand,#b0121e)':'var(--surface,#fff)'};color:${l.t===me?'#fff':'inherit'};border:1px solid var(--line);border-radius:14px;padding:7px 11px"><div style="white-space:pre-wrap;word-break:break-word">${esc(l.msg)}</div><small style="opacity:.75">${esc(l.by)} · ${esc(fmtAt(l.at))}</small></div></div>`).join('');
+function chatEmpView(e){const L=S.msgs.filter(m=>m.emp===e.id).slice().reverse();const cur=S.msgs.find(m=>m.no===S.chatSel&&m.emp===e.id);
+  if(cur){if((cur.seenE||0)<cur.log.length)cur.seenE=cur.log.length;
+    return `<section class="panel"><div class="row" style="justify-content:space-between;margin:0"><button class="btn ghost sm" data-chatsel="">← ทั้งหมด</button><span class="pill ${cur.status==='ปิด'?'p-n':'p-ok'}">${cur.status==='ปิด'?'ปิดเรื่องแล้ว':'เปิดอยู่'}</span></div><h3 style="margin:8px 0 2px">${esc(cur.subject)}</h3><p class="muted" style="margin:0 0 6px">ถึง: ${MSG_TO[cur.to]}</p>
+    <div style="background:var(--bg);border-radius:12px;padding:6px 10px;max-height:60vh;overflow:auto">${bubbles(cur,'emp')}</div>
+    <label class="f full">พิมพ์ข้อความ<textarea id="ch-txt" rows="3"></textarea></label><div class="row"><button class="btn" data-chatsend="${cur.no}">ส่ง</button></div></section>`}
+  return `<section class="panel"><h2>ติดต่อหัวหน้า / HR</h2><p class="muted">ถามเรื่องงาน แจ้งปัญหา หรือร้องเรียน · เลือก <b>ฝ่าย HR</b> ถ้าไม่อยากให้หัวหน้างานเห็น</p>
+  <div class="fields"><label class="f">ส่งถึง<select id="ch-to"><option value="spv">${MSG_TO.spv}</option><option value="hr">${MSG_TO.hr}</option></select></label><label class="f">หัวข้อ<input id="ch-sub" maxlength="120" placeholder="เช่น สอบถามวันหยุด"></label><label class="f full">ข้อความ<textarea id="ch-txt" rows="3"></textarea></label></div>
+  <div class="row"><button class="btn" id="ch-new">ส่งข้อความ</button></div>
+  ${L.length?`<h3>ข้อความของฉัน</h3>${L.map(m=>`<button class="panel" data-chatsel="${m.no}" style="display:block;width:100%;text-align:left;cursor:pointer;margin:6px 0"><div class="row" style="justify-content:space-between;margin:0"><b>${esc(m.subject)}</b>${unreadE(m)?`<span class="pill p-bad">ใหม่ ${unreadE(m)}</span>`:`<span class="pill p-n">${m.status==='ปิด'?'ปิดแล้ว':'เปิดอยู่'}</span>`}</div><small class="muted">ถึง ${MSG_TO[m.to]} · ${esc(fmtAt((m.log[m.log.length-1]||{}).at))}</small></button>`).join('')}`:''}</section>`}
+function chatAdm(){const f=S.chatF||'เปิด';const all=S.msgs.filter(msgVisible);const L=all.filter(m=>f==='ทั้งหมด'||m.status===f).slice().sort((a,b)=>String((b.log[b.log.length-1]||{}).at).localeCompare(String((a.log[a.log.length-1]||{}).at)));const cur=all.find(m=>m.no===S.chatSel);
+  if(cur&&(cur.seenA||0)<cur.log.length)cur.seenA=cur.log.length;
+  return `<h2>ข้อความจากพนักงาน</h2><p class="muted">${S.role.role==='spv'||S.role.role==='rm'?'เห็นเฉพาะข้อความที่ส่งถึงหัวหน้างาน · ข้อความถึง HR หัวหน้าไม่เห็น':'แอดมิน/HR เห็นทุกข้อความ รวมข้อความที่ส่งถึงหัวหน้างาน'}</p>
+  <div class="row" style="flex-wrap:wrap">${['เปิด','ปิด','ทั้งหมด'].map(k=>`<button class="btn ${f===k?'':'ghost'} sm" data-chatf="${k}">${k==='เปิด'?'เปิดอยู่':k==='ปิด'?'ปิดแล้ว':k} (${k==='ทั้งหมด'?all.length:all.filter(m=>m.status===k).length})</button>`).join('')}</div>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:12px" class="chat-grid">
+  <div>${L.map(m=>`<button class="panel" data-chatsel="${m.no}" style="display:block;width:100%;text-align:left;cursor:pointer;margin:0 0 6px;${m.no===S.chatSel?'border:2px solid var(--brand,#b0121e)':''}"><div class="row" style="justify-content:space-between;margin:0"><b>${esc(E(m.emp).name||m.emp)}</b>${unreadA(m)?`<span class="pill p-bad">ใหม่ ${unreadA(m)}</span>`:''}</div><div>${esc(m.subject)}</div><small class="muted">${m.to==='hr'?'🔒 ถึง HR':'ถึงหัวหน้า'} · สาขา ${esc(E(m.emp).branch||'')} · ${esc(fmtAt((m.log[m.log.length-1]||{}).at))}</small></button>`).join('')||'<p class="muted">ไม่มีข้อความ</p>'}</div>
+  <div>${cur?`<section class="panel"><div class="row" style="justify-content:space-between;margin:0"><div><b>${esc(cur.subject)}</b><br><small class="muted">${esc(E(cur.emp).name||cur.emp)} (${cur.emp}) · ${cur.to==='hr'?'🔒 ถึง HR':'ถึงหัวหน้างาน'}</small></div><button class="btn ghost sm" data-chatclose="${cur.no}">${cur.status==='ปิด'?'เปิดเรื่องอีกครั้ง':'ปิดเรื่อง'}</button></div>
+    <div style="background:var(--bg);border-radius:12px;padding:6px 10px;max-height:55vh;overflow:auto">${bubbles(cur,'adm')}</div>
+    <label class="f full">ตอบกลับ<textarea id="ch-txt" rows="3"></textarea></label><div class="row"><button class="btn" data-chatsend="${cur.no}">ส่ง</button></div></section>`:'<p class="muted">เลือกข้อความทางซ้าย</p>'}</div></div>`}
+function bindChat(){const sendTo=no=>{const m=S.msgs.find(x=>x.no===no);const t=($('#ch-txt')||{}).value||'';if(!t.trim())return toast('พิมพ์ข้อความ');const side=S.role?'adm':'emp';const who=S.role?S.role.name:E(S.who).name;
+    m.log.push({at:nowStamp(),by:who,t:side,msg:t.trim()});if(side==='emp'){m.status='เปิด';m.seenE=m.log.length}else m.seenA=m.log.length;m.lastT=side;render()};
+  document.querySelectorAll('[data-chatsel]').forEach(b=>b.onclick=()=>{S.chatSel=b.dataset.chatsel||null;render()});
+  document.querySelectorAll('[data-chatsend]').forEach(b=>b.onclick=()=>sendTo(b.dataset.chatsend));
+  document.querySelectorAll('[data-chatf]').forEach(b=>b.onclick=()=>{S.chatF=b.dataset.chatf;render()});
+  document.querySelectorAll('[data-chatclose]').forEach(b=>b.onclick=()=>{const m=S.msgs.find(x=>x.no===b.dataset.chatclose);m.status=m.status==='ปิด'?'เปิด':'ปิด';render()});
+  const nb=$('#ch-new');if(nb)nb.onclick=()=>{const e=E(S.who);const t=$('#ch-txt').value.trim(),sub=$('#ch-sub').value.trim();if(!t)return toast('พิมพ์ข้อความ');
+    const m={no:'MS-'+String(TODAY.getFullYear()+543).slice(2)+'-'+String(seq.ms++).padStart(4,'0'),emp:e.id,to:$('#ch-to').value,subject:sub||'ไม่มีหัวข้อ',date:iso(TODAY),status:'เปิด',log:[{at:nowStamp(),by:e.name,t:'emp',msg:t}],seenE:1,seenA:0,lastT:'emp'};S.msgs.push(m);S.chatSel=m.no;toast('ส่งแล้ว');render()}}
+// ---------- พิมพ์ / ดาวน์โหลดเอกสาร (แอดมิน + HR) ----------
+const canDocOut=()=>!!(S.role&&['admin','hr'].includes(S.role.role));
+function docStandalone(k){const css=[...document.querySelectorAll('style')].map(x=>x.textContent).join('\n');const fonts=[...document.querySelectorAll('link[rel=stylesheet]')].map(l=>l.outerHTML).join('');
+  return `<!doctype html><html lang="th"><head><meta charset="utf-8"><title>${esc(k)}</title>${fonts}<style>${css}\nbody{background:#fff;margin:0;padding:14mm}.letter{box-shadow:none;border:0;max-width:none}@page{size:A4;margin:12mm}@media print{body{padding:0}.noprint{display:none!important}}</style></head><body>${docHtml(k)}`}
+function docPrint(k,pdf){const w=window.open('','_blank');if(!w)return toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ · อนุญาต pop-up แล้วลองใหม่');w.document.write(docStandalone(k).replace('<body>','<body>'+(pdf?'<div class="noprint" style="background:#fff4e0;border:1px solid #e0b36a;border-radius:8px;padding:10px 14px;margin:0 0 12px;font:15px sans-serif"><b>บันทึกเป็นไฟล์ PDF:</b> ในหน้าต่างพิมพ์ ตรงช่อง <b>ปลายทาง / Destination</b> เลือก <b>บันทึกเป็น PDF (Save as PDF)</b> แล้วกดบันทึก · บนมือถือ: กดแชร์ → บันทึกลงไฟล์ <button onclick="print()" style="margin-left:8px">เปิดหน้าต่างพิมพ์อีกครั้ง</button></div>':'')));w.document.close();setTimeout(()=>{try{w.focus();w.print()}catch(e){}},700);if(typeof api==='function')api('log',{detail:(pdf?'pdf ':'print ')+k}).catch(()=>{})}
+function docDownload(k){docPrint(k,true)}
 function fixEmpView(e){const L=S.fixReq.filter(r=>r.emp===e.id&&r.status!=='ยกเลิก').sort((a,b)=>a.status==='รอพนักงานแก้'?-1:1);
   return `<section class="panel"><h2>เรื่องที่บริษัทแจ้งให้แก้ไข</h2>${L.length?'':'<p class="muted">ไม่มีเรื่องที่ต้องแก้ไข</p>'}${L.map(r=>{const open=r.status==='รอพนักงานแก้';const docs=r.items.filter(k=>!k.startsWith('d:')),data=r.items.filter(k=>k.startsWith('d:'));
    return `<div class="panel" style="${open?'border:2px solid #d98a1c':''}"><div class="row" style="justify-content:space-between;margin:0"><b>${r.no}</b><span class="pill ${FIX_PILL[r.status]}">${open?'ต้องแก้ไข':r.status==='พนักงานแก้แล้ว'?'ส่งแล้ว รอตรวจ':r.status}</span></div>
@@ -778,12 +818,13 @@ function _admView(){
   const blPend=S.blReq.filter(q=>q.status==='รออนุมัติ').length;
   const pendA=S.apps.filter(a=>(a.status==='รอพิจารณา'||a.status==='นัดสัมภาษณ์')&&inScope(a.branch)).length;
   const tabs=[['apps','ผู้สมัคร',pendA],['reg','ทะเบียนพนักงาน',pendE],['leave','ใบลา',pendL],['resign','ลาออก / เลิกจ้าง',pendR],['move','โยกย้าย / เปลี่ยนตำแหน่ง',S.moves.filter(m=>m.status==='รออนุมัติ'&&(inScope(m.from)||inScope(m.to))).length],['eval','ประเมินพนักงาน',evDue],['hc','อัตรากำลัง',hcPend],['warn','ใบเตือน',0],['jt','รหัส J&T',jtTodo],['ins','บัตรประกัน',insTodo],['asset','ทรัพย์สินบริษัท',assetOwed+openRepairs().length],['dep','เงินประกัน',can('dep')?rfDue:0],['exp','ใกล้หมดอายุ',ex.length],['time','ลงเวลาทำงาน',0]];
+  tabs.push(['chat','ข้อความพนักงาน',S.msgs.filter(msgVisible).reduce((a,m)=>a+(unreadA(m)?1:0),0)]);
   tabs.push(['fix','แจ้งแก้ไข',S.fixReq.filter(r=>r.status==='พนักงานแก้แล้ว'&&inScope(E(r.emp).branch)).length]);
   tabs.push(['ack','การรับทราบเอกสาร',ackMiss],['docs','เอกสารในระบบ',0]);
   if(can('import'))tabs.push(['pdpa','PDPA',S.dsr.filter(r=>!['เสร็จสิ้น','ปฏิเสธ'].includes(r.status)).length+S.breach.filter(b=>b.status!=='ปิดเรื่อง').length+pdpaDue().length],['black','แบล็กลิสต์',blPend],['qr','ลิงก์ & QR',0]);
   if(can('users'))tabs.push(['users','สิทธิ์ผู้ใช้',0]);
   if(!tabs.some(t=>t[0]===S.admTab))S.admTab='apps';
-  const F={fix:fixAdm,pdpa:pdpaAdm,move:moveAdm,apps:appsAdm,reg:regTable,leave:leaveAdm,resign:resignAdm,ins:insAdm,dep:depAdm,exp:()=>expAdm(ex),time:attAdm,users:usersAdm,warn:warnAdm,eval:evalAdm,docs:docsAdm,ack:ackAdm,hc:hcAdm,jt:jtAdm,asset:assetAdm,black:blackAdm,qr:qrAdm};
+  const F={chat:chatAdm,fix:fixAdm,pdpa:pdpaAdm,move:moveAdm,apps:appsAdm,reg:regTable,leave:leaveAdm,resign:resignAdm,ins:insAdm,dep:depAdm,exp:()=>expAdm(ex),time:attAdm,users:usersAdm,warn:warnAdm,eval:evalAdm,docs:docsAdm,ack:ackAdm,hc:hcAdm,jt:jtAdm,asset:assetAdm,black:blackAdm,qr:qrAdm};
   return `<div class="row"><div style="min-width:0"><h1>หลังบ้าน</h1><p class="muted">${esc(S.role.name)} · ${ROLE_NAME[S.role.role]}${S.role.branch?' · เห็นเฉพาะสาขา '+S.role.branch:' · เห็นทุกสาขา'} · ข้อมูล ณ ${th(TODAY)}</p></div><button class="btn ghost sm" id="adm-out" style="margin-left:auto">ออกจากระบบ</button></div>
   <div class="stats">
     <div class="stat"><b>${act.length}</b><span>พนักงานปัจจุบัน</span></div>
@@ -1596,9 +1637,12 @@ function docsAdm(){
   return `<h2>เอกสารในระบบ</h2><p class="muted">ทุกฉบับมีช่องลงลายมือชื่อ ระบบจริงออกเป็น PDF แก้ไขไม่ได้ เก็บในโฟลเดอร์ Drive ของพนักงานแต่ละคน · กด "ดูตัวอย่าง" เพื่อเปิดเอกสารที่สร้างจากข้อมูลตัวอย่าง</p>
   ${DOC_SETS.map(([h,ds])=>`<h3>${h}</h3><div class="tablewrap"><table><tr><th>เอกสาร</th><th>ออกเมื่อ / หมายเหตุ</th><th>ผู้ลงนาม</th><th></th></tr>${ds.map(([k,t,w,sg])=>`<tr><td><b>${t}</b></td><td style="white-space:normal;min-width:220px">${w}</td><td style="white-space:normal">${sg}</td><td><button class="btn ghost sm" data-doc="${k}">${S.doc===k?'ซ่อน':'ดูตัวอย่าง'}</button></td></tr>${S.doc===k?`<tr><td colspan="4" style="white-space:normal">${docHtml(k)}</td></tr>`:''}`).join('')}</table></div>`).join('')}`;
 }
-function docPreview(k){return `<div class="panel" style="background:var(--bg)"><div class="row"><b>ตัวอย่างเอกสาร</b><button class="btn ghost sm" data-doc="${k}" style="margin-left:auto">ปิด</button></div>${docHtml(k)}</div>`}
+function docPreview(k){return `<div class="panel" style="background:var(--bg)"><div class="row" style="flex-wrap:wrap"><b>ตัวอย่างเอกสาร</b><span style="margin-left:auto"></span>${canDocOut()?`<button class="btn sm" data-docprint="${k}">🖨 พิมพ์</button><button class="btn ghost sm" data-docdl="${k}">⬇ ดาวน์โหลด PDF</button>`:''}<button class="btn ghost sm" data-doc="${k}">ปิด</button></div>${docHtml(k)}</div>`}
 function bindDocs(){
   document.querySelectorAll('[data-doc]').forEach(b=>b.onclick=()=>{S.doc=S.doc===b.dataset.doc?null:b.dataset.doc;render()});
+  document.querySelectorAll('[data-docprint]').forEach(b=>b.onclick=()=>{if(canDocOut())docPrint(b.dataset.docprint)});
+  document.querySelectorAll('[data-docdl]').forEach(b=>b.onclick=()=>{if(canDocOut())docDownload(b.dataset.docdl)});
+  bindChat();
   document.querySelectorAll('[data-evgo]').forEach(b=>b.onclick=()=>{S.evalEmp=b.dataset.evgo;render();const x=$('#ev-box');if(x&&x.scrollIntoView)x.scrollIntoView({block:'start'})});
   const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn};
   on('#ev-cancel',()=>{S.evalEmp=null;render()});
@@ -1708,11 +1752,17 @@ function orgPanel(){
   <h3>ตำแหน่ง</h3><div class="tablewrap"><table><tr><th>ตำแหน่ง</th><th class="num">คนทำงาน</th><th>ให้เลือกในใบสมัคร / ลงทะเบียนพนักงานเดิม</th><th></th></tr>${POSITIONS.map(p=>`<tr><td>${esc(p)}</td><td class="num">${nP(p)}</td><td><label><input type="checkbox" data-orgapp="${esc(p)}" ${appOn(p)?'checked':''} style="width:auto"> ${appOn(p)?Object.entries(APPLY_POS).filter(([k,v])=>v[0]===p).map(([k])=>esc(k)).join(', '):'ไม่แสดง'}</label></td><td>${nP(p)?'':`<button class="btn ghost sm" data-orgdelp="${esc(p)}">ลบ</button>`}</td></tr>`).join('')}</table></div>
   <div class="row"><input id="org-pos" placeholder="ชื่อตำแหน่งใหม่" style="max-width:260px"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="org-posapp" checked style="width:auto"> เปิดให้เลือกในใบสมัคร</label><button class="btn sm" id="org-addp">เพิ่มตำแหน่ง</button></div>
   <p class="muted">ตำแหน่งใหม่ยังไม่อยู่ในกลุ่ม "ต้องลงเวลา" "มีวันลา" หรือ "สลับกะได้" ไปติ๊กเพิ่มที่แท็บลงเวลาทำงานและตั้งค่าการลา</p></section>`}
+function notifyPanel(){const st=S.ntfStat;
+  return `<section class="panel"><h2>แจ้งเตือนทางอีเมล</h2><p class="muted">ระบบส่งสรุปรายการใหม่ทุก 30 นาที (เฉพาะตอนที่มีรายการใหม่) · HR และแอดมินได้ทุกเรื่อง · หัวหน้างานได้เฉพาะสาขาตัวเอง · ข้อความที่พนักงานส่งถึง HR จะไม่ส่งให้หัวหน้า · ในอีเมลมีปุ่มกดเข้าระบบหลังบ้าน</p>
+  <div class="fields"><label class="f full">อีเมลแอดมินที่รับแจ้งเตือน (คั่นด้วย , ถ้ามีหลายคน)<input id="nt-admin" value="${esc(S.notifyAdmin||'')}" placeholder="acct.proudexpress@gmail.com"></label></div>
+  <div class="row"><button class="btn ghost sm" id="nt-save">บันทึก</button><button class="btn ghost sm" id="nt-check">ตรวจสถานะ</button><button class="btn ghost sm" id="nt-test">ส่งอีเมลทดสอบ</button></div>
+  ${st?`<dl class="kv"><dt>ผู้รับ</dt><dd>${st.recipients.length?st.recipients.map(esc).join(', '):'<b style="color:var(--bad)">ยังไม่มี</b>'}</dd><dt>ตั้งเวลาส่งอัตโนมัติ</dt><dd>${st.trigger?'✅ ตั้งแล้ว':'<b style="color:var(--bad)">ยังไม่ได้ตั้ง</b> · เปิด Apps Script เลือกฟังก์ชัน setupNotify แล้วกด Run ครั้งเดียว'}</dd><dt>โควตาอีเมลเหลือวันนี้</dt><dd>${st.quota}</dd><dt>ลิงก์ในอีเมล</dt><dd>${st.site?esc(st.site):'<b style="color:var(--bad)">ยังไม่รู้ลิงก์</b> · ออกจากระบบแล้วเข้าใหม่ 1 ครั้ง'}</dd><dt>รอส่ง</dt><dd>${st.pending} รายการ</dd></dl>`:''}
+  <p class="muted">อีเมลรับแจ้งเตือนของแต่ละคน แก้ได้ในตารางผู้ใช้ด้านล่าง (ช่อง "อีเมลรับแจ้งเตือน") · ติ๊กออกถ้าไม่อยากรับ</p></section>`}
 function usersAdm(){
-  const rows=S.users.map((u,i)=>`<tr><td>${esc(u.email)}</td><td>${esc(u.name)}</td><td><select data-urole="${i}" style="width:auto">${Object.entries(ROLE_NAME).map(([k,v])=>`<option value="${k}" ${u.role===k?'selected':''}>${v}</option>`).join('')}</select></td><td><select data-ubr="${i}" style="width:auto" ${u.role!=='spv'?'disabled':''}><option value="">ทุกสาขา</option>${BRANCHES.map(b=>`<option ${u.branch===b?'selected':''}>${b}</option>`).join('')}</select></td><td>${S.users.length>1?`<button class="btn ghost sm" data-udel="${i}">ลบสิทธิ์</button>`:''}</td></tr>`).join('');
-  return `${orgPanel()}${S.upwUser?`<section class="panel"><b>ตั้งรหัสผ่านชั่วคราวให้ ${esc(S.upwUser)}</b><div class="fields"><label class="f">รหัสผ่านชั่วคราว (อย่างน้อย 8 ตัว)<input id="upw-p" autocomplete="off"></label></div><div class="row"><button class="btn" id="upw-save">บันทึก</button><button class="btn ghost" id="upw-cancel">ยกเลิก</button></div><p class="muted">ผู้ใช้ต้องเปลี่ยนเป็นรหัสของตัวเองตอนเข้าครั้งแรก · ส่งรหัสให้ทางที่ปลอดภัย</p></section>`:''}<h2>สิทธิ์ผู้ใช้หลังบ้าน</h2><p class="muted">ผู้ใช้ใหม่: เพิ่มด้านล่าง แล้วกด "ตั้งรหัสผ่าน" · ชื่อผู้ใช้คืออีเมลที่กรอก</p><div class="row" style="flex-wrap:wrap">${S.users.map(u=>`<button class="btn ghost sm" data-upw="${esc(String(u.email).toLowerCase())}">ตั้งรหัสผ่าน: ${esc(u.name)}</button>`).join('')}</div>
+  const rows=S.users.map((u,i)=>`<tr><td>${esc(u.email)}</td><td>${esc(u.name)}</td><td><input data-unem="${i}" value="${esc(u.notifyEmail||(/@/.test(u.email)?u.email:''))}" placeholder="อีเมลรับแจ้งเตือน" style="min-width:180px"><label style="display:flex;gap:4px;align-items:center;font-size:.8rem"><input type="checkbox" data-unoff="${i}" ${u.notifyOff?'':'checked'} style="width:auto"> รับแจ้งเตือน</label></td><td><select data-urole="${i}" style="width:auto">${Object.entries(ROLE_NAME).map(([k,v])=>`<option value="${k}" ${u.role===k?'selected':''}>${v}</option>`).join('')}</select></td><td><select data-ubr="${i}" style="width:auto" ${u.role!=='spv'?'disabled':''}><option value="">ทุกสาขา</option>${BRANCHES.map(b=>`<option ${u.branch===b?'selected':''}>${b}</option>`).join('')}</select></td><td>${S.users.length>1?`<button class="btn ghost sm" data-udel="${i}">ลบสิทธิ์</button>`:''}</td></tr>`).join('');
+  return `${orgPanel()}${notifyPanel()}${S.upwUser?`<section class="panel"><b>ตั้งรหัสผ่านชั่วคราวให้ ${esc(S.upwUser)}</b><div class="fields"><label class="f">รหัสผ่านชั่วคราว (อย่างน้อย 8 ตัว)<input id="upw-p" autocomplete="off"></label></div><div class="row"><button class="btn" id="upw-save">บันทึก</button><button class="btn ghost" id="upw-cancel">ยกเลิก</button></div><p class="muted">ผู้ใช้ต้องเปลี่ยนเป็นรหัสของตัวเองตอนเข้าครั้งแรก · ส่งรหัสให้ทางที่ปลอดภัย</p></section>`:''}<h2>สิทธิ์ผู้ใช้หลังบ้าน</h2><p class="muted">ผู้ใช้ใหม่: เพิ่มด้านล่าง แล้วกด "ตั้งรหัสผ่าน" · ชื่อผู้ใช้คืออีเมลที่กรอก</p><div class="row" style="flex-wrap:wrap">${S.users.map(u=>`<button class="btn ghost sm" data-upw="${esc(String(u.email).toLowerCase())}">ตั้งรหัสผ่าน: ${esc(u.name)}</button>`).join('')}</div>
   <dl class="kv"><dt>แอดมินบริษัท</dt><dd>เห็นทุกสาขา ทุกเมนู จัดการสิทธิ์ผู้ใช้</dd><dt>HR</dt><dd>เห็นทุกสาขา นำเข้าไฟล์เงินเดือน/ประกัน สร้างรายการแจ้งเข้า-ออก บันทึกคืนเงินประกัน</dd><dt>หัวหน้างานสาขา</dt><dd>เห็นเฉพาะสาขาตัวเอง อนุมัติใบสมัคร ใบลา ใบลาออก บันทึกแจก/รับคืนบัตร ดูเงินประกันได้อย่างเดียว ไม่เห็นวันคืนเงินประกัน</dd></dl>
-  <div class="tablewrap"><table><tr><th>อีเมล Google</th><th>ชื่อ</th><th>สิทธิ์</th><th>สาขา</th><th></th></tr>${rows}</table></div>
+  <div class="tablewrap"><table><tr><th>ชื่อผู้ใช้</th><th>ชื่อ</th><th>อีเมลรับแจ้งเตือน</th><th>สิทธิ์</th><th>สาขา</th><th></th></tr>${rows}</table></div>
   <div class="fields"><label class="f">อีเมล Google<input id="nu-email" placeholder="name@gmail.com"></label><label class="f">ชื่อ<input id="nu-name"></label>
   <label class="f">สิทธิ์<select id="nu-role">${Object.entries(ROLE_NAME).map(([k,v])=>`<option value="${k}" ${k==='spv'?'selected':''}>${v}</option>`).join('')}</select></label>
   <label class="f">สาขา (หัวหน้างาน)<select id="nu-br">${BRANCHES.map(b=>`<option>${b}</option>`).join('')}</select></label></div>
@@ -1835,6 +1885,11 @@ function bindAdm(){
     S.depSheet={sheet:sn,head,rows:A.slice(h+1).filter(r=>r.some(c=>c!=='')),gid,gamt};S.depPeriod=$('#dep-period').value;S.depResult=null;render()};
   on('#dep-go',()=>{const ci=+$('#dep-colid').value,ca=+$('#dep-colamt').value,p=$('#dep-period').value;S.depPeriod=p;
     S.depResult=importDep(S.depSheet.rows.map(r=>[r[ci],r[ca]]),p);S.depSheet=null;render()});
+  document.querySelectorAll('[data-unem]').forEach(x=>x.onchange=()=>{const u=S.users[+x.dataset.unem];const v=x.value.trim();if(v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))return toast('อีเมลไม่ถูกต้อง');u.notifyEmail=v;render()});
+  document.querySelectorAll('[data-unoff]').forEach(x=>x.onchange=()=>{S.users[+x.dataset.unoff].notifyOff=!x.checked;render()});
+  on('#nt-save',()=>{S.notifyAdmin=$('#nt-admin').value.trim();toast('บันทึกแล้ว');render()});
+  on('#nt-check',async()=>{if(typeof api!=='function')return toast('ใช้ได้ในระบบจริง');try{S.ntfStat=await api('notifyTest',{});render()}catch(e){toast(e.message)}});
+  on('#nt-test',async()=>{if(typeof api!=='function')return toast('ใช้ได้ในระบบจริง');try{await REAL.flush();S.ntfStat=await api('notifyTest',{send:1});toast('ส่งอีเมลทดสอบไปที่ '+(S.ntfStat.recipients[0]||''));render()}catch(e){toast(e.message)}});
   document.querySelectorAll('[data-urole]').forEach(s=>s.onchange=()=>{const u=S.users[+s.dataset.urole];u.role=s.value;if(u.role!=='spv')u.branch='';else u.branch=u.branch||BRANCHES[0];render()});
   document.querySelectorAll('[data-ubr]').forEach(s=>s.onchange=()=>{S.users[+s.dataset.ubr].branch=s.value;toast('บันทึกแล้ว')});
   document.querySelectorAll('[data-udel]').forEach(b=>b.onclick=()=>{S.users.splice(+b.dataset.udel,1);toast('ลบสิทธิ์แล้ว');render()});
@@ -2190,7 +2245,7 @@ function attState(e){const now=NOW();const s0=shStart(e,attToday());let wd=attTo
 // ===== PDPA: พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 =====
 const PDPA={ver:'ฉบับที่ 1 (5 พ.ย. 2569)',contact:'ฝ่ายบุคคล บริษัท พราวเอ็กซ์เพรส จำกัด · อีเมล (ใส่อีเมลกลางของบริษัท) · โทร (ใส่เบอร์)',
   keep:{appDays:90,appKeepYears:1,empYears:10,timeYears:2,photoMonths:12,blackYears:5},dueDays:30,breachHrs:72};
-S.fixReq=[];seq.fx=seq.fx||1;S.pdpaCons=[];S.dsr=[];S.breach=[];S.access=[];S.pdpaDel=[];S.reveal={};
+S.fixReq=[];seq.fx=seq.fx||1;S.msgs=[];seq.ms=seq.ms||1;S.pdpaCons=[];S.dsr=[];S.breach=[];S.access=[];S.pdpaDel=[];S.reveal={};
 const DSR_TYPES=['ขอดู/ขอสำเนาข้อมูลของฉัน','ขอแก้ไขข้อมูลให้ถูกต้อง','ขอให้ลบหรือทำลายข้อมูล','ขอให้ระงับการใช้ข้อมูลชั่วคราว','คัดค้านการใช้ข้อมูล','ขอรับข้อมูลในรูปแบบไฟล์ (โอนย้าย)','ถอนความยินยอม','อื่น ๆ / สอบถาม'];
 const OPT_CONS={keepApp:'เก็บใบสมัครไว้พิจารณาตำแหน่งอื่นได้ 1 ปี',photoPR:'ใช้รูปถ่ายของฉันในสื่อประชาสัมพันธ์ของบริษัท (เช่น โพสต์ Facebook บริษัท)'};
 const ROPA=[
@@ -2501,16 +2556,16 @@ function bind(){
 $('#lb-x').onclick=()=>{$('#lb').hidden=true};$('#lb').onclick=ev=>{if(ev.target.id==='lb')$('#lb').hidden=true};
 S.resign.find(r=>r.no==='RS-69-0001').approvedDate='2026-09-11';
 const PAGES=['apply','emp','clock','oldentry','oldreg','update','leave','resign','card'];
-function fromHash(){const h=location.hash.slice(1);if(PAGES.includes(h)){S.view='emp';S.page=['apply','clock','oldentry'].includes(h)?h:h==='oldreg'?'oldentry':'emp';S.who=null;S.shot=null;render()}}
+function fromHash(){const h=location.hash.slice(1);if(h==='bo'){if(!S.role){S.view='adm';render()}return}if(PAGES.includes(h)){S.view='emp';S.page=['apply','clock','oldentry'].includes(h)?h:h==='oldreg'?'oldentry':'emp';S.who=null;S.shot=null;render()}}
 addEventListener('hashchange',()=>{if(!S.who&&!S.role)fromHash()});
 $('#sw-emp').onclick=()=>{S.view='emp';render()};
 $('#sw-adm').onclick=()=>{S.view='adm';render()};
 // ===================== โหมดระบบจริง: เชื่อม Google Apps Script =====================
 const REAL={on:true,api:API_URL,token:'',me:null,snap:null,busy:false,again:false,timer:0,blobs:new Map(),gpsW:null,loaded:false};
-const RC={emp:r=>r.id,leave:r=>r.no,resign:r=>r.no,punch:r=>r.emp+'|'+r.date,apps:r=>r.no,dep:r=>r.emp+'|'+r.period,black:r=>r.idCard,users:r=>String(r.email||'').toLowerCase(),assets:r=>r.no,counts:r=>r.no,repairs:r=>r.no,warn:r=>r.no,blReq:r=>r.emp+'|'+r.date,vol:r=>r.branch+'|'+r.date,hcReq:r=>r.no,moves:r=>r.no,evals:r=>r.no,acks:r=>r.emp+'|'+r.doc+'|'+r.ver,rosterLog:r=>r.emp+'|'+r.date+'|'+r.at,pdpaCons:r=>r.who+'|'+r.kind+'|'+r.date,dsr:r=>r.no,fixReq:r=>r.no,breach:r=>r.no,access:r=>r.at+'|'+r.by+'|'+r.emp+'|'+r.what,pdpaDel:r=>r.at+'|'+r.what};
+const RC={emp:r=>r.id,leave:r=>r.no,resign:r=>r.no,punch:r=>r.emp+'|'+r.date,apps:r=>r.no,dep:r=>r.emp+'|'+r.period,black:r=>r.idCard,users:r=>String(r.email||'').toLowerCase(),assets:r=>r.no,counts:r=>r.no,repairs:r=>r.no,warn:r=>r.no,blReq:r=>r.emp+'|'+r.date,vol:r=>r.branch+'|'+r.date,hcReq:r=>r.no,moves:r=>r.no,evals:r=>r.no,acks:r=>r.emp+'|'+r.doc+'|'+r.ver,rosterLog:r=>r.emp+'|'+r.date+'|'+r.at,pdpaCons:r=>r.who+'|'+r.kind+'|'+r.date,dsr:r=>r.no,fixReq:r=>r.no,msgs:r=>r.no,breach:r=>r.no,access:r=>r.at+'|'+r.by+'|'+r.emp+'|'+r.what,pdpaDel:r=>r.at+'|'+r.what};
 const RMAP={mark:()=>ATT.mark,rain:()=>ATT.rain,roster:()=>ATT.roster,depDed:()=>S.depDed,stock:()=>S.stock};
 const attCfgOf=()=>{const o={};Object.keys(ATT).forEach(k=>{if(!['mark','rain','roster'].includes(k))o[k]=ATT[k]});return o};
-const RSET={ATT:attCfgOf,LEAVE_CFG:()=>LEAVE_CFG,LEAVE:()=>LEAVE,PDPA:()=>PDPA,hc:()=>({hcRatio:S.hcRatio,hcDays:S.hcDays,fillSla:S.fillSla}),misc:()=>({dedCap:S.dedCap,oldRegOn:S.oldRegOn,oldRegUntil:S.oldRegUntil,policy:S.policy,org:S.org||null})};
+const RSET={ATT:attCfgOf,LEAVE_CFG:()=>LEAVE_CFG,LEAVE:()=>LEAVE,PDPA:()=>PDPA,hc:()=>({hcRatio:S.hcRatio,hcDays:S.hcDays,fillSla:S.fillSla}),misc:()=>({dedCap:S.dedCap,oldRegOn:S.oldRegOn,oldRegUntil:S.oldRegUntil,policy:S.policy,org:S.org||null,notifyAdmin:S.notifyAdmin||''})};
 function rSetApply(n,v){if(!v)return;if(n==='ATT')Object.assign(ATT,v);else if(n==='LEAVE_CFG')Object.assign(LEAVE_CFG,v);else if(n==='LEAVE')Object.keys(v).forEach(k=>LEAVE[k]=Object.assign(LEAVE[k]||{},v[k]));else if(n==='PDPA')Object.assign(PDPA,v);else{Object.assign(S,v);if(n==='misc'&&v.org)applyOrg(v.org)}}
 async function api(a,p){
   let res;try{res=await fetch(REAL.api,{method:'POST',body:JSON.stringify(Object.assign({a,t:REAL.token},p||{}))});}catch(e){throw new Error('เชื่อมต่อระบบไม่ได้ ตรวจอินเทอร์เน็ต')}
@@ -2542,7 +2597,7 @@ REAL.load=async function(){const since=iso(addDays(periodOf(addDays(periodOf(TOD
   Object.entries(r.settings||{}).forEach(([n,v])=>rSetApply(n,v));Object.keys(r.seq||{}).forEach(k=>{seq[k]=Math.max(seq[k]||1,r.seq[k])});
   REAL.markSeen();REAL.takeSnap();if(r.me.role==='admin')Object.keys(RSET).forEach(n=>{if(!r.settings[n])REAL.snap.s[n]=''});REAL.loaded=true;return r};
 // ---------- แจ้งเตือนรายการใหม่ (หลังบ้าน) ----------
-const WATCH={apps:['ใบสมัครงาน'],emp:['พนักงานลงทะเบียน',r=>r.status==='รอตรวจสอบ'],leave:['ใบลา'],resign:['ใบลาออก'],moves:['โยกย้าย'],hcReq:['ขอเพิ่มคน'],dsr:['คำขอข้อมูลส่วนบุคคล'],assets:['แจ้งของที่ถือ',r=>r.by==='พนักงานแจ้งเอง'&&!r.ok],fixReq:['พนักงานแก้ไขตามที่แจ้ง',r=>r.status==='พนักงานแก้แล้ว',r=>r.no+'|'+r.status+'|'+(r.log||[]).length]};
+const WATCH={apps:['ใบสมัครงาน'],emp:['พนักงานลงทะเบียน',r=>r.status==='รอตรวจสอบ'],leave:['ใบลา'],resign:['ใบลาออก'],moves:['โยกย้าย'],hcReq:['ขอเพิ่มคน'],dsr:['คำขอข้อมูลส่วนบุคคล'],assets:['แจ้งของที่ถือ',r=>r.by==='พนักงานแจ้งเอง'&&!r.ok],msgs:['ข้อความจากพนักงาน',r=>r.lastT==='emp',r=>r.no+'|'+(r.log||[]).length],fixReq:['พนักงานแก้ไขตามที่แจ้ง',r=>r.status==='พนักงานแก้แล้ว',r=>r.no+'|'+r.status+'|'+(r.log||[]).length]};
 const WK=c=>WATCH[c][2]||RC[c];
 REAL.seen=null;REAL.lastAct=Date.now();REAL.newItems={};
 REAL.markSeen=function(){REAL.seen={};Object.keys(WATCH).forEach(c=>REAL.seen[c]=new Set((S[c]||[]).map(WK(c))));REAL.newItems={};REAL.banner()};
@@ -2588,7 +2643,7 @@ REAL.afterBind=function(){
     if(!idValid(id))return m('เลขบัตรไม่ถูกต้อง');const p={idCard:id,phone:ph,pin:$('#lg-pin').value};
     if(!$('#lg-new').hidden){const a=$('#lg-np1').value,b=$('#lg-np2').value;if(!/^\d{6}$/.test(a))return m('PIN ต้องเป็นตัวเลข 6 หลัก');if(a!==b)return m('PIN 2 ช่องไม่ตรงกัน');p.newPin=a}
     m('กำลังตรวจสอบ…');try{const r=await api('loginEmp',p);if(r.needPin){$('#lg-new').hidden=false;m('ตั้ง PIN ก่อนเข้าใช้งาน');return}REAL.token=r.token;try{sessionStorage.setItem('hr_t',r.token)}catch(e){}const pg=S.page;await REAL.load();S.who=REAL.me.emp;const e=E(S.who);S.page=e&&!e.profileDone?'oldreg':(pg==='clock'?'pclock':'menu');_render()}catch(e){m(e.message)}});
-  on('#bo-go',async()=>{const m=t=>{$('#bo-msg').textContent=t;$('#bo-msg').style.color='var(--bad)'};const p={user:$('#bo-u').value.trim(),pass:$('#bo-p').value};
+  on('#bo-go',async()=>{const m=t=>{$('#bo-msg').textContent=t;$('#bo-msg').style.color='var(--bad)'};const p={user:$('#bo-u').value.trim(),pass:$('#bo-p').value,site:location.href.split('#')[0]};
     if(!$('#bo-new').hidden){const a=$('#bo-n1').value;if(a.length<8)return m('รหัสผ่านใหม่อย่างน้อย 8 ตัว');if(a!==$('#bo-n2').value)return m('รหัสผ่าน 2 ช่องไม่ตรงกัน');p.newPass=a}
     m('กำลังตรวจสอบ…');try{const r=await api('loginBo',p);if(r.mustChange){$('#bo-new').hidden=false;m('ตั้งรหัสผ่านใหม่ก่อนใช้งาน');return}REAL.token=r.token;try{sessionStorage.setItem('hr_t',r.token)}catch(e){}await REAL.load();S.view='adm';S.role={email:REAL.me.user,name:REAL.me.name,role:REAL.me.role,branch:REAL.me.branch};_render()}catch(e){m(e.message)}});
   on('#logout',()=>REAL.logout());on('#rl-out',()=>REAL.logout());on('#rl-ref',()=>REAL.refresh());
@@ -2602,7 +2657,7 @@ REAL.afterBind=function(){
   on('#rl-cp',()=>{S.cpOpen=!S.cpOpen;_render()});
   // รูป/ไฟล์ที่เก็บใน Drive
   document.querySelectorAll('img[src^="drive:"],img[data-drive]').forEach(im=>{const id=(im.getAttribute('src')||'').startsWith('drive:')?im.getAttribute('src'):im.dataset.drive;im.removeAttribute('src');im.dataset.drive=id;REAL.blob(id).then(u=>{if(u.startsWith('data:image'))im.src=u}).catch(()=>{})});
-  document.querySelectorAll('[data-dzoom]').forEach(b=>b.onclick=async()=>{try{const u=await REAL.blob(b.dataset.dzoom);if(u.startsWith('data:image')){$('#lb-img').src=u;$('#lb-t').textContent=b.querySelector('span').textContent;$('#lb').hidden=false}else{const w=window.open();if(w)w.document.write('<iframe src="'+u+'" style="border:0;width:100%;height:100vh"></iframe>')}}catch(e){toast(e.message)}});
+  document.querySelectorAll('[data-dzoom]').forEach(b=>b.onclick=async()=>{try{const u=await REAL.blob(b.dataset.dzoom);const nm=(b.querySelector('span')||{}).textContent||'file',okDl=S.role&&['admin','hr'].includes(S.role.role),ext=(u.match(/^data:[^/]+\/([a-z0-9]+)/)||[,'bin'])[1].replace('jpeg','jpg');const dl=$('#lb-dl');if(dl){dl.hidden=!okDl;dl.href=u;dl.download=nm+'.'+ext;dl.onclick=()=>{api('log',{detail:'file '+nm+' '+b.dataset.dzoom}).catch(()=>{})}}if(u.startsWith('data:image')){$('#lb-img').src=u;$('#lb-t').textContent=nm;$('#lb').hidden=false}else if(okDl){const a=document.createElement('a');a.href=u;a.download=nm+'.'+ext;document.body.appendChild(a);a.click();a.remove();api('log',{detail:'file '+nm}).catch(()=>{})}else{const w=window.open();if(w)w.document.write('<iframe src="'+u+'" style="border:0;width:100%;height:100vh"></iframe>')}}catch(e){toast(e.message)}});
   // GPS จริงในหน้าลงเวลา
   if($('.cam')&&S.page!=='card'&&!REAL.gpsW&&navigator.geolocation){REAL.gpsW=navigator.geolocation.watchPosition(p=>{const was=S.gps&&geoState(E(S.who)).ok;S.gps={lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy),at:Date.now()};const now=geoState(E(S.who)).ok;if((was!==now||!S.gpsShown)&&!S.shot){S.gpsShown=true;_render()}else{const pl=document.querySelector('.cam .pill');if(pl)pl.textContent=geoState(E(S.who)).txt}},
     e=>{S.gpsErr=e.code===1?'ไม่ได้อนุญาตให้เข้าถึงตำแหน่ง · เปิดสิทธิ์ตำแหน่งในการตั้งค่าเบราว์เซอร์':'หาตำแหน่งไม่ได้ ลองย้ายไปที่โล่ง';_render()},{enableHighAccuracy:true,maximumAge:5000,timeout:20000})}
