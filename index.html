@@ -464,24 +464,134 @@ function empView(){
   if(S.page==='chat')return menu+chatEmpView(e);
   if(S.page==='leave')return menu+leaveView(e,who);
   if(S.page==='resign')return menu+resignView(e,who);
+  if(S.page==='uni')return menu+uniView(e,who);
+  if(S.page==='gap')return menu+gapView(e,who);
   if(S.page==='card')return menu+cardView(e,who);
   if(S.page==='pclock')return menu+clockView();
   if(S.page==='pdpa')return menu+pdpaEmpView(e,who);
   return `${who}${e.status==='รอตรวจสอบ'?'<div class="note warn">ข้อมูลของคุณรอหัวหน้างานตรวจสอบ ใช้เมนูได้ตามปกติ</div>':''}
     <div class="mecard"><div><span class="muted">รหัส</span><b>${e.id}</b></div><div><span class="muted">JMS</span><b>${esc(e.jms||'-')}</b></div><div><span class="muted">อายุงาน</span><b>${tenure(e)}</b></div><div><span class="muted">สถานะ</span><b>${isPT(e)?'พาร์ทไทม์':probation(e)}</b></div><div><span class="muted">เงินประกันสะสม</span><b>${money(depSum(e.id))}</b></div>${hasLeave(e)?`<div><span class="muted">ลากิจคงเหลือ</span><b>${Math.max(0,quota(e,'personal')-leaveUsed(e.id,'personal',TODAY.getFullYear()))} วัน</b></div>`:''}</div>
     <div><h1>เมนูพนักงาน</h1></div>${fixOpen(e.id).length?`<div class="note warn" style="border-width:2px"><b>📌 บริษัทแจ้งให้แก้ไข/ส่งเอกสารเพิ่ม ${fixOpen(e.id).length} เรื่อง</b> <button class="btn sm" data-go="fix">ดูและแก้ไข</button></div>`:''}${noticeOk(e.id)?'':'<div class="note warn">บริษัทมีประกาศความเป็นส่วนตัว (PDPA) ฉบับใหม่ กรุณาอ่านและกดรับทราบ <button class="back" data-go="pdpa">อ่านเลย</button></div>'}
+    ${docGaps(e).length?`<div class="note warn" style="border-width:2px"><b>📄 เอกสาร/ข้อมูลของคุณยังไม่ครบ:</b> ${docGaps(e).map(x=>esc(x[1])).join(', ')} <button class="btn sm" data-go="gap">ส่งเอกสาร</button></div>`:''}
     <div class="grid">
       ${tile('me','ข้อมูลของฉัน','ดูข้อมูลทั้งหมด','ข้อมูลส่วนตัว การทำงาน เงินประกัน สิทธิ์ลา ของที่ถืออยู่')}
       ${fixOpen(e.id).length?tile('fix','เรื่องที่ต้องแก้ไข','มี '+fixOpen(e.id).length+' เรื่อง','บริษัทแจ้งให้ส่งเอกสารหรือแก้ข้อมูลเพิ่ม'):''}
       ${(()=>{const u=S.msgs.filter(m=>m.emp===e.id).reduce((a,m)=>a+unreadE(m),0);return tile('chat','ติดต่อหัวหน้า / HR',u?'ข้อความใหม่ '+u:'แชท','ถาม แจ้งปัญหา หรือร้องเรียน · เลือกส่งถึง HR ได้ถ้าไม่อยากให้หัวหน้าเห็น')})()}
       ${tile('update','แก้ไขข้อมูล','อัปเดตข้อมูล','เปลี่ยนเบอร์ ที่อยู่ บัญชี รหัส JMS ใบขับขี่ ทะเบียนรถ เพิ่ม/แก้ของที่ถืออยู่')}
       ${hasLeave(e)?tile('leave','การลา','ยื่นใบลา','ดูสิทธิ์ลาคงเหลือ ลาขั้นต่ำครึ่งวัน'):tile('leave','วันหยุด','แจ้งขอหยุด','แจ้งวันที่จะหยุดล่วงหน้า ให้หัวหน้าจัดคนแทน')}
+      ${tile('uni','ชุดยูนิฟอร์ม','สั่งเสื้อโปโล / แจ็คเก็ต','เลือกไซส์ ยินยอมหักค่าตอบแทน · ดูรายการที่สั่ง')}
       ${tile('resign','ลาออก','ยื่นใบลาออก','แจ้งล่วงหน้า 30 วัน')}
       ${insNeed(e)?tile('card','บัตรประกัน','ยืนยันรับบัตรประกัน','ถ่ายรูปคู่บัตรตอนรับบัตร'):''}
       ${tile('pdpa','PDPA','ข้อมูลส่วนบุคคลของฉัน','ประกาศความเป็นส่วนตัว ความยินยอม ขอดู ขอแก้ ขอลบข้อมูล'+(noticeOk(e.id)?'':' · มีประกาศใหม่ให้กดรับทราบ'))}
       ${needAtt(e)?tile('pclock','ลงเวลา','ลงเวลาเข้า-ออกงาน','ถ่ายรูปสดที่สาขา แทนสแกนนิ้ว · ดูสรุปวันทำงาน สาย ขาด ของงวดนี้'):''}
     </div>`;
 }
+
+// ----- ชุดยูนิฟอร์ม: พนักงานสั่งเอง ยินยอมหักค่าตอบแทน -----
+const UNI_ST={wait:'รอดำเนินการ',got:'ได้รับเสื้อแล้ว',cancel:'ยกเลิก'};
+const uniCfg=()=>S.uni&&S.uni.items?S.uni:{items:[],maxQty:5};
+const uniPayMonth=d=>{const e=periodOf(d||TODAY).e;return e.getFullYear()+'-'+String(e.getMonth()+1).padStart(2,'0')};
+const uniMonthName=m=>{if(!m)return '-';const[y,mo]=m.split('-').map(Number);const e=new Date(y,mo-1,ATT.startDay-1),s0=new Date(y,mo-2,ATT.startDay);return 'งวด '+TM[mo-1]+' '+(y+543)+' ('+th(s0)+' – '+th(e)+')'};
+const uniItemsTxt=o=>(o.items||[]).map(i=>((uniCfg().items.find(x=>x.k===i.k)||{}).n||i.n||i.k)+' '+i.size+' ×'+i.qty).join(', ');
+const uniTotal=items=>items.reduce((a,i)=>a+((uniCfg().items.find(x=>x.k===i.k)||{}).price||0)*i.qty,0);
+const uniPill=st=>`<span class="pill ${st===UNI_ST.got?'p-ok':st===UNI_ST.cancel?'p-n':'p-warn'}">${st}</span>`;
+function uniView(e,who){const C=uniCfg(),mine=S.uniOrd.filter(o=>o.emp===e.id).slice().reverse(),pm=uniPayMonth();
+  return `<section class="panel"><h2>สั่งชุดยูนิฟอร์ม</h2>${who}
+  <p class="muted">พนักงานทุกคนต้องแต่งกายด้วยชุดยูนิฟอร์ม · ค่าชุดพนักงานชำระเอง โดยหักจากค่าตอบแทนงวดที่สั่ง</p>
+  <div class="fields">${C.items.map(it=>`<label class="f">${esc(it.n)} · ตัวละ ${money(it.price)} บาท<span class="row" style="gap:6px;flex-wrap:nowrap"><select id="u-sz-${it.k}" aria-label="ไซส์${esc(it.n)}"><option value="">ไม่สั่ง</option>${it.sizes.map(z=>`<option>${esc(z)}</option>`).join('')}</select><select id="u-q-${it.k}" aria-label="จำนวน${esc(it.n)}">${Array.from({length:C.maxQty||5},(_,i)=>`<option>${i+1}</option>`).join('')}</select><span class="muted">ตัว</span></span></label>`).join('')}</div>
+  <div class="note" id="u-sum">ยังไม่ได้เลือก</div>
+  <label style="display:flex;gap:10px;align-items:flex-start;margin:12px 0;cursor:pointer"><input type="checkbox" id="u-ok" style="margin-top:5px;width:20px;height:20px;flex:none"><span>ข้าพเจ้า ${esc(e.name)} ยินยอมให้บริษัท พราวเอ็กซ์เพรส จำกัด หักค่าชุดยูนิฟอร์มตามรายการและจำนวนเงินข้างต้น จากค่าตอบแทนของข้าพเจ้าใน${uniMonthName(pm)} หากค่าตอบแทนงวดดังกล่าวไม่พอ ยินยอมให้หักในงวดถัดไปจนครบ</span></label>
+  ${sigPad('sg-uni','ลายมือชื่อผู้สั่ง / ผู้ให้ความยินยอม')}
+  <div class="row"><button class="btn" id="u-send">ยืนยันสั่งซื้อ</button></div>
+  ${mine.length?`<h3>รายการที่สั่ง</h3>${mine.map(o=>`<div class="panel" style="background:var(--surface);margin:8px 0;padding:12px"><div class="row" style="justify-content:space-between"><b>${o.no}</b>${uniPill(o.status)}</div><div>${esc(uniItemsTxt(o))}</div><div class="muted">สั่ง ${th(o.date)} · ยอด <b>${money(o.total||0)} บาท</b>${o.status===UNI_ST.cancel?'':' · หักใน'+uniMonthName(o.payMonth)}${o.deducted?' · หักแล้ว':''}${o.gotAt?' · ได้รับเสื้อ '+th(o.gotAt):''}</div>${o.status===UNI_ST.wait?`<div class="row" style="margin-top:6px"><button class="btn ghost sm" data-ucancel="${o.no}">ยกเลิกคำสั่งนี้</button></div>`:''}</div>`).join('')}`:''}</section>`}
+function uniAdm(){const C=uniCfg(),M=canMoney();const all=S.uniOrd.filter(o=>inScope(E(o.emp).branch||o.branch));
+  const months=[...new Set(all.map(o=>o.payMonth).filter(Boolean).concat([uniPayMonth()]))].sort().reverse();
+  const fm=S.uniM||uniPayMonth(),fs=S.uniS||'ทั้งหมด';
+  const L=all.filter(o=>(fm==='ทั้งหมด'||o.payMonth===fm)&&(fs==='ทั้งหมด'||o.status===fs)).slice().reverse();
+  const live=L.filter(o=>o.status!==UNI_ST.cancel),sum=live.reduce((a,o)=>a+(+o.total||0),0);
+  const bySize={};all.filter(o=>o.status===UNI_ST.wait).forEach(o=>(o.items||[]).forEach(i=>{const n=(C.items.find(x=>x.k===i.k)||{}).n||i.k;bySize[n]=bySize[n]||{};bySize[n][i.size]=(bySize[n][i.size]||0)+i.qty}));
+  const per={};live.forEach(o=>{per[o.emp]=per[o.emp]||{n:0,t:0,d:true};per[o.emp].n++;per[o.emp].t+=+o.total||0;if(!o.deducted)per[o.emp].d=false});
+  return `<section class="panel"><h2>ชุดยูนิฟอร์ม</h2><p class="muted">พนักงานสั่งผ่านเมนูพนักงาน พร้อมลงชื่อยินยอมให้หักค่าตอบแทน · งวดหัก = งวดค่าตอบแทนที่วันสั่งอยู่ (วันที่ ${ATT.startDay} ถึง ${ATT.startDay-1} เดือนถัดไป)${M?'':' · SPV/RM เห็นรายการและไซส์เพื่อแจกเสื้อ ไม่เห็นยอดเงิน'}</p>
+  <div class="row"><label class="f">งวดหัก<select id="uf-m"><option${fm==='ทั้งหมด'?' selected':''}>ทั้งหมด</option>${months.map(m=>`<option value="${m}"${m===fm?' selected':''}>${uniMonthName(m)}</option>`).join('')}</select></label>
+  <label class="f">สถานะ<select id="uf-s">${['ทั้งหมด',UNI_ST.wait,UNI_ST.got,UNI_ST.cancel].map(x=>`<option${x===fs?' selected':''}>${x}</option>`).join('')}</select></label></div>
+  <div class="stats"><div class="stat"><b>${live.length}</b><span>คำสั่งซื้อ (ไม่รวมยกเลิก)</span></div><div class="stat"><b>${Object.keys(per).length}</b><span>คน</span></div>${M?`<div class="stat"><b>${money(sum)}</b><span>ยอดหักรวม (บาท)</span></div>`:''}<div class="stat ${all.filter(o=>o.status===UNI_ST.wait).length?'alert':''}"><b>${all.filter(o=>o.status===UNI_ST.wait).length}</b><span>รอแจกเสื้อ (ทุกงวด)</span></div></div>
+  ${Object.keys(bySize).length?`<h3>ยอดเสื้อที่ต้องเตรียม (คำสั่งที่ยังไม่ได้รับเสื้อ)</h3><div class="tablewrap"><table><tr><th>รายการ</th>${[...new Set(C.items.flatMap(x=>x.sizes))].map(z=>`<th class="num">${esc(z)}</th>`).join('')}<th class="num">รวม</th></tr>${Object.entries(bySize).map(([n,z])=>`<tr><td>${esc(n)}</td>${[...new Set(C.items.flatMap(x=>x.sizes))].map(k=>`<td class="num">${z[k]||''}</td>`).join('')}<td class="num"><b>${Object.values(z).reduce((a,b)=>a+b,0)}</b></td></tr>`).join('')}</table></div>`:''}
+  ${M&&fm!=='ทั้งหมด'?`<h3>สรุปหักค่าตอบแทน ${uniMonthName(fm)}</h3><div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ-นามสกุล</th><th>สาขา</th><th>ตำแหน่ง</th><th class="num">จำนวนคำสั่ง</th><th class="num">ยอดหัก (บาท)</th><th>สถานะการหัก</th></tr>${Object.entries(per).map(([id,x])=>{const e=E(id);return `<tr><td>${id}</td><td>${esc(e.name||'-')}</td><td>${esc(e.branch||'-')}</td><td>${esc(e.pos||'-')}</td><td class="num">${x.n}</td><td class="num">${money(x.t)}</td><td>${x.d?'<span class="pill p-ok">หักแล้ว</span>':'<span class="pill p-warn">ยังไม่หัก</span>'}</td></tr>`}).join('')}<tr><td colspan="5"><b>รวม</b></td><td class="num"><b>${money(sum)}</b></td><td></td></tr></table></div>
+   <div class="row"><button class="btn" id="u-xl">ส่งออก Excel รายการหักงวดนี้</button><button class="btn ghost" id="u-ded">บันทึกว่าหักแล้วทั้งงวด</button></div>`:''}
+  <h3>รายการสั่งซื้อ</h3>${L.length?`<div class="tablewrap"><table><tr><th>เลขที่</th><th>วันที่สั่ง</th><th>พนักงาน</th><th>สาขา</th><th>รายการ / ไซส์</th>${M?'<th class="num">ยอด (บาท)</th><th>หักใน</th>':''}<th>สถานะ</th><th></th></tr>${L.map(o=>{const e=E(o.emp);return `<tr><td>${o.no}</td><td>${th(o.date)}</td><td>${esc(e.name||o.emp)}<br><small class="muted">${o.emp}</small></td><td>${esc(e.branch||'-')}</td><td>${esc(uniItemsTxt(o))}</td>${M?`<td class="num">${money(o.total||0)}</td><td>${o.status===UNI_ST.cancel?'-':`<select data-upm="${o.no}" aria-label="งวดหัก ${o.no}" ${o.deducted?'disabled':''}>${[...new Set([o.payMonth,uniPayMonth(),...[1,2].map(k=>uniPayMonth(addDays(periodOf(TODAY).e,1+31*(k-1))))])].filter(Boolean).sort().map(m=>`<option value="${m}"${m===o.payMonth?' selected':''}>${uniMonthName(m).replace(/ \(.*/,'')}</option>`).join('')}</select>${o.deducted?' <span class="pill p-ok">หักแล้ว</span>':''}`}</td>`:''}<td>${uniPill(o.status)}${o.gotAt?`<br><small class="muted">${th(o.gotAt)} · ${esc(o.gotBy||'')}</small>`:''}${o.cancelBy?`<br><small class="muted">โดย ${esc(o.cancelBy)}</small>`:''}</td>
+   <td><div class="row" style="gap:4px;flex-wrap:nowrap">${o.status===UNI_ST.wait?`<button class="btn ok sm" data-ugot="${o.no}">แจกเสื้อแล้ว</button>`:''}${M&&o.status===UNI_ST.wait?`<button class="btn ghost sm" data-uxc="${o.no}">ยกเลิก</button>`:''}${M?`<button class="btn ghost sm" data-uprint="${o.no}">หนังสือยินยอม</button>`:''}</div></td></tr>`}).join('')}</table></div>`:'<p class="muted">ยังไม่มีรายการในตัวกรองนี้</p>'}
+  ${S.role.role==='admin'?`<details style="margin-top:14px"><summary><b>ตั้งค่ารายการและราคา (แอดมิน)</b></summary><p class="muted">ราคาใหม่ใช้กับคำสั่งหลังบันทึกเท่านั้น คำสั่งเดิมคงราคาเดิม</p>
+   ${C.items.map((it,i)=>`<div class="fields"><label class="f">ชื่อรายการ<input data-uc="${i}" data-f="n" value="${esc(it.n)}"></label><label class="f">ไซส์ (คั่นด้วย ,)<input data-uc="${i}" data-f="sizes" value="${esc(it.sizes.join(', '))}"></label><label class="f">ราคา/ตัว (บาท)<input data-uc="${i}" data-f="price" inputmode="decimal" value="${it.price}"></label></div>`).join('')}
+   <div class="fields"><label class="f">สั่งได้สูงสุดต่อรายการ (ตัว)<input id="uc-max" inputmode="numeric" value="${C.maxQty||5}"></label></div><div class="row"><button class="btn" id="uc-save">บันทึกราคา</button><button class="btn ghost" id="uc-add">+ เพิ่มรายการ</button></div></details>`:''}</section>`}
+function uniDoc(o){const e=E(o.emp),C=uniCfg();
+  const rows=(o.items||[]).map(i=>{const it=C.items.find(x=>x.k===i.k)||{};const pr=(o.prices||{})[i.k]!=null?o.prices[i.k]:it.price||0;return `<tr><td>${esc(it.n||i.k)}</td><td>${esc(i.size)}</td><td class="num">${i.qty}</td><td class="num">${money(pr)}</td><td class="num">${money(pr*i.qty)}</td></tr>`}).join('');
+  return paper('หนังสือยินยอมให้หักค่าตอบแทน (ค่าชุดยูนิฟอร์ม)',o.no,o.date,`<p>ข้าพเจ้า ${esc(e.name)} รหัสพนักงาน ${e.id} ตำแหน่ง ${esc(e.pos)} สาขา ${esc(e.branch)} ได้สั่งซื้อชุดยูนิฟอร์มของบริษัท ดังนี้</p>
+   <table class="doc-t"><tr><th>รายการ</th><th>ไซส์</th><th>จำนวน</th><th>ราคา/ตัว</th><th>รวม (บาท)</th></tr>${rows}<tr><td colspan="4"><b>รวมทั้งสิ้น</b></td><td class="num"><b>${money(o.total||0)}</b></td></tr></table>
+   <p>ข้าพเจ้ายินยอมให้บริษัท พราวเอ็กซ์เพรส จำกัด หักเงินจำนวน ${money(o.total||0)} บาท จากค่าตอบแทนของข้าพเจ้าใน${uniMonthName(o.payMonth)} หากค่าตอบแทนงวดดังกล่าวไม่พอ ยินยอมให้หักในงวดถัดไปจนครบ โดยข้าพเจ้าได้ให้ความยินยอมด้วยความสมัครใจ ผ่านระบบพนักงานของบริษัท เมื่อ ${esc(o.at||th(o.date))}</p>
+   ${o.status===UNI_ST.got?`<p>ได้รับเสื้อครบแล้ว เมื่อ ${th(o.gotAt)} ผู้แจก ${esc(o.gotBy||'-')}</p>`:''}`,[['('+esc(e.name)+')<br>ผู้ให้ความยินยอม',o.sign],['(............................)<br>ฝ่ายบุคคล','']])}
+
+function bindUni(){const uon=(id,ev,fn)=>{const el=$(id);if(el)el[ev]=fn};
+  uon('#gap-f','onchange',e=>{S.gapF=e.target.value;render()});
+  document.querySelectorAll('[data-gapnote]').forEach(b=>b.onclick=()=>{if(gapNotify(E(b.dataset.gapnote))){toast('แจ้งพนักงานแล้ว');render()}});
+  uon('#gap-all','onclick',()=>{const b=$('#gap-all');if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='ยืนยันแจ้งทุกคน';return}let n=0;S.emp.filter(e=>e.status!=='พ้นสภาพ'&&inScope(e.branch)).forEach(e=>{if(gapNotify(e))n++});toast('แจ้งแล้ว '+n+' คน');render()});
+  uon('#gap-send','onclick',async()=>{const e=E(S.who),ins=[...document.querySelectorAll('[data-gapfile]')].filter(i=>i.files.length);if(!ins.length){toast('ยังไม่ได้แนบไฟล์');return}
+    const b=$('#gap-send');b.disabled=true;b.textContent='กำลังส่ง…';e.docs=Object.assign({},e.docs);const got=[];for(const i of ins){e.docs[i.dataset.gapfile]=await readDocFile(i.files[0]);got.push(i.dataset.gapfile)}e.updated=iso(TODAY);
+    S.fixReq.filter(r=>r.emp===e.id&&r.status==='รอพนักงานแก้'&&r.items.every(k=>!docGaps(e).some(x=>x[0]===k))).forEach(r=>{r.status='พนักงานแก้แล้ว';r.doneAt=nowStamp();r.log.push({at:nowStamp(),by:e.name,t:'emp',msg:'ส่งเอกสารที่ขาดแล้ว',files:got})});
+    toast('ส่งเอกสารแล้ว '+got.length+' รายการ');render()});
+  // ฝั่งพนักงาน
+  if($('#u-send')){const C=uniCfg();const pick=()=>C.items.map(it=>({k:it.k,size:$('#u-sz-'+it.k).value,qty:+$('#u-q-'+it.k).value||1})).filter(i=>i.size);
+    const upd=()=>{const it=pick();$('#u-sum').innerHTML=it.length?`รวม <b>${money(uniTotal(it))} บาท</b> · ${esc(it.map(i=>(C.items.find(x=>x.k===i.k)||{}).n+' '+i.size+' ×'+i.qty).join(', '))} · หักใน${uniMonthName(uniPayMonth())}`:'ยังไม่ได้เลือก'};
+    C.items.forEach(it=>{$('#u-sz-'+it.k).onchange=upd;$('#u-q-'+it.k).onchange=upd});upd();
+    $('#u-send').onclick=()=>{const it=pick();if(!it.length){toast('เลือกไซส์อย่างน้อย 1 รายการ');return}if(!$('#u-ok').checked){toast('กรุณาติ๊กยินยอมให้หักค่าตอบแทน');return}
+      const sg=needSig('sg-uni');if(!sg)return;delete S.sigs['sg-uni'];const prices=Object.fromEntries(C.items.map(x=>[x.k,x.price]));
+      S.uniOrd.push({no:'UN-69-'+String(seq.un++).padStart(4,'0'),emp:S.who,branch:E(S.who).branch,date:iso(TODAY),at:new Date().toLocaleString('th-TH'),items:it,prices,total:uniTotal(it),payMonth:uniPayMonth(),consent:true,sign:sg,status:UNI_ST.wait});
+      toast('สั่งชุดยูนิฟอร์มแล้ว · ยอด '+money(uniTotal(it))+' บาท');render()}}
+  document.querySelectorAll('[data-ucancel]').forEach(b=>b.onclick=()=>{if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='ยืนยันยกเลิก';return}const o=S.uniOrd.find(x=>x.no===b.dataset.ucancel);if(o&&o.status===UNI_ST.wait){o.status=UNI_ST.cancel;o.cancelBy='พนักงาน';o.cancelAt=iso(TODAY);toast('ยกเลิกแล้ว');render()}});
+  // หลังบ้าน
+  uon('#uf-m','onchange',e=>{S.uniM=e.target.value;render()});uon('#uf-s','onchange',e=>{S.uniS=e.target.value;render()});
+  document.querySelectorAll('[data-ugot]').forEach(b=>b.onclick=()=>{const o=S.uniOrd.find(x=>x.no===b.dataset.ugot);o.status=UNI_ST.got;o.gotAt=iso(TODAY);o.gotBy=S.role.name;toast('บันทึกแจกเสื้อแล้ว '+o.no);render()});
+  document.querySelectorAll('[data-uxc]').forEach(b=>b.onclick=()=>{if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='ยืนยันยกเลิก';return}const o=S.uniOrd.find(x=>x.no===b.dataset.uxc);o.status=UNI_ST.cancel;o.cancelBy=S.role.name;o.cancelAt=iso(TODAY);toast('ยกเลิก '+o.no);render()});
+  document.querySelectorAll('[data-upm]').forEach(el=>el.onchange=()=>{const o=S.uniOrd.find(x=>x.no===el.dataset.upm);o.payMonth=el.value;toast('ย้ายไปหักใน'+uniMonthName(el.value));render()});
+  document.querySelectorAll('[data-uprint]').forEach(b=>b.onclick=()=>{const o=S.uniOrd.find(x=>x.no===b.dataset.uprint);printHtml(uniDoc(o),'หนังสือยินยอมหักค่าชุด '+o.no,false,'uni:'+o.no)});
+  uon('#u-ded','onclick',()=>{const b=$('#u-ded');if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='ยืนยัน: หักแล้วทั้งงวด';return}let n=0;S.uniOrd.filter(o=>o.payMonth===S.uniM&&o.status!==UNI_ST.cancel&&!o.deducted&&inScope(E(o.emp).branch)).forEach(o=>{o.deducted=true;o.dedAt=iso(TODAY);o.dedBy=S.role.name;n++});toast('บันทึกหักแล้ว '+n+' รายการ');render()});
+  uon('#u-xl','onclick',()=>uniExport());
+  uon('#uc-add','onclick',()=>{S.uni.items.push({k:'U'+Date.now().toString(36),n:'รายการใหม่',sizes:['S','M','L','XL'],price:0});render()});
+  uon('#uc-save','onclick',()=>{const C=S.uni;document.querySelectorAll('[data-uc]').forEach(el=>{const it=C.items[+el.dataset.uc],f=el.dataset.f;if(f==='sizes')it.sizes=el.value.split(',').map(x=>x.trim()).filter(Boolean);else if(f==='price')it.price=Math.max(0,+el.value||0);else it.n=el.value.trim()||it.n});C.maxQty=Math.max(1,Math.min(20,+$('#uc-max').value||5));C.items=C.items.filter(x=>x.sizes.length);toast('บันทึกราคาแล้ว');render()});
+}
+async function uniExport(){const m=S.uniM;const L=S.uniOrd.filter(o=>o.payMonth===m&&o.status!==UNI_ST.cancel&&inScope(E(o.emp).branch));
+  const A=[['สรุปหักค่าชุดยูนิฟอร์ม',uniMonthName(m)],[],['รหัส','ชื่อ-นามสกุล','สาขา','ตำแหน่ง','จำนวนคำสั่ง','ยอดหัก (บาท)','หักแล้ว']];const per={};L.forEach(o=>{per[o.emp]=per[o.emp]||{n:0,t:0,d:true};per[o.emp].n++;per[o.emp].t+=+o.total||0;if(!o.deducted)per[o.emp].d=false});
+  Object.entries(per).forEach(([id,x])=>{const e=E(id);A.push([id,e.name,e.branch,e.pos,x.n,x.t,x.d?'ใช่':''])});A.push(['','','','','รวม',L.reduce((a,o)=>a+(+o.total||0),0),'']);
+  const B=[['เลขที่','วันที่สั่ง','รหัส','ชื่อ-นามสกุล','สาขา','รายการ','ยอด (บาท)','สถานะ','แจกเสื้อเมื่อ']];L.forEach(o=>{const e=E(o.emp);B.push([o.no,o.date,o.emp,e.name,e.branch,uniItemsTxt(o),+o.total||0,o.status,o.gotAt||''])});
+  const wb=XLSX.utils.book_new();const put=(rows,name,w)=>{const sh=XLSX.utils.aoa_to_sheet(rows);sh['!cols']=w;XLSX.utils.book_append_sheet(wb,sh,name)};
+  put(A,'สรุปหักรายคน',[{wch:11},{wch:26},{wch:9},{wch:20},{wch:12},{wch:13},{wch:9}]);put(B,'รายการสั่ง',[{wch:12},{wch:11},{wch:11},{wch:26},{wch:9},{wch:40},{wch:11},{wch:16},{wch:11}]);
+  const fn='หักค่าชุดยูนิฟอร์ม_'+m+'.xlsx';
+  const dl=await getDL();if(!dl)return;
+  try{await dl.save({filename:fn,data:new Blob([XLSX.write(wb,{type:'array',bookType:'xlsx'})])});toast('บันทึก Excel แล้ว')}catch(e){toast(e&&e.code==='declined'?'ยกเลิกการบันทึก':'บันทึกไม่สำเร็จ')}
+}
+
+// ----- เอกสารไม่ครบ: เพิ่มพนักงานเข้าก่อน แล้วระบบเตือนว่าขาดอะไร -----
+const vehNeed=e=>/นำจ่าย|รับพัสดุ|ขับรถ/.test(e.pos||'');
+function docGaps(e){if(!e||e.status==='พ้นสภาพ'||e.profileDone===false)return [];const d=e.docs||{},g=[],has=(...k)=>k.some(x=>d[x]);
+  if(!has('f1'))g.push(['f1','รูปถ่ายหน้าตรง']);if(!has('f2','card'))g.push(['f2','รูปบัตรประชาชน']);if(!has('f4','bank'))g.push(['f4','รูปหน้าสมุดบัญชีกสิกร']);
+  if(!e.acct)g.push(['d:acct','เลขบัญชีธนาคาร']);if(!e.address)g.push(['d:addr','ที่อยู่']);if(!e.emerg)g.push(['d:emerg','ผู้ติดต่อฉุกเฉิน']);
+  if(vehNeed(e)){const exp=e.licExp&&e.licExp!==LIFE&&D(e.licExp)<TODAY;
+    if(!has('f5')||exp)g.push(['f5',exp?'รูปใบขับขี่ (ใบเดิมหมดอายุ '+th(e.licExp)+')':'รูปใบขับขี่']);
+    if(!e.licNo||!e.licExp||exp||(/นำจ่าย|รับพัสดุ/.test(e.pos)&&!e.plate))g.push(['d:lic',exp?'ใบขับขี่หมดอายุ (ต่ออายุแล้วแก้วันหมดอายุ)':'ข้อมูลใบขับขี่ / ทะเบียนรถ'])}
+  return g}
+const gapNotified=(e,k)=>S.fixReq.some(r=>r.emp===e.id&&r.status==='รอพนักงานแก้'&&r.items.includes(k));
+function gapView(e,who){const g=docGaps(e),files=g.filter(x=>!x[0].startsWith('d:')),data=g.filter(x=>x[0].startsWith('d:'));
+  return `<section class="panel"><h2>เอกสาร / ข้อมูลที่ยังขาด</h2>${who}${g.length?`<p class="muted">ส่งให้ครบเพื่อให้ทะเบียนพนักงานสมบูรณ์ ถ้ายังไม่มีเอกสาร (เช่น ใบขับขี่หาย กำลังทำใหม่) ส่งได้ภายหลังเมื่อได้รับแล้ว</p>
+   ${files.length?`<div class="fields">${files.map(([k,t])=>`<label class="f">${esc(t)}<input type="file" accept="image/*,application/pdf" data-gapfile="${k}"></label>`).join('')}</div><div class="row"><button class="btn" id="gap-send">ส่งเอกสารที่แนบ</button><span class="muted">แนบเฉพาะที่มีก็ได้</span></div>`:''}
+   ${data.length?`<div class="note">ข้อมูลที่ต้องกรอก: <b>${data.map(x=>esc(x[1])).join(', ')}</b> <button class="btn ghost sm" data-go="update">ไปหน้าแก้ไขข้อมูล</button></div>`:''}`:'<div class="note ok">เอกสารครบแล้ว ขอบคุณค่ะ</div>'}</section>`}
+function gapAdm(){const F=S.gapF||'ทั้งหมด';const L=S.emp.filter(e=>e.status!=='พ้นสภาพ'&&inScope(e.branch)).map(e=>[e,docGaps(e)]).filter(([e,g])=>g.length&&(F==='ทั้งหมด'||g.some(x=>x[0]===F)));
+  const notYet=L.filter(([e,g])=>g.some(x=>!gapNotified(e,x[0])));
+  return `<section class="panel"><h2>เอกสารไม่ครบ</h2><p class="muted">พนักงานที่เพิ่มเข้าทะเบียนแล้ว แต่ยังขาดเอกสารหรือข้อมูล · พนักงานจะเห็นแจ้งเตือนที่เมนูของตัวเองและส่งเองได้ · กด "แจ้งพนักงาน" เพื่อส่งเป็นเรื่องติดตาม (ดูสถานะได้ที่แท็บแจ้งแก้ไข)</p>
+   <div class="row"><label class="f">ขาดเรื่อง<select id="gap-f">${['ทั้งหมด',...FIX_ITEMS.map(x=>x[0])].map(k=>`<option value="${k}"${k===F?' selected':''}>${k==='ทั้งหมด'?'ทั้งหมด':esc(fixLabel(k))}</option>`).join('')}</select></label>
+   ${notYet.length?`<button class="btn" id="gap-all">แจ้งทุกคนที่ยังไม่ได้แจ้ง (${notYet.length} คน)</button>`:''}</div>
+   <div class="stats"><div class="stat ${L.length?'alert':''}"><b>${L.length}</b><span>คนที่เอกสารไม่ครบ</span></div><div class="stat"><b>${notYet.length}</b><span>ยังไม่ได้แจ้งพนักงาน</span></div></div>
+   ${L.length?`<div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ-นามสกุล</th><th>สาขา</th><th>ตำแหน่ง</th><th>เริ่มงาน</th><th>ที่ยังขาด</th><th></th></tr>${L.map(([e,g])=>`<tr><td>${e.id}</td><td><button class="back" data-sel="${e.id}">${esc(e.name)}</button></td><td>${esc(e.branch)}</td><td>${esc(posLabel(e.pos))}${e.type?' · '+esc(e.type):''}</td><td>${th(e.start)}</td><td style="white-space:normal;min-width:220px">${g.map(([k,t])=>`<span class="pill ${gapNotified(e,k)?'p-n':'p-warn'}" style="margin:2px">${esc(t)}${gapNotified(e,k)?' · แจ้งแล้ว':''}</span>`).join('')}</td><td>${g.some(x=>!gapNotified(e,x[0]))?`<button class="btn ghost sm" data-gapnote="${e.id}">แจ้งพนักงาน</button>`:''}</td></tr>`).join('')}</table></div>`:'<p class="muted">ไม่มีพนักงานที่เอกสารไม่ครบในตัวกรองนี้</p>'}</section>`}
+function gapNotify(e){const g=docGaps(e).filter(x=>!gapNotified(e,x[0]));if(!g.length)return false;
+  S.fixReq.push({no:'FX-'+String(TODAY.getFullYear()+543).slice(2)+'-'+String(seq.fx++).padStart(4,'0'),emp:e.id,date:iso(TODAY),by:S.role.name,items:g.map(x=>x[0]),status:'รอพนักงานแก้',auto:'gap',log:[{at:nowStamp(),by:S.role.name,t:'adm',msg:'เอกสาร/ข้อมูลยังไม่ครบ: '+g.map(x=>x[1]).join(', ')+' · กรุณาส่งให้ครบ ถ้ายังไม่มี (เช่น ใบขับขี่หาย) แจ้งกำหนดที่จะได้รับในช่องข้อความ'}]});return true}
 const OLD_ASSETS=['PDA','มือถือบริษัท','ซิมการ์ด','เครื่องสแกน','โน้ตบุ๊ก','เสื้อโปโล J&T','เสื้อแจ็คเก็ต J&T'];
 // ----- ลายมือชื่อ: ใช้ทุกแบบฟอร์มฝั่งพนักงาน -----
 const sigPad=(id,label)=>`<div class="sigbox"><div class="muted">${label} * <span class="muted">(เซ็นด้วยนิ้วหรือเมาส์)</span></div><canvas class="sig-pad" id="${id}" width="420" height="120" aria-label="${label}"></canvas><button type="button" class="btn ghost sm" data-sigclr="${id}">ล้างลายเซ็น</button></div>`;
@@ -564,6 +674,7 @@ function applyView(mode){
     <label class="f full" style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="g-ok" style="width:auto;margin-top:4px"> ข้าพเจ้าในฐานะผู้แทนโดยชอบธรรม ยินยอมให้ผู้สมัครทำงานกับ บริษัท พราวเอ็กซ์เพรส จำกัด ในตำแหน่งที่สมัคร และรับทราบเงื่อนไขการทำงานของลูกจ้างอายุต่ำกว่า 18 ปีข้างต้นแล้ว</label>
     <div class="full">${sigPad('sg-guard','ลายมือชื่อผู้ปกครอง')}</div>`)}</div>
   <div id="a-veh">${sec(4,'รถและใบขับขี่',`
+    <label class="full" style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="a-nolic" style="width:20px;height:20px;flex:none;margin-top:3px"><span><b>ยังไม่มีใบขับขี่ / ใบขับขี่หาย / หมดอายุ (ส่งภายหลัง)</b><br><small class="muted">ติ๊กแล้วส่งข้อมูลได้เลย ระบบจะเตือนให้ส่งใบขับขี่เมื่อได้รับแล้ว</small></span></label>
     <label class="f">เลขใบขับขี่ *<input id="a-lic"></label>
     <div class="f">ใบขับขี่หมดอายุ *<input type="date" id="a-licexp">${lifeBox('a-licexp','')}</div>
     <label class="f">ทะเบียนรถ *<input id="a-plate" placeholder="เช่น 1กข 2345 กรุงเทพฯ"></label>
@@ -841,13 +952,15 @@ function _admView(){
   const pendA=S.apps.filter(a=>(a.status==='รอพิจารณา'||a.status==='นัดสัมภาษณ์')&&inScope(a.branch)).length;
   const tabs=[['apps','ผู้สมัคร',pendA],['reg','ทะเบียนพนักงาน',pendE],['leave','ใบลา',pendL],['resign','ลาออก / เลิกจ้าง',pendR],['move','โยกย้าย / เปลี่ยนตำแหน่ง',S.moves.filter(m=>m.status==='รออนุมัติ'&&(inScope(m.from)||inScope(m.to))).length],['eval','ประเมินพนักงาน',evDue],['hc','อัตรากำลัง',hcPend],['warn','ใบเตือน',0],['jt','รหัส J&T',jtTodo],['ins','บัตรประกัน',insTodo],['asset','ทรัพย์สินบริษัท',assetOwed+openRepairs().length],['dep','เงินประกัน',can('dep')?rfDue:0],['exp','ใกล้หมดอายุ',ex.length],['time','ลงเวลาทำงาน',0]];
   tabs.push(['pt','พาร์ทไทม์',S.emp.filter(e=>isPT(e)&&e.status==='รอตรวจสอบ'&&inScope(e.branch)).length]);
+  tabs.push(['gap','เอกสารไม่ครบ',S.emp.filter(e=>e.status!=='พ้นสภาพ'&&inScope(e.branch)&&docGaps(e).some(x=>!gapNotified(e,x[0]))).length]);
+  tabs.push(['uni','ชุดยูนิฟอร์ม',S.uniOrd.filter(o=>o.status===UNI_ST.wait&&inScope(E(o.emp).branch)).length]);
   tabs.push(['chat','ข้อความพนักงาน',S.msgs.filter(msgVisible).reduce((a,m)=>a+(unreadA(m)?1:0),0)]);
   tabs.push(['fix','แจ้งแก้ไข',S.fixReq.filter(r=>r.status==='พนักงานแก้แล้ว'&&inScope(E(r.emp).branch)).length]);
   tabs.push(['ack','การรับทราบเอกสาร',ackMiss],['docs','เอกสารในระบบ',0]);
   if(can('import'))tabs.push(['pdpa','PDPA',S.dsr.filter(r=>!['เสร็จสิ้น','ปฏิเสธ'].includes(r.status)).length+S.breach.filter(b=>b.status!=='ปิดเรื่อง').length+pdpaDue().length],['black','แบล็กลิสต์',blPend],['qr','ลิงก์ & QR',0]);
   if(can('users'))tabs.push(['users','สิทธิ์ผู้ใช้',0]);
   if(!tabs.some(t=>t[0]===S.admTab))S.admTab='apps';
-  const F={pt:ptAdm,chat:chatAdm,fix:fixAdm,pdpa:pdpaAdm,move:moveAdm,apps:appsAdm,reg:regTable,leave:leaveAdm,resign:resignAdm,ins:insAdm,dep:depAdm,exp:()=>expAdm(ex),time:attAdm,users:usersAdm,warn:warnAdm,eval:evalAdm,docs:docsAdm,ack:ackAdm,hc:hcAdm,jt:jtAdm,asset:assetAdm,black:blackAdm,qr:qrAdm};
+  const F={gap:gapAdm,uni:uniAdm,pt:ptAdm,chat:chatAdm,fix:fixAdm,pdpa:pdpaAdm,move:moveAdm,apps:appsAdm,reg:regTable,leave:leaveAdm,resign:resignAdm,ins:insAdm,dep:depAdm,exp:()=>expAdm(ex),time:attAdm,users:usersAdm,warn:warnAdm,eval:evalAdm,docs:docsAdm,ack:ackAdm,hc:hcAdm,jt:jtAdm,asset:assetAdm,black:blackAdm,qr:qrAdm};
   return `<div class="row"><div style="min-width:0"><h1>หลังบ้าน</h1><p class="muted">${esc(S.role.name)} · ${ROLE_NAME[S.role.role]}${S.role.branch?' · เห็นเฉพาะสาขา '+S.role.branch:' · เห็นทุกสาขา'} · ข้อมูล ณ ${th(TODAY)}</p></div><button class="btn ghost sm" id="adm-out" style="margin-left:auto">ออกจากระบบ</button></div>
   <div class="stats">
     <div class="stat"><b>${act.length}</b><span>พนักงานปัจจุบัน</span></div>
@@ -2312,7 +2425,8 @@ function attState(e){const now=NOW();const s0=shStart(e,attToday());let wd=attTo
 // ===== PDPA: พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 =====
 const PDPA={ver:'ฉบับที่ 1 (5 พ.ย. 2569)',contact:'ฝ่ายบุคคล บริษัท พราวเอ็กซ์เพรส จำกัด · อีเมล (ใส่อีเมลกลางของบริษัท) · โทร (ใส่เบอร์)',
   keep:{appDays:90,appKeepYears:1,empYears:10,timeYears:2,photoMonths:12,blackYears:5},dueDays:30,breachHrs:72};
-S.fixReq=[];seq.fx=seq.fx||1;S.msgs=[];seq.ms=seq.ms||1;S.pdpaCons=[];S.dsr=[];S.breach=[];S.access=[];S.pdpaDel=[];S.reveal={};
+S.fixReq=[];seq.fx=seq.fx||1;S.uniOrd=[];seq.un=seq.un||1;S.uni=S.uni||{items:[{k:'POLO',n:'เสื้อโปโล',sizes:['S','M','L','XL'],price:115},{k:'JK',n:'เสื้อแจ็คเก็ต',sizes:['S','M','L','XL','2XL','3XL','4XL'],price:210}],maxQty:5};
+S.msgs=[];seq.ms=seq.ms||1;S.pdpaCons=[];S.dsr=[];S.breach=[];S.access=[];S.pdpaDel=[];S.reveal={};
 const DSR_TYPES=['ขอดู/ขอสำเนาข้อมูลของฉัน','ขอแก้ไขข้อมูลให้ถูกต้อง','ขอให้ลบหรือทำลายข้อมูล','ขอให้ระงับการใช้ข้อมูลชั่วคราว','คัดค้านการใช้ข้อมูล','ขอรับข้อมูลในรูปแบบไฟล์ (โอนย้าย)','ถอนความยินยอม','อื่น ๆ / สอบถาม'];
 const OPT_CONS={keepApp:'เก็บใบสมัครไว้พิจารณาตำแหน่งอื่นได้ 1 ปี',photoPR:'ใช้รูปถ่ายของฉันในสื่อประชาสัมพันธ์ของบริษัท (เช่น โพสต์ Facebook บริษัท)'};
 const ROPA=[
@@ -2465,6 +2579,7 @@ function stamp(src){
 }
 // ---------- events ----------
 function bind(){
+  bindUni();
   document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{S.page=b.dataset.go;if(b.dataset.go!=='oldreg')S.oldDone=null;S.photo=null;S.applied=null;S.shot=null;S.kind=null;render();scrollTo(0,0)});
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{S.admTab=b.dataset.tab;S.tabQ='';render()});
   document.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{S.selEmp=b.dataset.sel;render()});
@@ -2498,7 +2613,7 @@ function bind(){
       Object.entries(v).forEach(([k,x])=>{if(!$(k).readOnly&&!(k==='#a-phone'&&$('#a-id').readOnly))$(k).value=x});if($('#a-start'))$('#a-start').value='2025-08-01';$('#a-pos').value='นำจ่ายพัสดุรถมอเตอร์ไซค์';$('#a-id').oninput();document.querySelectorAll('.a-con').forEach(c=>c.checked=true);if($('#a-ack'))$('#a-ack').checked=true;sync();toast('กรอกตัวอย่างแล้ว (ไฟล์แนบข้ามได้ในโหมดทดลอง)')};
     $('#a-send').onclick=async()=>{const g=k=>$(k).value.trim();const p=g('#a-pos'),veh=NEEDS_VEHICLE(p);const miss=[];
       [['#a-title','คำนำหน้า'],['#a-name','ชื่อ'],['#a-dob','วันเกิด'],['#a-phone','เบอร์โทร'],['#a-addr','ที่อยู่'],['#a-ename','ผู้ติดต่อฉุกเฉิน'],['#a-ephone','เบอร์ฉุกเฉิน'],['#a-acct','บัญชีกสิกร']].forEach(([k,t])=>{if(!g(k))miss.push(t)});
-      if(veh)[['#a-lic','ใบขับขี่'],['#a-licexp','วันหมดอายุใบขับขี่'],['#a-plate','ทะเบียนรถ']].forEach(([k,t])=>{if(!(k==='#a-licexp'?licVal('a-licexp'):g(k)))miss.push(t)});
+      const noLic=!!($('#a-nolic')&&$('#a-nolic').checked);if(veh)[['#a-lic','ใบขับขี่'],['#a-licexp','วันหมดอายุใบขับขี่'],['#a-plate','ทะเบียนรถ']].forEach(([k,t])=>{if(noLic&&k!=='#a-plate')return;if(!(k==='#a-licexp'?licVal('a-licexp'):g(k)))miss.push(t)});
       if(!idValid(g('#a-id')))miss.push('เลขบัตรประชาชนที่ถูกต้อง');
       if(g('#a-phone')&&!/^0\d{9}$/.test(g('#a-phone')))miss.push('เบอร์โทร 10 หลัก');
       const ag=g('#a-dob')?ageOf(g('#a-dob')):null;if(ag!==null&&ag<15){$('#a-msg').textContent='อายุต่ำกว่า 15 ปี กฎหมายห้ามจ้างงาน';$('#a-msg').style.color='var(--bad)';return}
@@ -2578,6 +2693,7 @@ function bind(){
       const sg=needSig('sg-leave');if(!sg)return;delete S.sigs['sg-leave'];
       const f=$('#l-from').value,to=$('#l-to').value;S.leave.push({sign:sg,created:iso(TODAY),no:'LV-69-'+String(seq.lv++).padStart(4,'0'),emp:S.who,type:t,from:f,to,part:f===to?$('#l-part').value:'full',...calc.v,reason:$('#l-reason').value,lateNotice:calc.n&&!calc.n.ok?calc.n.late:'',status:'รออนุมัติ'});toast(t==='dayoff'?'ส่งแจ้งขอหยุดแล้ว รอหัวหน้ารับทราบ':'ส่งใบลาแล้ว รอ SPV อนุมัติ');render()}}
   if($('#r-last')){const upd=()=>{const v=$('#r-last').value;$('#r-pay').textContent=v?`รับเงินงวดสุดท้ายวันที่ ${th(finalPay(v))}`:''};$('#r-last').onchange=upd;upd();
+
     $('#r-send').onclick=()=>{const v=$('#r-last').value;if(!v||v<$('#r-last').min){toast('วันทำงานสุดท้ายต้องห่างจากวันนี้อย่างน้อย 30 วัน');return}
       const sg=needSig('sg-resign');if(!sg)return;delete S.sigs['sg-resign'];
       S.resign.push({sign:sg,no:'RS-69-'+String(seq.rs++).padStart(4,'0'),emp:S.who,submitted:iso(TODAY),lastDay:v,reason:$('#r-reason').value,status:'รออนุมัติ'});toast('ยื่นใบลาออกแล้ว');render()}}
@@ -2631,10 +2747,10 @@ $('#sw-emp').onclick=()=>{S.view='emp';render()};
 $('#sw-adm').onclick=()=>{S.view='adm';render()};
 // ===================== โหมดระบบจริง: เชื่อม Google Apps Script =====================
 const REAL={on:true,api:API_URL,token:'',me:null,snap:null,busy:false,again:false,timer:0,blobs:new Map(),gpsW:null,loaded:false};
-const RC={emp:r=>r.id,leave:r=>r.no,resign:r=>r.no,punch:r=>r.emp+'|'+r.date,apps:r=>r.no,dep:r=>r.emp+'|'+r.period,black:r=>r.idCard,users:r=>String(r.email||'').toLowerCase(),assets:r=>r.no,counts:r=>r.no,repairs:r=>r.no,warn:r=>r.no,blReq:r=>r.emp+'|'+r.date,vol:r=>r.branch+'|'+r.date,hcReq:r=>r.no,moves:r=>r.no,evals:r=>r.no,acks:r=>r.emp+'|'+r.doc+'|'+r.ver,rosterLog:r=>r.emp+'|'+r.date+'|'+r.at,pdpaCons:r=>r.who+'|'+r.kind+'|'+r.date,dsr:r=>r.no,fixReq:r=>r.no,msgs:r=>r.no,breach:r=>r.no,access:r=>r.at+'|'+r.by+'|'+r.emp+'|'+r.what,pdpaDel:r=>r.at+'|'+r.what};
+const RC={emp:r=>r.id,leave:r=>r.no,resign:r=>r.no,punch:r=>r.emp+'|'+r.date,apps:r=>r.no,dep:r=>r.emp+'|'+r.period,black:r=>r.idCard,users:r=>String(r.email||'').toLowerCase(),assets:r=>r.no,counts:r=>r.no,repairs:r=>r.no,warn:r=>r.no,blReq:r=>r.emp+'|'+r.date,vol:r=>r.branch+'|'+r.date,hcReq:r=>r.no,moves:r=>r.no,evals:r=>r.no,acks:r=>r.emp+'|'+r.doc+'|'+r.ver,rosterLog:r=>r.emp+'|'+r.date+'|'+r.at,pdpaCons:r=>r.who+'|'+r.kind+'|'+r.date,dsr:r=>r.no,fixReq:r=>r.no,msgs:r=>r.no,uniOrd:r=>r.no,breach:r=>r.no,access:r=>r.at+'|'+r.by+'|'+r.emp+'|'+r.what,pdpaDel:r=>r.at+'|'+r.what};
 const RMAP={mark:()=>ATT.mark,rain:()=>ATT.rain,roster:()=>ATT.roster,depDed:()=>S.depDed,stock:()=>S.stock};
 const attCfgOf=()=>{const o={};Object.keys(ATT).forEach(k=>{if(!['mark','rain','roster'].includes(k))o[k]=ATT[k]});return o};
-const RSET={ATT:attCfgOf,LEAVE_CFG:()=>LEAVE_CFG,LEAVE:()=>LEAVE,PDPA:()=>PDPA,hc:()=>({hcRatio:S.hcRatio,hcDays:S.hcDays,fillSla:S.fillSla}),misc:()=>({dedCap:S.dedCap,oldRegOn:S.oldRegOn,oldRegUntil:S.oldRegUntil,policy:S.policy,org:S.org||null,notifyAdmin:S.notifyAdmin||''})};
+const RSET={ATT:attCfgOf,LEAVE_CFG:()=>LEAVE_CFG,LEAVE:()=>LEAVE,PDPA:()=>PDPA,hc:()=>({hcRatio:S.hcRatio,hcDays:S.hcDays,fillSla:S.fillSla}),misc:()=>({dedCap:S.dedCap,oldRegOn:S.oldRegOn,oldRegUntil:S.oldRegUntil,policy:S.policy,org:S.org||null,notifyAdmin:S.notifyAdmin||'',uni:S.uni||null})};
 function rSetApply(n,v){if(!v)return;if(n==='ATT')Object.assign(ATT,v);else if(n==='LEAVE_CFG')Object.assign(LEAVE_CFG,v);else if(n==='LEAVE')Object.keys(v).forEach(k=>LEAVE[k]=Object.assign(LEAVE[k]||{},v[k]));else if(n==='PDPA')Object.assign(PDPA,v);else{Object.assign(S,v);if(n==='misc'&&v.org)applyOrg(v.org)}}
 async function api(a,p){
   let res;try{res=await fetch(REAL.api,{method:'POST',body:JSON.stringify(Object.assign({a,t:REAL.token},p||{}))});}catch(e){throw new Error('เชื่อมต่อระบบไม่ได้ ตรวจอินเทอร์เน็ต')}
@@ -2666,7 +2782,7 @@ REAL.load=async function(){const since=iso(addDays(periodOf(addDays(periodOf(TOD
   Object.entries(r.settings||{}).forEach(([n,v])=>rSetApply(n,v));Object.keys(r.seq||{}).forEach(k=>{seq[k]=Math.max(seq[k]||1,r.seq[k])});
   REAL.markSeen();REAL.takeSnap();if(r.me.role==='admin')Object.keys(RSET).forEach(n=>{if(!r.settings[n])REAL.snap.s[n]=''});REAL.loaded=true;return r};
 // ---------- แจ้งเตือนรายการใหม่ (หลังบ้าน) ----------
-const WATCH={apps:['ใบสมัครงาน'],emp:['พนักงานลงทะเบียน',r=>r.status==='รอตรวจสอบ'],leave:['ใบลา'],resign:['ใบลาออก'],moves:['โยกย้าย'],hcReq:['ขอเพิ่มคน'],dsr:['คำขอข้อมูลส่วนบุคคล'],assets:['แจ้งของที่ถือ',r=>r.by==='พนักงานแจ้งเอง'&&!r.ok],msgs:['ข้อความจากพนักงาน',r=>r.lastT==='emp',r=>r.no+'|'+(r.log||[]).length],fixReq:['พนักงานแก้ไขตามที่แจ้ง',r=>r.status==='พนักงานแก้แล้ว',r=>r.no+'|'+r.status+'|'+(r.log||[]).length]};
+const WATCH={apps:['ใบสมัครงาน'],emp:['พนักงานลงทะเบียน',r=>r.status==='รอตรวจสอบ'],leave:['ใบลา'],resign:['ใบลาออก'],moves:['โยกย้าย'],hcReq:['ขอเพิ่มคน'],uniOrd:['สั่งชุดยูนิฟอร์ม',r=>r.status==='รอดำเนินการ'],dsr:['คำขอข้อมูลส่วนบุคคล'],assets:['แจ้งของที่ถือ',r=>r.by==='พนักงานแจ้งเอง'&&!r.ok],msgs:['ข้อความจากพนักงาน',r=>r.lastT==='emp',r=>r.no+'|'+(r.log||[]).length],fixReq:['พนักงานแก้ไขตามที่แจ้ง',r=>r.status==='พนักงานแก้แล้ว',r=>r.no+'|'+r.status+'|'+(r.log||[]).length]};
 const WK=c=>WATCH[c][2]||RC[c];
 REAL.seen=null;REAL.lastAct=Date.now();REAL.newItems={};
 REAL.markSeen=function(){REAL.seen={};Object.keys(WATCH).forEach(c=>REAL.seen[c]=new Set((S[c]||[]).map(WK(c))));REAL.newItems={};REAL.banner()};
