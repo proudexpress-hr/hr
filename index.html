@@ -443,10 +443,10 @@ function empView(){
     <div><h1>ยินดีต้อนรับค่ะ</h1><p class="muted">เลือกให้ตรงกับคุณ</p></div>
     <div class="grid big2">
       ${tile('apply','ผู้สมัครใหม่','สมัครงาน','ยังไม่เคยทำงานกับบริษัท กรอกใบสมัครและแนบเอกสาร')}
-      ${tile('emp','พนักงานปัจจุบัน','เข้าสู่ระบบพนักงาน','ใช้เลขบัตรประชาชน + เบอร์โทร · ครั้งแรกต้องกรอกข้อมูลให้ครบก่อน แล้วจึงใช้เมนูลา ลาออก รับบัตรประกันได้')}
+      ${tile('emp','พนักงานปัจจุบัน','เข้าสู่ระบบพนักงาน','⏱ ลงเวลาเข้า-ออกงาน · ลา · แก้ไขข้อมูล · ลาออก — ใช้เลขบัตรประชาชน + เบอร์โทร + PIN')}
       ${oldRegOpen()?tile('oldentry','พนักงานเดิม · เปิดถึง '+th(S.oldRegUntil),'เพิ่มข้อมูลพนักงานเดิม','ทำงานอยู่แล้วแต่ยังไม่มีข้อมูลในระบบ กรอกข้อมูลย้อนหลังที่นี่ (เหลืออีก '+daysBetween(TODAY,D(S.oldRegUntil))+' วัน)'):''}
     </div>
-    <p class="muted">ลงเวลาทำงาน (ทุกตำแหน่ง แทนสแกนนิ้ว) ใช้ QR "ลงเวลาทำงาน" ที่ติดในสาขา หรือ <button class="back" data-go="clock">กดที่นี่</button></p>`;
+    <div class="note"><b>⏱ จะลงเวลาเข้า-ออกงาน?</b> กด <b>เข้าสู่ระบบพนักงาน</b> → ปุ่มลงเวลาสีแดงอยู่บนสุดของเมนู · <span class="muted">พาร์ทไทม์มาครั้งแรก ให้ SPV เพิ่มชื่อในระบบก่อน</span></div>`;
   const home=`<button class="back" data-go="home">← หน้าแรก</button>`;
   if(S.page==='apply')return home+applyView();
   if(S.page==='oldentry'&&!(S.who&&E(S.who)))return home+(oldRegOpen()?`<div class="note"><b>สำหรับพนักงานที่ทำงานอยู่แล้ว แต่ยังไม่มีข้อมูลในระบบ</b> · กรอกครั้งเดียว ไม่ต้องเข้าสู่ระบบก่อน · เปิดรับถึงวันที่ <b>${th(S.oldRegUntil)}</b><br>ส่งแล้วหัวหน้างานสาขาจะตรวจสอบ จากนั้นใช้เลขบัตรประชาชน + เบอร์โทรที่กรอกไว้ เข้าสู่ระบบที่ "พนักงานปัจจุบัน" ได้เลย</div>`+applyView('oldreg'):'<div class="note warn">ช่วงเพิ่มข้อมูลพนักงานเดิมปิดแล้ว ถ้ายังไม่มีข้อมูลในระบบ ติดต่อฝ่ายบุคคลหรือหัวหน้างานสาขา</div>');
@@ -470,7 +470,11 @@ function empView(){
   if(S.page==='card')return menu+cardView(e,who);
   if(S.page==='pclock')return menu+clockView();
   if(S.page==='pdpa')return menu+pdpaEmpView(e,who);
-  return `${who}${e.status==='รอตรวจสอบ'?'<div class="note warn">ข้อมูลของคุณรอหัวหน้างานตรวจสอบ ใช้เมนูได้ตามปกติ</div>':''}
+  const clk=needAtt(e)&&e.status==='ทำงาน'?(()=>{const d=attToday(),p=punchOn(e.id,d)||{},so=shiftOn(e,d),nx=!p.in&&!p.out?'in':!p.out?'out':'';
+    return `<div class="panel" style="border:2px solid var(--brand);display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
+     <div><b style="font-size:1.1rem">⏱ ลงเวลาวันนี้ · ${th(d)}</b><div class="muted">${so.off?'วันนี้เป็นวันหยุดของคุณ':'กะ '+esc(so.sh||shiftOf(e))} · เข้า <b>${esc(p.in||'–')}</b> · ออก <b>${esc(p.out||'–')}</b></div></div>
+     <button class="btn" data-go="pclock" style="font-size:1.15rem;padding:14px 22px;min-width:220px">${nx==='in'?'ลงเวลาเข้างาน':nx==='out'?'ลงเวลาออกงาน':'ดูการลงเวลา / สรุปงวด'}</button></div>`})():'';
+  return `${who}${clk}${e.status==='รอตรวจสอบ'?'<div class="note warn">ข้อมูลของคุณรอหัวหน้างานตรวจสอบ ใช้เมนูได้ตามปกติ</div>':''}
     <div class="mecard"><div><span class="muted">รหัส</span><b>${e.id}</b></div><div><span class="muted">JMS</span><b>${esc(e.jms||'-')}</b></div><div><span class="muted">อายุงาน</span><b>${tenure(e)}</b></div><div><span class="muted">สถานะ</span><b>${isPT(e)?'พาร์ทไทม์':probation(e)}</b></div><div><span class="muted">เงินประกันสะสม</span><b>${money(depSum(e.id))}</b></div>${hasLeave(e)?`<div><span class="muted">ลากิจคงเหลือ</span><b>${Math.max(0,quota(e,'personal')-leaveUsed(e.id,'personal',TODAY.getFullYear()))} วัน</b></div>`:''}</div>
     <div><h1>เมนูพนักงาน</h1></div>${fixOpen(e.id).length?`<div class="note warn" style="border-width:2px"><b>📌 บริษัทแจ้งให้แก้ไข/ส่งเอกสารเพิ่ม ${fixOpen(e.id).length} เรื่อง</b> <button class="btn sm" data-go="fix">ดูและแก้ไข</button></div>`:''}${noticeOk(e.id)?'':'<div class="note warn">บริษัทมีประกาศความเป็นส่วนตัว (PDPA) ฉบับใหม่ กรุณาอ่านและกดรับทราบ <button class="back" data-go="pdpa">อ่านเลย</button></div>'}
     ${ctrPending(e.id).length?`<div class="note warn" style="border-width:2px"><b>✍️ มีสัญญารอคุณลงนาม ${ctrPending(e.id).length} ฉบับ</b> <button class="btn sm" data-go="ctr">อ่านและลงนาม</button></div>`:''}
@@ -485,7 +489,6 @@ function empView(){
       ${tile('resign','ลาออก','ยื่นใบลาออก','แจ้งล่วงหน้า 30 วัน')}
       ${insNeed(e)?tile('card','บัตรประกัน','ยืนยันรับบัตรประกัน','ถ่ายรูปคู่บัตรตอนรับบัตร'):''}
       ${tile('pdpa','PDPA','ข้อมูลส่วนบุคคลของฉัน','ประกาศความเป็นส่วนตัว ความยินยอม ขอดู ขอแก้ ขอลบข้อมูล'+(noticeOk(e.id)?'':' · มีประกาศใหม่ให้กดรับทราบ'))}
-      ${needAtt(e)?tile('pclock','ลงเวลา','ลงเวลาเข้า-ออกงาน','ถ่ายรูปสดที่สาขา แทนสแกนนิ้ว · ดูสรุปวันทำงาน สาย ขาด ของงวดนี้'):''}
     </div>`;
 }
 
@@ -963,7 +966,7 @@ function clockView(){if(!(S.who&&E(S.who)))return realLoginEmp();
     <div class="cam">
       ${S.shot?`<img src="${S.shot.img}" alt="รูปที่ถ่าย">`:`<div class="vf"><video id="vf-video" playsinline muted autoplay hidden></video><canvas id="vf-sim" width="300" height="400"></canvas></div>`}
       <div style="display:flex;flex-direction:column;gap:10px;min-width:0;flex:1 1 220px">
-        <div><div class="muted">ตำแหน่ง (${anyGeo(me)?'RM: อยู่ในรัศมีของคลังใดก็ได้':'ต้องอยู่ในรัศมี '+((ATT.geo[me.branch]||{}).r||'-')+' ม. ของสาขา '+me.branch})${fixedOf(me)?' · เวลาเข้างาน '+fixedOf(me).split('-')[0]+' น.':''}</div>
+        <div><div class="muted">ตำแหน่ง (${freeGeo(me)?'ลงเวลาได้ทุกที่ รวมนอกสถานที่':anyGeo(me)?'RM: อยู่ในรัศมีของคลังใดก็ได้':'ต้องอยู่ในรัศมี '+((ATT.geo[me.branch]||{}).r||'-')+' ม. ของสาขา '+me.branch})${fixedOf(me)?' · เวลาเข้างาน '+fixedOf(me).split('-')[0]+' น.':''}</div>
           <div class="row" style="margin-top:6px"><span class="pill ${g.ok?'p-ok':'p-bad'}" style="white-space:normal">${g.txt}</span>
           <button class="btn ghost sm" id="c-loc">ทดลอง: เปลี่ยนตำแหน่ง</button></div></div>
         ${S.shot?`<div>ถ่ายเมื่อ <b>${S.shot.t}</b> <span class="muted">(ต้องยืนยันภายใน 60 วินาที)</span></div>${sigPad('sg-punch','ลายมือชื่อ')}
@@ -2174,7 +2177,7 @@ function blackAdm(){
   ${hits.length?`<h3>ความพยายามสมัครที่ถูกบล็อก</h3><div class="tablewrap"><table><tr><th>วันที่</th><th>ชื่อที่กรอก</th><th>เลขบัตร</th><th>ตรวจพบจาก</th><th>เบอร์</th></tr>${hits.map(a=>`<tr><td>${th(a.date)}</td><td>${esc(a.title+a.name)}</td><td>${a.idCard}</td><td>${esc(a.blocked)}</td><td>${a.phone}</td></tr>`).join('')}</table></div>`:''}`;
 }
 // ----- ลิงก์ + QR -----
-const LINKS=[['apply','สมัครงาน','ติดหน้าสาขา / โพสต์รับสมัคร'],['emp','พนักงานปัจจุบัน','ส่งให้พนักงานทุกคน: ครั้งแรกกรอกข้อมูล แล้วใช้เมนูลา ลาออก รับบัตรประกัน อัปเดตข้อมูล'],['clock','ลงเวลาทำงาน','ติดจุดเข้างานของสาขา · พนักงานทุกคนถ่ายรูปลงเวลาแทนสแกนนิ้ว']];
+const LINKS=[['apply','สมัครงาน','ติดหน้าสาขา / โพสต์รับสมัคร'],['emp','พนักงานปัจจุบัน','ส่งให้พนักงานทุกคน (ลิงก์เดียวพอ): เข้าแล้วมีปุ่มลงเวลาเข้า-ออกงานบนสุด + เมนูลา ลาออก บัตรประกัน แก้ไขข้อมูล'],['clock','ลงเวลาทำงาน','ติดจุดเข้างานของสาขา · พนักงานทุกคนถ่ายรูปลงเวลาแทนสแกนนิ้ว']];
 function qrLinks(){return oldRegOpen()?[...LINKS.slice(0,2),['oldentry','เพิ่มข้อมูลพนักงานเดิม','เปิดถึง '+th(S.oldRegUntil)+' แล้วปิดเอง'],...LINKS.slice(2)]:LINKS}
 function linkFor(k){const u=(S.baseUrl||'').trim();if(!u)return '';return /script\.google\.com/.test(u)?u+(u.includes('?')?'&':'?')+'page='+k:u.split('#')[0]+'#'+k}
 function qrImg(text){if(!window.qrcode||!text)return '';const q=qrcode(0,'M');q.addData(unescape(encodeURIComponent(text)));q.make();return q.createDataURL(6,12)}
@@ -2225,6 +2228,7 @@ const MUST_ATT=['RM','SPV','ADMIN'];   // ต้องลงเวลาเส�
 const needAtt=e=>MUST_ATT.includes(e.pos)||ATT.pos.includes(e.pos)||!!(e&&(ATT.fixed||{})['EMP:'+e.id]);
 const FIXED_DEF={'RM':'07:00-16:00','SPV':'07:00-16:00','SPV@301675':'10:00-19:00'};
 const fixedOf=e=>{const F=ATT.fixed||FIXED_DEF;return e?F['EMP:'+e.id]||F[e.pos+'@'+e.branch]||F[e.pos]||'':''};
+const freeGeo=e=>!!e&&(ATT.freeGeo||[]).includes(e.id);   // รายบุคคล: ลงเวลาได้ทุกที่ ไม่จำกัดรัศมี
 const anyGeo=e=>!!e&&(ATT.anyGeoPos||['RM']).includes(e.pos);   // RM ลงเวลาได้ทุกคลัง (เฉพาะคลังที่มีรหัสตัวเลข)
 const hm=s=>{if(!s)return null;const[a,b]=s.split(':').map(Number);return a*60+b};
 const fmtM=m=>String(Math.floor(((m%1440)+1440)%1440/60)).padStart(2,'0')+':'+String(((m%60)+60)%60).padStart(2,'0');
@@ -2305,6 +2309,7 @@ function seedAtt(){
 }
 // --- พนักงาน: หน้าลงเวลา ---
 function geoState(e){return geoReal(e);const g=ATT.geo[e.branch]||{r:200};const L=S.loc||'in';
+  if(freeGeo(e))return{ok:true,dist:null,txt:'ลงเวลาได้ทุกที่ (แอดมินอนุญาตนอกสถานที่) · ระบบบันทึกพิกัดไว้'};
   if(anyGeo(e)&&L!=='out')return{ok:true,dist:40,txt:'อยู่ในพื้นที่คลัง '+(L==='other'?'301714':'301710')+' ห่าง ~40 ม. (RM ลงเวลาได้ทุกคลัง)'};
   if(L==='in')return{ok:true,dist:35,txt:'อยู่ที่สาขา '+e.branch+' ห่าง ~35 ม.'};
   if(L==='other'){const o=BRANCHES.find(b=>b!==e.branch);return{ok:false,dist:9800,txt:'อยู่ที่สาขา '+o+' ไม่ใช่สาขาของคุณ ('+e.branch+') · ลงเวลาไม่ได้'}}
@@ -2376,8 +2381,8 @@ function attCfg(){const ad=can('users');const dis=ad?'':'disabled';
   <div class="checks" style="flex-direction:row;flex-wrap:wrap;gap:14px">${POSITIONS.map(p=>`<label><input type="checkbox" class="cf-flex" value="${p}" ${ATT.flexPos.includes(p)?'checked':''} ${dis}> ${p}</label>`).join('')}</div>
   <div class="fields"><label class="f full">กะที่ใช้จับอัตโนมัติ (คั่นด้วย ,)<input id="cf-fs" value="${ATT.flexShifts.join(', ')}" ${dis}><small class="muted">ควรห่างกันอย่างน้อย 4 ชม. ถ้ากะเริ่มใกล้กันมาก คนที่มาสายเยอะจะถูกนับเป็นกะถัดไปแทน</small></label></div>
   <h3>เวลาเข้างานตายตัว (SPV จัดกะเปลี่ยนไม่ได้ · เลือกได้แค่ ทำงาน/หยุด)</h3><p class="muted">มาสายและไม่ลงเวลาในวันทำงานที่ไม่ใช่วันหยุดหรือวันลา คิดค่าปรับตามระเบียบเดียวกับพนักงานทุกคน · RM ลงเวลาได้ในรัศมีของคลังใดก็ได้ ส่วน SPV / ADMIN ต้องอยู่ในรัศมีคลังของตัวเอง</p>
-  <div class="fields">${['RM','SPV',...BRANCHES.map(b=>'SPV@'+b),...Object.keys(ATT.fixed||{}).filter(k=>k.startsWith('EMP:'))].map(k=>k.startsWith('EMP:')?`<label class="f">รายบุคคล: ${esc((E(k.slice(4))||{}).name||k.slice(4))} <small class="muted">(ลบเวลาเพื่อยกเลิก)</small><input class="cf-fix" data-k="${k}" value="${esc(ATT.fixed[k])}" ${dis}></label>`:`<label class="f">${k.includes('@')?'SPV คลัง '+k.split('@')[1]+' <small class="muted">(เว้นว่าง = ใช้เวลา SPV ปกติ)</small>':k}<input class="cf-fix" data-k="${k}" value="${esc((ATT.fixed||FIXED_DEF)[k]||'')}" placeholder="${k.includes('@')?'':'07:00-16:00'}" ${dis}></label>`).join('')}</div>
-  ${dis?'':`<div class="row"><label class="f">เพิ่มเวลาเข้างานรายบุคคล (เช่น ทดลองใช้)<select id="cf-fe"><option value="">— เลือกพนักงาน —</option>${S.emp.filter(e=>e.status==='ทำงาน').map(e=>`<option value="${e.id}">${esc(e.name)} · ${esc(e.branch)} · ${esc(e.pos)}</option>`).join('')}</select></label><label class="f">เวลา<input id="cf-ft" value="10:00-19:00" style="width:130px"></label><button class="btn ghost" id="cf-fadd">+ เพิ่ม</button></div>`}
+  <div class="fields">${['RM','SPV',...BRANCHES.map(b=>'SPV@'+b),...Object.keys(ATT.fixed||{}).filter(k=>k.startsWith('EMP:'))].map(k=>k.startsWith('EMP:')?`<label class="f">รายบุคคล: ${esc((E(k.slice(4))||{}).name||k.slice(4))} <small class="muted">(ลบเวลาเพื่อยกเลิก)</small><input class="cf-fix" data-k="${k}" value="${esc(ATT.fixed[k])}" ${dis}><span style="display:flex;gap:6px;align-items:center;font-size:.88rem"><input type="checkbox" class="cf-free" data-id="${k.slice(4)}" style="width:auto" ${(ATT.freeGeo||[]).includes(k.slice(4))?'checked':''} ${dis}> ลงเวลาได้ทุกที่ (นอกสถานที่ได้)</span></label>`:`<label class="f">${k.includes('@')?'SPV คลัง '+k.split('@')[1]+' <small class="muted">(เว้นว่าง = ใช้เวลา SPV ปกติ)</small>':k}<input class="cf-fix" data-k="${k}" value="${esc((ATT.fixed||FIXED_DEF)[k]||'')}" placeholder="${k.includes('@')?'':'07:00-16:00'}" ${dis}></label>`).join('')}</div>
+  ${dis?'':`<div class="row"><label class="f">เพิ่มเวลาเข้างานรายบุคคล (เช่น ทดลองใช้)<select id="cf-fe"><option value="">— เลือกพนักงาน —</option>${S.emp.filter(e=>e.status==='ทำงาน').map(e=>`<option value="${e.id}">${esc(e.name)} · ${esc(e.branch)} · ${esc(e.pos)}</option>`).join('')}</select></label><label class="f">เวลา<input id="cf-ft" value="10:00-19:00" style="width:130px"></label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cf-ffree" style="width:auto"> ลงเวลาได้ทุกที่</label><button class="btn ghost" id="cf-fadd">+ เพิ่ม</button></div>`}
   <h3>ตำแหน่งที่ต้องลงเวลา</h3><p class="muted">RM / SPV / ADMIN ต้องลงเวลาเสมอ</p><div class="checks" style="flex-direction:row;flex-wrap:wrap;gap:14px">${POSITIONS.map(p=>`<label><input type="checkbox" class="cf-pos" value="${p}" ${ATT.pos.includes(p)?'checked':''} ${dis}> ${p}</label>`).join('')}</div>
   <h3>สถานะที่ SPV เลือกได้</h3><div class="tablewrap"><table><tr><th>สถานะ</th><th>ผลต่อการคำนวณ</th></tr>${ATT_ST.map(([s,h])=>`<tr><td>${s}</td><td>${h}</td></tr>`).join('')}</table></div>
   ${ad?'<div class="row"><button class="btn" id="cf-save">บันทึกตั้งค่า</button></div>':''}`}
@@ -2418,12 +2423,12 @@ function bindAtt(){
   on('#att-xls',()=>attExport(S.attPrev?periodOf(addDays(periodOf(NOW()).s,-1)):periodOf(NOW())));
   document.querySelectorAll('[data-geohere]').forEach(b=>b.onclick=()=>{if(!navigator.geolocation){toast('อุปกรณ์นี้อ่านตำแหน่งไม่ได้');return}
     navigator.geolocation.getCurrentPosition(p=>{const g=ATT.geo[b.dataset.geohere];g.lat=+p.coords.latitude.toFixed(6);g.lng=+p.coords.longitude.toFixed(6);toast('บันทึกพิกัดสาขา '+b.dataset.geohere+' แล้ว');render()},()=>toast('หน้าทดลองนี้อ่านตำแหน่งไม่ได้ · ระบบจริงให้ SPV ยืนกลางสาขาแล้วกดปุ่มนี้'),{enableHighAccuracy:true,timeout:8000})});
-  on('#cf-fadd',()=>{const id=$('#cf-fe').value,n=normShift($('#cf-ft').value);if(!id){toast('เลือกพนักงาน');return}if(!n||n==='หยุด'||n==='AUTO'){toast('ใส่เวลาแบบ 10:00-19:00');return}ATT.fixed=Object.assign({},ATT.fixed||FIXED_DEF,{['EMP:'+id]:n});toast('ตั้งเวลาเข้างาน '+E(id).name+' = '+n+' แล้ว');render()});
+  on('#cf-fadd',()=>{const id=$('#cf-fe').value,n=normShift($('#cf-ft').value);if(!id){toast('เลือกพนักงาน');return}if(!n||n==='หยุด'||n==='AUTO'){toast('ใส่เวลาแบบ 10:00-19:00');return}ATT.fixed=Object.assign({},ATT.fixed||FIXED_DEF,{['EMP:'+id]:n});ATT.freeGeo=(ATT.freeGeo||[]).filter(x=>x!==id).concat($('#cf-ffree').checked?[id]:[]);toast('ตั้งเวลาเข้างาน '+E(id).name+' = '+n+' แล้ว');render()});
   on('#cf-save',()=>{document.querySelectorAll('.geo').forEach(i=>{ATT.geo[i.dataset.b][i.dataset.k]=+i.value||ATT.geo[i.dataset.b][i.dataset.k]});
     ATT.accMax=+$('#cf-acc').value||ATT.accMax;ATT.startDay=Math.min(28,Math.max(1,+$('#cf-sd').value||25));ATT.grace=+$('#cf-gr').value||0;ATT.lateRate=+$('#cf-lr').value||0;
     const ti=$('#cf-ti').value.split(',').map(x=>x.split(':').map(Number)).filter(x=>x.length===2&&!isNaN(x[0])&&!isNaN(x[1])).sort((a,b)=>a[0]-b[0]);if(ti.length)ATT.tiers=ti;
     const sh=$('#cf-sh').value.split(',').map(x=>x.trim()).filter(x=>/^\d\d:\d\d-\d\d:\d\d$/.test(x));if(sh.length)ATT.shifts=sh;
-    {const F={};let bad='';document.querySelectorAll('.cf-fix').forEach(i=>{const v=i.value.trim();if(!v)return;const n=normShift(v);if(!n||n==='หยุด'||n==='AUTO'){bad=i.dataset.k;return}F[i.dataset.k]=n});if(bad){toast('เวลา '+bad+' ไม่ถูกต้อง ใส่แบบ 07:00-16:00');return}ATT.fixed=F}
+    {const F={};let bad='';document.querySelectorAll('.cf-fix').forEach(i=>{const v=i.value.trim();if(!v)return;const n=normShift(v);if(!n||n==='หยุด'||n==='AUTO'){bad=i.dataset.k;return}F[i.dataset.k]=n});if(bad){toast('เวลา '+bad+' ไม่ถูกต้อง ใส่แบบ 07:00-16:00');return}ATT.fixed=F;ATT.freeGeo=[...document.querySelectorAll('.cf-free:checked')].map(x=>x.dataset.id).filter(id=>F['EMP:'+id])}
     ATT.pos=[...document.querySelectorAll('.cf-pos:checked')].map(x=>x.value);ATT.flexPos=[...document.querySelectorAll('.cf-flex:checked')].map(x=>x.value);
     const fs=$('#cf-fs').value.split(',').map(x=>normShift(x)).filter(x=>x&&x!=='หยุด'&&x!=='AUTO');if(fs.length)ATT.flexShifts=fs;toast('บันทึกตั้งค่าแล้ว');render()});
 }
@@ -2933,7 +2938,7 @@ REAL.afterBind=function(){
   if(!$('.cam')&&REAL.gpsW!=null){navigator.geolocation.clearWatch(REAL.gpsW);REAL.gpsW=null}
 };
 REAL.blob=function(id){if(!REAL.blobs.has(id))REAL.blobs.set(id,api('blob',{id:id.slice(6)}));return REAL.blobs.get(id)};
-function geoReal(e){if(typeof anyGeo==='function'&&anyGeo(e)&&S.gps){const L=Object.keys(ATT.geo).filter(b=>/^\d+$/.test(b)&&ATT.geo[b].lat).map(b=>{const g=ATT.geo[b],R=6371000,r=x=>x*Math.PI/180,a=Math.sin(r(g.lat-S.gps.lat)/2)**2+Math.cos(r(S.gps.lat))*Math.cos(r(g.lat))*Math.sin(r(g.lng-S.gps.lng)/2)**2;return{b,g,d:Math.round(2*R*Math.asin(Math.sqrt(a)))}}).sort((x,y)=>x.d-y.d);const n=L[0];
+function geoReal(e){if(typeof freeGeo==='function'&&freeGeo(e))return{ok:true,dist:null,txt:'ลงเวลาได้ทุกที่ (แอดมินอนุญาตนอกสถานที่)'+(S.gps?' · บันทึกพิกัดไว้':'')};if(typeof anyGeo==='function'&&anyGeo(e)&&S.gps){const L=Object.keys(ATT.geo).filter(b=>/^\d+$/.test(b)&&ATT.geo[b].lat).map(b=>{const g=ATT.geo[b],R=6371000,r=x=>x*Math.PI/180,a=Math.sin(r(g.lat-S.gps.lat)/2)**2+Math.cos(r(S.gps.lat))*Math.cos(r(g.lat))*Math.sin(r(g.lng-S.gps.lng)/2)**2;return{b,g,d:Math.round(2*R*Math.asin(Math.sqrt(a)))}}).sort((x,y)=>x.d-y.d);const n=L[0];
     if(!n)return{ok:false,dist:null,txt:'ยังไม่ได้ตั้งพิกัดคลัง ติดต่อแอดมิน'};if(S.gps.acc>ATT.accMax)return{ok:false,dist:n.d,txt:'สัญญาณ GPS คลาดเคลื่อน '+S.gps.acc+' ม. ลองใหม่ในที่โล่ง'};
     return n.d<=n.g.r?{ok:true,dist:n.d,txt:'อยู่ในพื้นที่คลัง '+n.b+' ห่าง '+n.d+' ม. (RM ลงเวลาได้ทุกคลัง)'}:{ok:false,dist:n.d,txt:'ไม่อยู่ในรัศมีคลังใด · คลังที่ใกล้ที่สุด '+n.b+' ห่าง '+(n.d>=1000?(n.d/1000).toFixed(1)+' กม.':n.d+' ม.')+' ลงเวลาไม่ได้'}}
   const g=ATT.geo[e.branch];if(S.gpsErr&&!S.gps)return{ok:false,dist:null,txt:S.gpsErr};if(!S.gps)return{ok:false,dist:null,txt:'กำลังหาตำแหน่ง GPS… (กดอนุญาตตำแหน่ง)'};if(!g)return{ok:false,dist:null,txt:'ยังไม่ได้ตั้งพิกัดสาขา '+e.branch+' ติดต่อแอดมิน'};
