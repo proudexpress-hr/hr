@@ -216,14 +216,14 @@ const POSITIONS=['RM','บัญชี','ประสานงาน','SPV','CRD
 const DELIVERY_TYPES=['SPT','SPT+C'];
 // ตำแหน่งที่เปิดรับสมัคร → ตำแหน่ง/ประเภทในทะเบียน
 const APPLY_POS={
-  'ผู้จัดการคลัง (SPV)':['SPV',''],'ผู้ช่วยผู้จัดการคลัง (CRD)':['CRD',''],'ธุรการ (ADMIN)':['ADMIN',''],'คัดแยกพัสดุ (STK)':['คัดแยก',''],
+  'ผู้จัดการภาค (RM)':['RM',''],'ผู้จัดการคลัง (SPV)':['SPV',''],'ผู้ช่วยผู้จัดการคลัง (CRD)':['CRD',''],'ธุรการ (ADMIN)':['ADMIN',''],'คัดแยกพัสดุ (STK)':['คัดแยก',''],
   'พนักงานนำจ่ายพัสดุรถเล็ก (DC-SPT)':['พนักงานนำจ่ายพัสดุ','SPT'],'พนักงานนำจ่ายพัสดุรถใหญ่ (DC-SPT+C)':['พนักงานนำจ่ายพัสดุ','SPT+C'],
   'พนักงานรับพัสดุรถเล็ก (CV-SPT)':['พนักงานรับพัสดุ','SPT'],'พนักงานรับพัสดุรถใหญ่ (CV-SPT+C)':['พนักงานรับพัสดุ','SPT+C'],
   'พนักงานขับรถบริษัท (TR)':['พนักงานขับรถบริษัท',''],'บัญชี':['บัญชี',''],'ประสานงาน':['ประสานงาน','']};
 const LEGACY_APPLY={'แอดมินธุรการ':['ADMIN',''],'คัดแยกพัสดุ':['คัดแยก',''],'นำจ่ายพัสดุรถมอเตอร์ไซค์':['พนักงานนำจ่ายพัสดุ','SPT'],'นำจ่ายพัสดุรถยนต์หรือสี่ล้อ':['พนักงานนำจ่ายพัสดุ','SPT+C'],'รับพัสดุรถมอเตอร์ไซค์':['พนักงานรับพัสดุ','SPT'],'รับพัสดุรถยนต์หรือสี่ล้อ':['พนักงานรับพัสดุ','SPT+C'],'พนักงานขับรถบริษัท':['พนักงานขับรถบริษัท',''],'พาร์ทไทม์':['คัดแยก',''],'การตลาด':['การตลาด','']};
 const appPos=l=>APPLY_POS[l]||LEGACY_APPLY[l]||[l||'',''];
 const STD_POS=[...POSITIONS],STD_APPLY=JSON.parse(JSON.stringify(APPLY_POS));
-const POS_LABEL={SPV:'ผู้จัดการคลัง (SPV)',CRD:'ผู้ช่วยผู้จัดการคลัง (CRD)',ADMIN:'ธุรการ (ADMIN)','คัดแยก':'คัดแยกพัสดุ (STK)','พนักงานขับรถบริษัท':'พนักงานขับรถบริษัท (TR)'};
+const POS_LABEL={RM:'ผู้จัดการภาค (RM)',SPV:'ผู้จัดการคลัง (SPV)',CRD:'ผู้ช่วยผู้จัดการคลัง (CRD)',ADMIN:'ธุรการ (ADMIN)','คัดแยก':'คัดแยกพัสดุ (STK)','พนักงานขับรถบริษัท':'พนักงานขับรถบริษัท (TR)'};
 const posLabel=(p,t)=>p==='พนักงานนำจ่ายพัสดุ'?(t==='SPT+C'?'พนักงานนำจ่ายพัสดุรถใหญ่ (DC-SPT+C)':t==='SPT'?'พนักงานนำจ่ายพัสดุรถเล็ก (DC-SPT)':'พนักงานนำจ่ายพัสดุ (DC)'):p==='พนักงานรับพัสดุ'?(t==='SPT+C'?'พนักงานรับพัสดุรถใหญ่ (CV-SPT+C)':t==='SPT'?'พนักงานรับพัสดุรถเล็ก (CV-SPT)':'พนักงานรับพัสดุ (CV)'):(POS_LABEL[p]||p||'-');
 const apPick=a=>{const o=(S.apPick||{})[a.no];if(o)return o;let key=APPLY_POS[a.pos]?a.pos:(Object.keys(APPLY_POS).find(k=>String(APPLY_POS[k])===String(appPos(a.pos)))||a.pos);return{key,pt:!!a.ptime}};
 const isPT=e=>!!(e&&(e.ptime||e.pos==='พาร์ทไทม์'));   // พาร์ทไทม์ = ประเภทการจ้าง (ใช้ได้กับทุกตำแหน่ง)
@@ -984,7 +984,7 @@ const statusPill=s=>`<span class="pill ${s==='อนุมัติ'||s==='ท�
 const ROLE_NAME={admin:'แอดมินบริษัท',hr:'HR',rm:'RM (ดูแลทุกสาขา)',spv:'หัวหน้างานสาขา (SPV)'};
 const inScope=b=>!S.role||!S.role.branch||b===S.role.branch;
 function orgFix(){if(typeof ATT==='undefined')return;ATT.geo=ATT.geo||{};BRANCHES.forEach(b=>{if(!ATT.geo[b])ATT.geo[b]={lat:0,lng:0,r:200};S.stock=S.stock||{};if(!S.stock[b])S.stock[b]={}})}
-function applyOrg(o){if(!o)return;if(Array.isArray(o.branches)&&o.branches.length)BRANCHES.splice(0,BRANCHES.length,...o.branches);if(Array.isArray(o.positions)&&o.positions.length)POSITIONS.splice(0,POSITIONS.length,...o.positions);if(o.apply&&typeof o.apply==='object'){Object.keys(APPLY_POS).forEach(k=>delete APPLY_POS[k]);Object.assign(APPLY_POS,o.apply)}orgFix()}
+function applyOrg(o){if(!o)return;if(Array.isArray(o.branches)&&o.branches.length)BRANCHES.splice(0,BRANCHES.length,...o.branches);if(Array.isArray(o.positions)&&o.positions.length)POSITIONS.splice(0,POSITIONS.length,...o.positions);if(!POSITIONS.includes('RM'))POSITIONS.unshift('RM');if(o.apply&&typeof o.apply==='object'){Object.keys(APPLY_POS).forEach(k=>delete APPLY_POS[k]);Object.assign(APPLY_POS,o.apply);if(!Object.values(APPLY_POS).some(v=>v[0]==='RM'))APPLY_POS['ผู้จัดการภาค (RM)']=['RM','']}orgFix()}
 function saveOrg(){S.org={branches:[...BRANCHES],positions:[...POSITIONS],apply:JSON.parse(JSON.stringify(APPLY_POS))};orgFix()}
 const canMoney=()=>!!(S.role&&['admin','hr'].includes(S.role.role));   // ข้อมูลเงินของพนักงาน: เฉพาะ HR + แอดมิน
 const can=x=>{const r=S.role&&S.role.role;if(r==='admin')return true;if(r==='hr')return x!=='users';return ['approve','card'].includes(x)};
