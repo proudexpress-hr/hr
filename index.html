@@ -2323,15 +2323,41 @@ function attScope(){const b=S.attBr||S.role.branch||'';return S.emp.filter(e=>(e
 function attAdm(){
   const v=S.attView||'today';const P=S.attPrev?periodOf(addDays(periodOf(NOW()).s,-1)):periodOf(NOW());
   const brSel=S.role.branch?'':`<label class="f" style="max-width:200px">สาขา<select id="att-br"><option value="">ทุกสาขา</option>${BRANCHES.map(b=>`<option ${S.attBr===b?'selected':''}>${b}</option>`).join('')}</select></label>`;
-  const sub=[['today','วันนี้'],['roster','ตารางเข้างาน'],['grid','ตารางงวด / ทำเงินเดือน'],['cfg','ตั้งค่า กะ รัศมี ค่าปรับ']].map(([k,t])=>`<button data-attv="${k}" aria-pressed="${v===k}">${t}</button>`).join('');
+  const sub=[['today','วันนี้'],['check','ตรวจสาย / ไม่ลงเวลา'],['roster','ตารางเข้างาน'],['grid','ตารางงวด / ทำเงินเดือน'],['cfg','ตั้งค่า กะ รัศมี ค่าปรับ']].map(([k,t])=>`<button data-attv="${k}" aria-pressed="${v===k}">${t}</button>`).join('');
   let body='';
   if(v==='today')body=attToday_();
   else if(v==='grid')body=attGrid(P);
   else if(v==='roster')body=rosterView(P);
+  else if(v==='check')body=attCheck();
   else body=attCfg();
   return `<div class="row"><h2>ลงเวลาทำงาน</h2><span class="muted">ถ่ายรูปสด + ตรวจรัศมีสาขา แทนสแกนนิ้ว · ข้อมูลถึง ${th(attToday())} ${NOW().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit'})}</span></div>
   <div class="tabs" style="margin:8px 0">${sub}</div><div class="fields">${brSel}${v==='grid'||v==='roster'?`<label class="f" style="max-width:260px">งวด<select id="att-per"><option value="0" ${!S.attPrev?'selected':''}>งวดปัจจุบัน ${periodOf(NOW()).name}</option><option value="1" ${S.attPrev?'selected':''}>งวดก่อน ${periodOf(addDays(periodOf(NOW()).s,-1)).name}</option></select></label>`:''}</div>${body}`;
 }
+
+// ตรวจสาย / ไม่ลงเวลา: เลือกช่วงวันที่ แล้วเห็นทันทีว่าใครสาย ใครไม่ลงเวลาเข้า/ออก ใครขาด
+function attCheck(){const F=S.cf||{},t=attToday(),y=iso(addDays(D(t),-1)),P0=periodOf(NOW());
+  const from=F.from||t,to=F.to&&F.to<=t?F.to:t,q=(F.q||'').trim().toLowerCase();
+  const days=[];for(let d=D(from);iso(d)<=to;d=addDays(d,1))days.push(iso(d));
+  const emps=attScope().filter(e=>(!F.pos||e.pos===F.pos)&&(!q||[e.name,e.id,e.jms,e.nick].some(v=>String(v||'').toLowerCase().includes(q))));
+  const inc=[];emps.forEach(e=>days.forEach(d=>{const x=dayInfo(e,d);if(!x.active)return;const p=x.p,nowM=NOW().getHours()*60+NOW().getMinutes(),sh=(x.sh||shiftOf(e)).split('-');
+    if(x.late)inc.push({e,d,k:'late',t:'สาย '+x.late+' นาที',n:x.late,p});
+    if(p&&!p.in&&p.out&&!x.st)inc.push({e,d,k:'ns',t:'ไม่ลงเวลาเข้า',p});
+    if(p&&p.in&&!p.out&&(d<t||nowM>hm(sh[1]||'23:59')+60))inc.push({e,d,k:'nout',t:'ไม่ลงเวลาออก',p});
+    if(x.st==='มาทำงานไม่ลงเวลา')inc.push({e,d,k:'ns',t:'มาทำงานไม่ลงเวลา (SPV ยืนยัน)',p});
+    if(x.absent&&!(d===t&&nowM<=hm(sh[0])+ATT.grace))inc.push({e,d,k:'abs',t:d===t?'ยังไม่ลงเวลา':'ไม่ลงเวลาเลย (ขาด)',p})}));
+  const K={late:'สาย',ns:'ไม่ลงเวลาเข้า',nout:'ไม่ลงเวลาออก',abs:'ไม่ลงเวลาเลย / ขาด'},L=inc.filter(x=>!F.k||x.k===F.k),cnt=k=>inc.filter(x=>x.k===k).length,M=canMoney();
+  const per={};L.forEach(x=>{const r=per[x.e.id]=per[x.e.id]||{e:x.e,late:0,lm:0,ns:0,nout:0,abs:0};if(x.k==='late'){r.late++;r.lm+=x.n}else r[x.k]++});
+  const qb=(lbl,a,b)=>`<button class="btn ghost sm" data-cfr="${a}|${b}" ${from===a&&to===b?'aria-pressed="true" style="border-color:var(--brand);color:var(--brand)"':''}>${lbl}</button>`;
+  return `<div class="panel" style="background:var(--bg);padding:10px"><div class="row" style="flex-wrap:wrap;gap:6px">${qb('วันนี้',t,t)}${qb('เมื่อวาน',y,y)}${qb('7 วันล่าสุด',iso(addDays(D(t),-6)),t)}${qb('งวดนี้',iso(P0.s),t)}</div>
+   <div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:8px"><label class="f" style="flex:1;min-width:130px">ตั้งแต่<input type="date" id="cf-from" value="${from}" max="${t}"></label><label class="f" style="flex:1;min-width:130px">ถึง<input type="date" id="cf-to" value="${to}" max="${t}"></label>
+   <label class="f" style="flex:1;min-width:150px">เรื่อง<select id="cf-k"><option value="">ทั้งหมด</option>${Object.entries(K).map(([k,v])=>`<option value="${k}"${F.k===k?' selected':''}>${v}</option>`).join('')}</select></label>
+   <label class="f" style="flex:1;min-width:150px">ตำแหน่ง<select id="cf-pos"><option value="">ทั้งหมด</option>${[...new Set(attScope().map(e=>e.pos))].sort().map(p=>`<option value="${esc(p)}"${F.pos===p?' selected':''}>${esc(posLabel(p))}</option>`).join('')}</select></label>
+   <label class="f" style="flex:2;min-width:180px">ค้นหา ชื่อ / รหัส / JMS<input id="cf-q" value="${esc(F.q||'')}"></label></div></div>
+   <div class="stats">${Object.entries(K).map(([k,v])=>`<button class="stat ${cnt(k)?'alert':''}" data-cfk="${k}" style="text-align:left;cursor:pointer;font:inherit;color:inherit;background:var(--surface)${F.k===k?';border-color:var(--brand)':''}"><b>${cnt(k)}</b><span>${v} (ครั้ง)</span></button>`).join('')}</div>
+   <h3>สรุปรายคน (${Object.keys(per).length} คน)</h3>${Object.keys(per).length?`<div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ</th><th>สาขา</th><th>ตำแหน่ง</th><th class="num">สาย (ครั้ง)</th><th class="num">สายรวม (นาที)</th>${M?'<th class="num">ค่าปรับสาย</th>':''}<th class="num">ไม่ลงเข้า</th><th class="num">ไม่ลงออก</th><th class="num">ไม่ลงเลย/ขาด</th></tr>${Object.values(per).sort((a,b)=>(b.late+b.ns+b.nout+b.abs)-(a.late+a.ns+a.nout+a.abs)).map(r=>`<tr><td>${r.e.id}</td><td>${esc(r.e.name)}</td><td>${esc(r.e.branch)}</td><td>${esc(posLabel(r.e.pos,r.e.type))}</td><td class="num">${r.late||''}</td><td class="num">${r.lm||''}</td>${M?`<td class="num">${r.lm?money(r.lm*ATT.lateRate):''}</td>`:''}<td class="num">${r.ns||''}</td><td class="num">${r.nout||''}</td><td class="num">${r.abs||''}</td></tr>`).join('')}</table></div>`:'<div class="note ok">ไม่มีใครสายหรือไม่ลงเวลาในช่วงนี้ 👍</div>'}
+   ${L.length?`<h3>รายการทั้งหมด (${L.length})</h3><div class="tablewrap"><table><tr><th>วันที่</th><th>ชื่อ</th><th>สาขา</th><th>กะ</th><th>เข้า</th><th>ออก</th><th>เรื่อง</th><th></th></tr>${L.sort((a,b)=>b.d.localeCompare(a.d)||a.e.name.localeCompare(b.e.name)).map(x=>`<tr><td>${th(x.d)}</td><td>${esc(x.e.name)}<br><small class="muted">${x.e.id}</small></td><td>${esc(x.e.branch)}</td><td>${esc(shiftOn(x.e,x.d).sh||shiftOf(x.e))}</td><td>${x.p&&x.p.in||'-'}</td><td>${x.p&&x.p.out||'-'}</td><td><span class="pill ${x.k==='late'?'p-warn':'p-bad'}">${esc(x.t)}</span></td><td><button class="btn ghost sm" data-attcell="${x.e.id}|${x.d}">แก้ / ใส่เหตุผล</button></td></tr>`).join('')}</table></div>`:''}
+   ${S.attCell?attCellBox():''}
+   <p class="muted">"แก้ / ใส่เหตุผล" = SPV/HR ใส่สถานะ เช่น ลา ทำงานนอกสถานที่ ยกเว้นค่าปรับสาย (ฝนตก ยางแตก) ระบบคำนวณใหม่ทันที · ไม่ลงเวลาออก ใช้ตรวจเฉย ๆ ไม่มีค่าปรับในระเบียบเดิม</p>`}
 function attToday_(){
   const d=attToday(),list=attScope().filter(e=>e.status==='ทำงาน');
   const rows=list.map(e=>{const x=dayInfo(e,d),p=x.p;const sh=(x.auto?x.sh:isFlex(e)?ATT.flexShifts[0]:(shiftOn(e,d).sh||shiftOf(e))).split('-');const nowM=NOW().getHours()*60+NOW().getMinutes();
@@ -2408,6 +2434,13 @@ function bindAtt(){
   const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn};
   document.querySelectorAll('[data-attv]').forEach(b=>b.onclick=()=>{S.attView=b.dataset.attv;S.attCell=null;S.attEmp=null;render()});
   {const s=$('#att-br');if(s)s.onchange=()=>{S.attBr=s.value;S.attCell=null;render()}}
+  {const cset=(k,v)=>{S.cf=Object.assign({},S.cf,{[k]:v});S.attCell=null;render()};['from','to','k','pos'].forEach(k=>{const el=$('#cf-'+k);if(el)el.onchange=()=>cset(k,el.value)});
+   document.querySelectorAll('[data-cfr]').forEach(b=>b.onclick=()=>{const[a,z]=b.dataset.cfr.split('|');S.cf=Object.assign({},S.cf,{from:a,to:z});render()});
+   document.querySelectorAll('[data-cfk]').forEach(b=>b.onclick=()=>cset('k',(S.cf||{}).k===b.dataset.cfk?'':b.dataset.cfk));
+   const q=$('#cf-q');if(q){let t;q.oninput=()=>{clearTimeout(t);t=setTimeout(()=>{const p=q.selectionStart;S.cf=Object.assign({},S.cf,{q:q.value});render();const n=$('#cf-q');if(n){n.focus();n.setSelectionRange(p,p)}},250)}}}
+  {const set=(k,v)=>{S.rf=Object.assign({},S.rf,{[k]:v});render()};['pos','type','emp','sh','off','day','from','to'].forEach(k=>{const el=$('#rf-'+k);if(el)el.onchange=()=>set(k,el.value)});
+   const c=$('#rf-cus');if(c)c.onchange=()=>set('cus',c.checked);const cl=$('#rf-clear');if(cl)cl.onclick=()=>{S.rf={};render()};
+   const q=$('#rf-q');if(q){let t;q.oninput=()=>{clearTimeout(t);t=setTimeout(()=>{const p=q.selectionStart;S.rf=Object.assign({},S.rf,{q:q.value});render();const n=$('#rf-q');if(n){n.focus();n.setSelectionRange(p,p)}},250)}}}
   {const s=$('#att-per');if(s)s.onchange=()=>{S.attPrev=s.value==='1';S.attCell=null;render()}}
   document.querySelectorAll('[data-attcell]').forEach(b=>b.onclick=()=>{S.attCell=b.dataset.attcell;S.attEmp=null;render();const x=$('#att-cellbox');if(x&&x.scrollIntoView)x.scrollIntoView({block:'center'})});
   document.querySelectorAll('[data-attph]').forEach(b=>b.onclick=()=>{S.attCell=b.dataset.attph;render()});
@@ -2454,25 +2487,48 @@ function setRoster(e,d,val,src){if(fixedOf(e)&&val&&val!=='หยุด')val=fix
   const def=WD[D(d).getDay()]===offOf(e)?'หยุด':shiftOf(e);
   if(val===def)delete ATT.roster[k];else ATT.roster[k]=val;
   if(from!==val)S.rosterLog.unshift({emp:e.id,date:d,from,to:val,by:S.role.name,at:new Date().toLocaleString('th-TH'),src});return from!==val}
+// ตัวกรองตารางงาน: ตำแหน่ง ประเภทรถ ประจำ/พาร์ทไทม์ กะปกติ วันหยุดประจำ เปลี่ยนจากปกติ ช่วงวันที่ และค้นหาชื่อ/รหัส/JMS
+function rosterFilter(P){const F=S.rf||{},all=attScope().filter(e=>e.status==='ทำงาน'),q=(F.q||'').trim().toLowerCase(),pd=periodDays(P);
+  const ds=pd.filter(d=>(!F.from||d>=F.from)&&(!F.to||d<=F.to));
+  const list=all.filter(e=>(!F.pos||e.pos===F.pos)&&(!F.type||(F.type==='-'?!e.type:e.type===F.type))&&(!F.emp||(F.emp==='pt'?isPT(e):!isPT(e)))
+    &&(!F.sh||(F.sh==='AUTO'?isFlex(e):!isFlex(e)&&shiftOf(e)===F.sh))&&(!F.off||offOf(e)===F.off)
+    &&(!F.cus||ds.some(d=>shiftOn(e,d).custom))&&(!F.day||ds.some(d=>{const x=shiftOn(e,d);return F.day==='หยุด'?x.off:!x.off&&(x.sh===F.day||(isFlex(e)&&F.day==='AUTO'))}))
+    &&(!q||[e.name,e.id,e.jms,e.nick,e.phone].some(v=>String(v||'').toLowerCase().includes(q))));
+  return {all,list,days:ds.length?ds:pd}}
+function rosterFilterBar(P,all,n){const F=S.rf||{},uniq=a=>[...new Set(a.filter(Boolean))].sort(),pd=periodDays(P);
+  const sel=(id,label,opts,v)=>`<label class="f" style="min-width:130px;flex:1">${label}<select id="${id}"><option value="">ทั้งหมด</option>${opts.map(([k,t])=>`<option value="${esc(k)}"${k===v?' selected':''}>${esc(t)}</option>`).join('')}</select></label>`;
+  return `<div class="panel" style="background:var(--bg);padding:10px"><div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end">
+   <label class="f" style="min-width:180px;flex:2">ค้นหา ชื่อ / รหัส / JMS / ชื่อเล่น<input id="rf-q" value="${esc(F.q||'')}" placeholder="พิมพ์เพื่อค้นหา"></label>
+   ${sel('rf-pos','ตำแหน่ง',uniq(all.map(e=>e.pos)).map(p=>[p,posLabel(p)]),F.pos)}
+   ${sel('rf-type','ประเภทรถ',[...uniq(all.map(e=>e.type)).map(t=>[t,t]),['-','ไม่มี (ไม่ใช่นำจ่าย)']],F.type)}
+   ${sel('rf-emp','ประเภทการจ้าง',[['reg','ประจำ / สัญญาจ้าง'],['pt','พาร์ทไทม์']],F.emp)}
+   ${sel('rf-sh','กะปกติ',[...uniq(all.filter(e=>!isFlex(e)).map(shiftOf)).map(x=>[x,shShort(x)]),['AUTO','กะอัตโนมัติ']],F.sh)}
+   ${sel('rf-off','วันหยุดประจำ',uniq(all.map(offOf)).map(x=>[x,'หยุดวัน'+x]),F.off)}
+   ${sel('rf-day','มีวันที่เป็น',[['หยุด','หยุด'],...ATT.shifts.map(x=>[x,'กะ '+shShort(x)])],F.day)}
+   <label class="f" style="min-width:130px;flex:1">ตั้งแต่วันที่<input type="date" id="rf-from" value="${F.from||''}" min="${pd[0]}" max="${pd[pd.length-1]}"></label>
+   <label class="f" style="min-width:130px;flex:1">ถึงวันที่<input type="date" id="rf-to" value="${F.to||''}" min="${pd[0]}" max="${pd[pd.length-1]}"></label>
+   <label style="display:flex;gap:6px;align-items:center;white-space:nowrap"><input type="checkbox" id="rf-cus" style="width:auto" ${F.cus?'checked':''}> เฉพาะที่เปลี่ยนจากปกติ</label>
+   <button class="btn ghost sm" id="rf-clear">ล้างตัวกรอง</button></div>
+   <p class="muted" style="margin:6px 0 0">แสดง <b>${n}</b> จาก ${all.length} คน · สาขาเลือกได้ที่ช่อง "สาขา" ด้านบน · ดาวน์โหลดเทมเพลต Excel จะได้เฉพาะคนและวันที่ที่กรองไว้</p></div>`}
 function rosterView(P){
-  const list=attScope().filter(e=>e.status==='ทำงาน');const days=periodDays(P);const opts=[...ATT.shifts,'หยุด'];
+  const RF=rosterFilter(P),list=RF.list,days=RF.days;const opts=[...ATT.shifts,'หยุด'];
   const head=days.map(d=>{const x=D(d);return `<th class="dcol${d===attToday()?' today':''}">${x.getDate()}<br><small>${WDS[x.getDay()]}</small></th>`}).join('');
   const rows=list.map(e=>`<tr><td class="sticky">${esc(e.name)}<br><small class="muted">${e.id} · ${isFlex(e)?'กะอัตโนมัติ':'ปกติ '+shShort(shiftOf(e))} หยุด${offOf(e)}</small></td>${days.map(d=>{const s=shiftOn(e,d),fx=isFlex(e),v=s.off?'หยุด':fx?'AUTO':s.sh,ok=canRoster(e,d)&&(!e.start||d>=e.start);const op2=fx?['AUTO','หยุด']:opts;
     return `<td class="dc ${s.off?'c-off':''} ${s.custom?'r-cus':''}"><select class="rs" data-rs="${e.id}|${d}" ${ok?'':'disabled'} aria-label="${esc(e.name)} ${d}">${(op2.includes(v)?op2:[v,...op2]).map(o=>`<option value="${o}" ${o===v?'selected':''}>${shShort(o==='หยุด'?'':o)}</option>`).join('')}</select></td>`}).join('')}</tr>`).join('');
   const log=S.rosterLog.filter(l=>list.some(e=>e.id===l.emp)).slice(0,15).map(l=>`<tr><td>${esc(l.at)}</td><td>${esc(E(l.emp).name)}</td><td>${th(l.date)}</td><td>${shShort(l.from==='หยุด'?'':l.from)} → <b>${shShort(l.to==='หยุด'?'':l.to)}</b></td><td>${esc(l.src)}</td><td>${esc(l.by)}</td></tr>`).join('');
   const imp=S.rsImport;
-  return `<p class="muted">งวด ${P.name} · ช่องที่ไม่ได้แก้ = กะปกติและวันหยุดประจำของคนนั้น · ช่องขอบแดง = เปลี่ยนจากปกติ · เปลี่ยนแล้วระบบใช้คิดสาย/ขาดของวันนั้นทันที${S.role.role==='spv'?' · SPV แก้ได้ตั้งแต่วันนี้เป็นต้นไป วันที่ผ่านมาแล้วให้ HR/แอดมินแก้':''}</p>
+  return `${rosterFilterBar(P,RF.all,list.length)}<p class="muted">งวด ${P.name} · ช่องที่ไม่ได้แก้ = กะปกติและวันหยุดประจำของคนนั้น · ช่องขอบแดง = เปลี่ยนจากปกติ · เปลี่ยนแล้วระบบใช้คิดสาย/ขาดของวันนั้นทันที${S.role.role==='spv'?' · SPV แก้ได้ตั้งแต่วันนี้เป็นต้นไป วันที่ผ่านมาแล้วให้ HR/แอดมินแก้':''}</p>
   <div class="row"><button class="btn" id="rs-tpl">ดาวน์โหลดเทมเพลต Excel</button><label class="btn ghost" style="cursor:pointer">นำเข้าไฟล์ Excel<input type="file" id="rs-file" accept=".xlsx,.xls" hidden></label><span class="muted">กรอกกะเป็น 07:00-16:00 หรือ หยุด · แถวละ 1 คน คอลัมน์ละ 1 วัน</span></div>
   ${imp?`<div class="panel" style="background:var(--bg)"><b>ตรวจไฟล์ ${esc(imp.name)}</b><p>จะเปลี่ยน <b>${imp.changes.length}</b> ช่อง · ไม่เปลี่ยน ${imp.same} ช่อง${imp.errs.length?` · <span style="color:var(--bad)">ข้ามไป ${imp.errs.length} ช่อง</span>`:''}</p>
     ${imp.errs.length?`<details><summary>รายการที่ข้าม</summary><ul class="doc-ol">${imp.errs.slice(0,40).map(x=>`<li>${esc(x)}</li>`).join('')}${imp.errs.length>40?'<li>…</li>':''}</ul></details>`:''}
     ${imp.changes.length?`<details open><summary>ตัวอย่างที่จะเปลี่ยน</summary><ul class="doc-ol">${imp.changes.slice(0,12).map(c=>`<li>${esc(E(c.id).name)} ${th(c.d)}: ${shShort(c.from==='หยุด'?'':c.from)} → <b>${shShort(c.to==='หยุด'?'':c.to)}</b></li>`).join('')}${imp.changes.length>12?'<li>…</li>':''}</ul></details>`:''}
     <div class="row"><button class="btn ok" id="rs-apply" ${imp.changes.length?'':'disabled'}>ยืนยันนำเข้า ${imp.changes.length} ช่อง</button><button class="btn ghost" id="rs-cancel">ยกเลิก</button></div></div>`:''}
-  <div class="tablewrap gridwrap"><table class="attgrid rgrid"><tr><th class="sticky">ชื่อ</th>${head}</tr>${rows||`<tr><td class="muted" colspan="${days.length+1}">ไม่มีพนักงาน</td></tr>`}</table></div>
+  <div class="tablewrap gridwrap"><table class="attgrid rgrid"><tr><th class="sticky">ชื่อ</th>${head}</tr>${rows||`<tr><td class="muted" colspan="${days.length+1}">${(S.rf&&Object.values(S.rf).some(Boolean))?'ไม่พบตามตัวกรอง':'ไม่มีพนักงาน'}</td></tr>`}</table></div>
   <h3>ประวัติการเปลี่ยนตาราง</h3><div class="tablewrap"><table><tr><th>เวลา</th><th>พนักงาน</th><th>วันที่</th><th>เปลี่ยน</th><th>ช่องทาง</th><th>โดย</th></tr>${log||'<tr><td colspan="6" class="muted">ยังไม่มีการเปลี่ยน</td></tr>'}</table></div>`;
 }
 async function rosterTpl(P){
   if(!window.XLSX){toast('โหลดตัวสร้าง Excel ไม่สำเร็จ');return}
-  const list=attScope().filter(e=>e.status==='ทำงาน'),days=periodDays(P),br=S.attBr||S.role.branch||'ทุกสาขา';
+  const RF=rosterFilter(P),list=RF.list,days=RF.days,br=S.attBr||S.role.branch||'ทุกสาขา';
   const A=[['ตารางเข้างาน สาขา '+br+' งวด '+dmy(P.s)+' – '+dmy(P.e)+' · กรอกกะ เช่น 07:00-16:00 หรือ หยุด · ห้ามแก้แถวหัวตารางและคอลัมน์รหัสพนักงาน'],
     ['รหัสพนักงาน','ชื่อ-นามสกุล','ตำแหน่ง','สาขา',...days.map(d=>dmy(d)+' ('+WDS[D(d).getDay()]+')')]];
   list.forEach(e=>A.push([e.id,e.name,e.pos,e.branch,...days.map(d=>{const s=shiftOn(e,d);return s.off?'หยุด':isFlex(e)?'ทำงาน':s.sh})]));
