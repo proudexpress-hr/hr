@@ -709,7 +709,7 @@ function applyView(mode){
   ${old?sec(1,'การทำงานปัจจุบัน',`
     <label class="f">ตำแหน่งปัจจุบัน *<select id="a-pos">${opt(Object.keys(APPLY_POS))}</select></label><label class="f">ประเภทการจ้าง<select id="a-ptime"><option value="">ประจำ</option><option value="1">พาร์ทไทม์</option></select></label>
     <label class="f">สาขาที่ทำงานอยู่ *<select id="a-branch">${opt(BRANCHES)}</select></label>
-    <label class="f">วันที่เริ่มงาน *<input type="date" id="a-start" max="${iso(TODAY)}"><small class="muted">จำวันที่ไม่ได้ ให้เลือกวันที่ 1 ของเดือนที่เริ่ม</small></label>
+    <label class="f">วันที่เริ่มงาน *<input type="date" id="a-start" min="${OPEN_DATE}" max="${iso(TODAY)}"><small class="muted">จำวันที่ไม่ได้ ให้เลือกวันที่ 1 ของเดือนที่เริ่ม · เริ่มได้ตั้งแต่ ${OPEN_TXT} (วันที่บริษัทเปิด)</small></label>
     <label class="f">รหัส J&T / JMS *<input id="a-jms" placeholder="เช่น 301714T000118"></label>
     <label class="f">ชื่อในระบบ JMS *<input id="a-jmsname" placeholder="ชื่อตามที่ขึ้นในระบบ J&T"></label>
     <div class="f full"><span class="muted">ของบริษัทที่ถืออยู่ตอนนี้ (ใส่จำนวน ไม่มีเว้นว่าง)</span><div class="oa">${OLD_ASSETS.map((t,i)=>`<label>${t}<input class="a-asset" data-t="${t}" inputmode="numeric" placeholder="0"></label>`).join('')}</div></div>`):sec(1,'ตำแหน่งที่สมัคร',`
@@ -844,14 +844,14 @@ function updateView(e,who){
       <label class="f">สาขา<select id="u-branch">${BRANCHES.map(b=>`<option>${b}</option>`).join('')}</select></label>
       <label class="f">ตำแหน่ง<select id="u-pos">${POSITIONS.map(p=>`<option value="${esc(p)}">${esc(posLabel(p))}</option>`).join('')}</select></label>
       <label class="f">ประเภทรถ (นำจ่าย)<select id="u-type"><option value="">-</option><option>SPT</option><option>SPT+C</option></select></label>
-      <label class="f">วันเริ่มงาน (ประมาณได้)<input type="date" id="u-start"></label>
+      <label class="f">วันเริ่มงาน * (ประมาณได้ · ไม่ก่อน ${OPEN_TXT})<input type="date" id="u-start" min="${OPEN_DATE}" max="${iso(TODAY)}"></label>
       `:''}${isPend?`<div class="note warn full">ข้อมูลยังรอหัวหน้าตรวจ แก้ชื่อ สาขา ตำแหน่ง วันเริ่มงานได้จนกว่าหัวหน้าจะยืนยัน</div>
       <label class="f">ชื่อ-นามสกุล (มีคำนำหน้า)<input id="u-name" value="${esc(e.name)}"></label>
       <label class="f">วันเกิด<input type="date" id="u-dob" value="${esc(e.dob||'')}"></label>
       <label class="f">สาขา<select id="u-branch">${BRANCHES.map(b=>`<option ${b===e.branch?'selected':''}>${b}</option>`).join('')}</select></label>
       <label class="f">ตำแหน่ง<select id="u-pos">${POSITIONS.map(p=>`<option value="${esc(p)}" ${p===e.pos?'selected':''}>${esc(posLabel(p))}</option>`).join('')}</select></label>
       <label class="f">ประเภทรถ (นำจ่าย)<select id="u-type">${['','SPT','SPT+C'].map(t=>`<option value="${t}" ${t===(e.type||'')?'selected':''}>${t||'-'}</option>`).join('')}</select></label>
-      <label class="f">วันเริ่มงาน<input type="date" id="u-start" value="${esc(e.start||'')}"></label>`:''}
+      <label class="f">วันเริ่มงาน<input type="date" id="u-start" min="${OPEN_DATE}" max="${iso(TODAY)}" value="${esc(e.start||'')}"></label>`:''}
     <label class="f">รหัส J&T (JMS)${JMS_POS.test(e.pos)||isNew?' *':''}<input id="u-jms" value="${esc(e.jms||'')}" placeholder="เช่น 301714T000118"></label>
     <label class="f">ชื่อในระบบ JMS${JMS_POS.test(e.pos)||isNew?' *':''}<input id="u-jmsname" value="${esc(e.jmsName||'')}" placeholder="ชื่อตามที่ขึ้นในระบบ J&T"></label>
     <label class="f">เบอร์โทร<input id="u-phone" value="${esc(e.phone)}" inputmode="tel"></label>
@@ -963,7 +963,7 @@ function clockView(){if(!(S.who&&E(S.who)))return realLoginEmp();
     <div class="cam">
       ${S.shot?`<img src="${S.shot.img}" alt="รูปที่ถ่าย">`:`<div class="vf"><video id="vf-video" playsinline muted autoplay hidden></video><canvas id="vf-sim" width="300" height="400"></canvas></div>`}
       <div style="display:flex;flex-direction:column;gap:10px;min-width:0;flex:1 1 220px">
-        <div><div class="muted">ตำแหน่ง (ต้องอยู่ในรัศมี ${ATT.geo[me.branch].r} ม. ของสาขา ${me.branch})</div>
+        <div><div class="muted">ตำแหน่ง (${anyGeo(me)?'RM: อยู่ในรัศมีของคลังใดก็ได้':'ต้องอยู่ในรัศมี '+((ATT.geo[me.branch]||{}).r||'-')+' ม. ของสาขา '+me.branch})${fixedOf(me)?' · เวลาเข้างาน '+fixedOf(me).split('-')[0]+' น.':''}</div>
           <div class="row" style="margin-top:6px"><span class="pill ${g.ok?'p-ok':'p-bad'}" style="white-space:normal">${g.txt}</span>
           <button class="btn ghost sm" id="c-loc">ทดลอง: เปลี่ยนตำแหน่ง</button></div></div>
         ${S.shot?`<div>ถ่ายเมื่อ <b>${S.shot.t}</b> <span class="muted">(ต้องยืนยันภายใน 60 วินาที)</span></div>${sigPad('sg-punch','ลายมือชื่อ')}
@@ -1069,7 +1069,7 @@ function appsAdm(){
       <label class="f">ตำแหน่งที่อนุมัติ<select id="ap-pos" data-no="${a.no}">${(APPLY_POS[pk.key]?[]:[pk.key]).concat(Object.keys(APPLY_POS)).map(k=>`<option value="${esc(k)}" ${k===pk.key?'selected':''}>${esc(k)}</option>`).join('')}</select>${pk.key!==a.pos?`<small style="color:var(--warn)">ผู้สมัครเลือกมา: ${esc(a.pos)}</small>`:'<small class="muted">แก้ได้ ถ้าผู้สมัครกดตำแหน่งผิด</small>'}</label>
       <label class="f">ประเภทการจ้าง<select id="ap-pt" data-no="${a.no}"><option value="0" ${pk.pt?'':'selected'}>ประจำ / สัญญาจ้าง</option><option value="1" ${pk.pt?'selected':''}>พาร์ทไทม์</option></select>${pk.pt!==!!a.ptime?`<small style="color:var(--warn)">ผู้สมัครเลือกมา: ${a.ptime?'พาร์ทไทม์':'ประจำ'}</small>`:''}</label>
       <label class="f">สาขาที่อนุมัติ<select id="ap-br" ${S.role.branch?'disabled':''}>${BRANCHES.map(b=>`<option ${b===a.branch?'selected':''}>${b}</option>`).join('')}</select></label>
-      <label class="f">วันเริ่มงาน<input type="date" id="ap-start" value="${a.avail}"></label>
+      <label class="f">วันเริ่มงาน<input type="date" id="ap-start" min="${OPEN_DATE}" max="${iso(TODAY)}" value="${a.avail}"></label>
       <label class="f">ประเภทค่าตอบแทน<select id="ap-paytype">${Object.keys(PAY_TYPES).map(t=>`<option ${t===defPay(appPos(pk.key)[0])?'selected':''}>${t}</option>`).join('')}</select></label>
       <label class="f"><span id="ap-ratelab">${PAY_TYPES[defPay(appPos(pk.key)[0])]}</span><input id="ap-rate" inputmode="decimal" value="${defAmt(defPay(appPos(pk.key)[0]))}"></label>
       ${(()=>{const o=openReqs(a.branch,appPos(pk.key)[0]);return `<label class="f">ปิดคำขอเพิ่มคน<select id="ap-req">${o.map(r=>`<option value="${r.no}">${r.no} · ได้ ${fillsOf(r).length}/${r.qty} · อนุมัติ ${th(r.approvedDate||r.date)}</option>`).join('')}<option value="">ไม่ผูกกับคำขอ (แทนคนออก ฯลฯ)</option></select><small class="muted">${o.length?'ผูกเพื่อวัดผลการหาคนของ HR':'ไม่มีคำขอที่เปิดอยู่ของสาขา/ตำแหน่งนี้'}</small></label>`})()}</div>
@@ -1233,7 +1233,7 @@ function empEditForm(e){const o=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>
     <label class="f">ตำแหน่ง<select id="ee-pos">${(POSITIONS.includes(e.pos)?POSITIONS:[e.pos,...POSITIONS]).map(x=>`<option value="${esc(x)}" ${x===e.pos?'selected':''}>${esc(posLabel(x))}</option>`).join('')}</select></label>
     <label class="f">ประเภทการจ้าง<select id="ee-pt"><option value="">ประจำ</option><option value="1" ${isPT(e)?'selected':''}>พาร์ทไทม์</option></select></label>
     <label class="f">ประเภทรถ (นำจ่าย)<select id="ee-type">${o(['','SPT','SPT+C'],e.type||'')}</select></label>
-    <label class="f">วันเริ่มงาน<input type="date" id="ee-start" value="${esc(e.start||'')}"></label>
+    <label class="f">วันเริ่มงาน<input type="date" id="ee-start" min="${OPEN_DATE}" max="${iso(TODAY)}" value="${esc(e.start||'')}"></label>
     <label class="f">รหัส J&T (JMS)<input id="ee-jms" value="${esc(e.jms||'')}"></label>
     <label class="f">ชื่อในระบบ JMS<input id="ee-jmsname" value="${esc(e.jmsName||'')}"></label>
     <label class="f full">ที่อยู่ปัจจุบัน<input id="ee-addr" value="${esc(e.address||'')}"></label>${extraFields('ee',e)}
@@ -1272,7 +1272,7 @@ function ptAdm(){const L=S.emp.filter(e=>isPT(e)&&inScope(e.branch));const P=per
     <label class="f">เลขบัตรประชาชน *<input id="pt-id" inputmode="numeric" maxlength="13"></label><label class="f">เบอร์โทร *<input id="pt-phone" inputmode="tel" maxlength="10"></label>
     <label class="f">สาขา<select id="pt-br">${brs.map(b=>`<option>${esc(b)}</option>`).join('')}</select></label>
     <label class="f">ตำแหน่ง<select id="pt-pos">${Object.keys(APPLY_POS).map(k=>`<option>${esc(k)}</option>`).join('')}</select></label>
-    <label class="f">เลขบัญชีกสิกรไทย<input id="pt-acct" inputmode="numeric"></label><label class="f">วันเริ่มงาน<input type="date" id="pt-start" value="${iso(TODAY)}"></label></div>
+    <label class="f">เลขบัญชีกสิกรไทย<input id="pt-acct" inputmode="numeric"></label><label class="f">วันเริ่มงาน<input type="date" id="pt-start" min="${OPEN_DATE}" max="${iso(TODAY)}" value="${iso(TODAY)}"></label></div>
     <div class="row"><button class="btn" id="pt-save">บันทึก</button><span class="muted">พาร์ทไทม์เข้าระบบพนักงานด้วยเลขบัตร + เบอร์นี้ แล้วกรอกข้อมูลส่วนที่เหลือเอง (รูปบัตร บัญชี ลายเซ็น)</span></div></section>`:''}
   <div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ</th><th>สาขา</th><th>ตำแหน่ง</th><th>เบอร์</th><th>เริ่มงาน</th><th>สถานะ</th><th class="num">วันที่มา (งวดนี้)</th><th class="num">ชั่วโมง (งวดนี้)</th></tr>${rows||'<tr><td colspan="9" class="muted">ไม่มีรายชื่อ</td></tr>'}</table></div>`}
 function fixAdm(){const f=S.fxF||'พนักงานแก้แล้ว';const all=S.fixReq.filter(r=>inScope(E(r.emp).branch));const L=all.filter(r=>f==='ทั้งหมด'||r.status===f).slice().reverse();
@@ -1669,6 +1669,7 @@ function bindHr2(){
     if(!v('ee-name'))return toast('กรอกชื่อ-นามสกุล');
     if(nid&&!idValid(nid))return toast('เลขบัตรประชาชนไม่ถูกต้อง');
     if(nid&&nid!==e.idCard&&S.emp.some(x=>x.id!==e.id&&x.idCard===nid))return toast('เลขบัตรนี้มีในทะเบียนแล้ว ('+S.emp.find(x=>x.id!==e.id&&x.idCard===nid).id+')');
+    if(v('ee-start')&&startErr(v('ee-start'))){toast(startErr(v('ee-start')));return}
     const nv={ptime:!!v('ee-pt'),name:v('ee-name'),sex:v('ee-sex'),dob:v('ee-dob'),phone:v('ee-phone').replace(/[^\d]/g,''),branch:v('ee-br'),pos:v('ee-pos'),type:v('ee-type'),start:v('ee-start'),jms:v('ee-jms'),jmsName:v('ee-jmsname'),address:v('ee-addr'),emerg:v('ee-emerg'),licNo:v('ee-lic'),licExp:licVal('ee-licexp'),plate:v('ee-plate'),taxExp:v('ee-taxexp'),...readExtra('ee',e)};
     if(nid)nv.idCard=nid;if(nac)nv.acct=nac;
     const LB={ptime:'ประเภทการจ้าง',name:'ชื่อ',sex:'เพศ',dob:'วันเกิด',phone:'เบอร์',branch:'สาขา',pos:'ตำแหน่ง',type:'ประเภทรถ',start:'วันเริ่มงาน',jms:'รหัส JMS',jmsName:'ชื่อ JMS',address:'ที่อยู่',emerg:'ผู้ติดต่อฉุกเฉิน',licNo:'ใบขับขี่',licExp:'ใบขับขี่หมดอายุ',plate:'ทะเบียนรถ',taxExp:'ภาษีรถ',idCard:'เลขบัตร',acct:'บัญชี',nick:'ชื่อเล่น',nat:'สัญชาติ',military:'สถานะทหาร',pin:'ตำแหน่งบ้าน'};
@@ -2129,6 +2130,7 @@ function bindAdm(){
     if(!v('pt-name'))return toast('กรอกชื่อ-นามสกุล');if(!idValid(id))return toast('เลขบัตรประชาชนไม่ถูกต้อง');if(!/^0\d{9}$/.test(ph))return toast('เบอร์โทร 10 หลัก');
     const dup=S.emp.find(e=>e.idCard===id);if(dup)return toast('เลขบัตรนี้มีในทะเบียนแล้ว ('+dup.id+' '+dup.name+')');
     const [pos,type]=appPos(v('pt-pos'));const t=v('pt-title');const spv=S.role.role==='spv';
+    if(startErr(v('pt-start'))){toast(startErr(v('pt-start')));return}
     const e=mk(seq.pe++,{ptime:true,name:t+v('pt-name'),nick:v('pt-nick'),sex:t==='นาย'?'ชาย':'หญิง',idCard:id,phone:ph,branch:v('pt-br'),pos,type,acct:v('pt-acct').replace(/\D/g,''),start:v('pt-start'),jms:'',status:spv?'รอตรวจสอบ':'ทำงาน',profileDone:false,source:'เพิ่มพาร์ทไทม์โดย '+S.role.name,updated:iso(TODAY)});
     S.emp.push(e);S.ptNew=false;toast('เพิ่ม '+e.id+' แล้ว'+(spv?' · รอ HR ตรวจ':''));render()});
   on('#org-std',()=>{const used=new Set(S.emp.filter(e=>e.status!=='พ้นสภาพ').map(e=>e.pos));const keep=POSITIONS.filter(p=>used.has(p)&&!STD_POS.includes(p)&&p!=='พาร์ทไทม์');
@@ -2217,10 +2219,16 @@ const SHIFT_DEF={'SPV':'10:00-19:00','ADMIN':'08:00-17:00','คัดแยก':
 const NOW=()=>new Date();
 const xD=v=>v?D(v):'';// ช่องวันที่ใน Excel = วันที่จริง แสดง วว/ดด/ปปปป
 const attToday=()=>iso(NOW());
-const needAtt=e=>ATT.pos.includes(e.pos);
+const OPEN_DATE='2022-12-01',OPEN_TXT='1 ธ.ค. 2565';   // บริษัทเปิดวันนี้ วันเริ่มงานต้องไม่ก่อนวันนี้
+const startErr=v=>!v?'กรุณาใส่วันเริ่มงาน':v<OPEN_DATE?'วันเริ่มงานต้องไม่ก่อน '+OPEN_TXT+' (วันที่บริษัทเปิด)':D(v)>TODAY?'วันเริ่มงานต้องไม่เกินวันนี้':'';
+const MUST_ATT=['RM','SPV','ADMIN'];   // ต้องลงเวลาเสมอ (แอดมินปิดไม่ได้)
+const needAtt=e=>MUST_ATT.includes(e.pos)||ATT.pos.includes(e.pos)||!!(e&&(ATT.fixed||{})['EMP:'+e.id]);
+const FIXED_DEF={'RM':'07:00-16:00','SPV':'07:00-16:00','SPV@301675':'10:00-19:00'};
+const fixedOf=e=>{const F=ATT.fixed||FIXED_DEF;return e?F['EMP:'+e.id]||F[e.pos+'@'+e.branch]||F[e.pos]||'':''};
+const anyGeo=e=>!!e&&(ATT.anyGeoPos||['RM']).includes(e.pos);   // RM ลงเวลาได้ทุกคลัง (เฉพาะคลังที่มีรหัสตัวเลข)
 const hm=s=>{if(!s)return null;const[a,b]=s.split(':').map(Number);return a*60+b};
 const fmtM=m=>String(Math.floor(((m%1440)+1440)%1440/60)).padStart(2,'0')+':'+String(((m%60)+60)%60).padStart(2,'0');
-const shiftOf=e=>e.shift||SHIFT_DEF[e.pos]||'08:00-17:00';
+const shiftOf=e=>fixedOf(e)||e.shift||SHIFT_DEF[e.pos]||'08:00-17:00';
 const offOf=e=>e.offDay||WD[(parseInt(e.id.slice(3))*3)%7];
 function periodOf(d){const x=typeof d==='string'?D(d):d;let y=x.getFullYear(),m=x.getMonth();if(x.getDate()<ATT.startDay){m--;if(m<0){m=11;y--}}const s=new Date(y,m,ATT.startDay),e=new Date(y,m+1,ATT.startDay-1);return{s,e,name:th(s)+' – '+th(e)}}
 function periodDays(p){const out=[];for(let d=new Date(p.s);d<=p.e;d=addDays(d,1))out.push(iso(d));return out}
@@ -2296,7 +2304,8 @@ function seedAtt(){
   const e2=S.emp.find(e=>e.id==='PE-00023'),d2=iso(addDays(ps,10));if(e2){ATT.mark[e2.id+'|'+d2]={st:'มาทำงานไม่ลงเวลา',note:'มือถือแบตหมด SPV เห็นว่ามาทำงาน',by:'SPV สาขา 301714',at:d2};S.punch=S.punch.filter(p=>!(p.emp===e2.id&&p.date===d2))}
 }
 // --- พนักงาน: หน้าลงเวลา ---
-function geoState(e){return geoReal(e);const g=ATT.geo[e.branch];const L=S.loc||'in';
+function geoState(e){return geoReal(e);const g=ATT.geo[e.branch]||{r:200};const L=S.loc||'in';
+  if(anyGeo(e)&&L!=='out')return{ok:true,dist:40,txt:'อยู่ในพื้นที่คลัง '+(L==='other'?'301714':'301710')+' ห่าง ~40 ม. (RM ลงเวลาได้ทุกคลัง)'};
   if(L==='in')return{ok:true,dist:35,txt:'อยู่ที่สาขา '+e.branch+' ห่าง ~35 ม.'};
   if(L==='other'){const o=BRANCHES.find(b=>b!==e.branch);return{ok:false,dist:9800,txt:'อยู่ที่สาขา '+o+' ไม่ใช่สาขาของคุณ ('+e.branch+') · ลงเวลาไม่ได้'}}
   return{ok:false,dist:2400,txt:'นอกพื้นที่ ห่างสาขา ~2.4 กม. (เกินรัศมี '+g.r+' ม.) · ลงเวลาไม่ได้'}}
@@ -2366,7 +2375,10 @@ function attCfg(){const ad=can('users');const dis=ad?'':'disabled';
   <h3>ตำแหน่งที่จับกะอัตโนมัติจากเวลาลงเข้า</h3><p class="muted">สำหรับตำแหน่งที่สลับกะกันบ่อย ไม่ต้องจัดกะล่วงหน้า (ตารางเข้างานกำหนดแค่ ทำงาน/หยุด) · ระบบเลือกกะที่เวลาเริ่มใกล้เวลาลงเข้าที่สุด แล้วคิดสายจากกะนั้น · ตำแหน่งที่ไม่ติ๊กใช้กะตามตารางเข้างาน</p>
   <div class="checks" style="flex-direction:row;flex-wrap:wrap;gap:14px">${POSITIONS.map(p=>`<label><input type="checkbox" class="cf-flex" value="${p}" ${ATT.flexPos.includes(p)?'checked':''} ${dis}> ${p}</label>`).join('')}</div>
   <div class="fields"><label class="f full">กะที่ใช้จับอัตโนมัติ (คั่นด้วย ,)<input id="cf-fs" value="${ATT.flexShifts.join(', ')}" ${dis}><small class="muted">ควรห่างกันอย่างน้อย 4 ชม. ถ้ากะเริ่มใกล้กันมาก คนที่มาสายเยอะจะถูกนับเป็นกะถัดไปแทน</small></label></div>
-  <h3>ตำแหน่งที่ต้องลงเวลา</h3><div class="checks" style="flex-direction:row;flex-wrap:wrap;gap:14px">${POSITIONS.map(p=>`<label><input type="checkbox" class="cf-pos" value="${p}" ${ATT.pos.includes(p)?'checked':''} ${dis}> ${p}</label>`).join('')}</div>
+  <h3>เวลาเข้างานตายตัว (SPV จัดกะเปลี่ยนไม่ได้ · เลือกได้แค่ ทำงาน/หยุด)</h3><p class="muted">มาสายและไม่ลงเวลาในวันทำงานที่ไม่ใช่วันหยุดหรือวันลา คิดค่าปรับตามระเบียบเดียวกับพนักงานทุกคน · RM ลงเวลาได้ในรัศมีของคลังใดก็ได้ ส่วน SPV / ADMIN ต้องอยู่ในรัศมีคลังของตัวเอง</p>
+  <div class="fields">${['RM','SPV',...BRANCHES.map(b=>'SPV@'+b),...Object.keys(ATT.fixed||{}).filter(k=>k.startsWith('EMP:'))].map(k=>k.startsWith('EMP:')?`<label class="f">รายบุคคล: ${esc((E(k.slice(4))||{}).name||k.slice(4))} <small class="muted">(ลบเวลาเพื่อยกเลิก)</small><input class="cf-fix" data-k="${k}" value="${esc(ATT.fixed[k])}" ${dis}></label>`:`<label class="f">${k.includes('@')?'SPV คลัง '+k.split('@')[1]+' <small class="muted">(เว้นว่าง = ใช้เวลา SPV ปกติ)</small>':k}<input class="cf-fix" data-k="${k}" value="${esc((ATT.fixed||FIXED_DEF)[k]||'')}" placeholder="${k.includes('@')?'':'07:00-16:00'}" ${dis}></label>`).join('')}</div>
+  ${dis?'':`<div class="row"><label class="f">เพิ่มเวลาเข้างานรายบุคคล (เช่น ทดลองใช้)<select id="cf-fe"><option value="">— เลือกพนักงาน —</option>${S.emp.filter(e=>e.status==='ทำงาน').map(e=>`<option value="${e.id}">${esc(e.name)} · ${esc(e.branch)} · ${esc(e.pos)}</option>`).join('')}</select></label><label class="f">เวลา<input id="cf-ft" value="10:00-19:00" style="width:130px"></label><button class="btn ghost" id="cf-fadd">+ เพิ่ม</button></div>`}
+  <h3>ตำแหน่งที่ต้องลงเวลา</h3><p class="muted">RM / SPV / ADMIN ต้องลงเวลาเสมอ</p><div class="checks" style="flex-direction:row;flex-wrap:wrap;gap:14px">${POSITIONS.map(p=>`<label><input type="checkbox" class="cf-pos" value="${p}" ${ATT.pos.includes(p)?'checked':''} ${dis}> ${p}</label>`).join('')}</div>
   <h3>สถานะที่ SPV เลือกได้</h3><div class="tablewrap"><table><tr><th>สถานะ</th><th>ผลต่อการคำนวณ</th></tr>${ATT_ST.map(([s,h])=>`<tr><td>${s}</td><td>${h}</td></tr>`).join('')}</table></div>
   ${ad?'<div class="row"><button class="btn" id="cf-save">บันทึกตั้งค่า</button></div>':''}`}
 async function attExport(P){
@@ -2406,21 +2418,24 @@ function bindAtt(){
   on('#att-xls',()=>attExport(S.attPrev?periodOf(addDays(periodOf(NOW()).s,-1)):periodOf(NOW())));
   document.querySelectorAll('[data-geohere]').forEach(b=>b.onclick=()=>{if(!navigator.geolocation){toast('อุปกรณ์นี้อ่านตำแหน่งไม่ได้');return}
     navigator.geolocation.getCurrentPosition(p=>{const g=ATT.geo[b.dataset.geohere];g.lat=+p.coords.latitude.toFixed(6);g.lng=+p.coords.longitude.toFixed(6);toast('บันทึกพิกัดสาขา '+b.dataset.geohere+' แล้ว');render()},()=>toast('หน้าทดลองนี้อ่านตำแหน่งไม่ได้ · ระบบจริงให้ SPV ยืนกลางสาขาแล้วกดปุ่มนี้'),{enableHighAccuracy:true,timeout:8000})});
+  on('#cf-fadd',()=>{const id=$('#cf-fe').value,n=normShift($('#cf-ft').value);if(!id){toast('เลือกพนักงาน');return}if(!n||n==='หยุด'||n==='AUTO'){toast('ใส่เวลาแบบ 10:00-19:00');return}ATT.fixed=Object.assign({},ATT.fixed||FIXED_DEF,{['EMP:'+id]:n});toast('ตั้งเวลาเข้างาน '+E(id).name+' = '+n+' แล้ว');render()});
   on('#cf-save',()=>{document.querySelectorAll('.geo').forEach(i=>{ATT.geo[i.dataset.b][i.dataset.k]=+i.value||ATT.geo[i.dataset.b][i.dataset.k]});
     ATT.accMax=+$('#cf-acc').value||ATT.accMax;ATT.startDay=Math.min(28,Math.max(1,+$('#cf-sd').value||25));ATT.grace=+$('#cf-gr').value||0;ATT.lateRate=+$('#cf-lr').value||0;
     const ti=$('#cf-ti').value.split(',').map(x=>x.split(':').map(Number)).filter(x=>x.length===2&&!isNaN(x[0])&&!isNaN(x[1])).sort((a,b)=>a[0]-b[0]);if(ti.length)ATT.tiers=ti;
     const sh=$('#cf-sh').value.split(',').map(x=>x.trim()).filter(x=>/^\d\d:\d\d-\d\d:\d\d$/.test(x));if(sh.length)ATT.shifts=sh;
+    {const F={};let bad='';document.querySelectorAll('.cf-fix').forEach(i=>{const v=i.value.trim();if(!v)return;const n=normShift(v);if(!n||n==='หยุด'||n==='AUTO'){bad=i.dataset.k;return}F[i.dataset.k]=n});if(bad){toast('เวลา '+bad+' ไม่ถูกต้อง ใส่แบบ 07:00-16:00');return}ATT.fixed=F}
     ATT.pos=[...document.querySelectorAll('.cf-pos:checked')].map(x=>x.value);ATT.flexPos=[...document.querySelectorAll('.cf-flex:checked')].map(x=>x.value);
     const fs=$('#cf-fs').value.split(',').map(x=>normShift(x)).filter(x=>x&&x!=='หยุด'&&x!=='AUTO');if(fs.length)ATT.flexShifts=fs;toast('บันทึกตั้งค่าแล้ว');render()});
 }
 // ===== ตารางเข้างาน (กะ/วันหยุดรายวัน) =====
 ATT.roster={};S.rosterLog=[];ATT.flexPos=['คัดแยก'];ATT.flexShifts=['00:00-09:00','08:00-17:00','12:00-21:00'];
-const isFlex=e=>ATT.flexPos.includes(e.pos);
+const isFlex=e=>!fixedOf(e)&&ATT.flexPos.includes(e.pos);
 // ตำแหน่งกะยืดหยุ่น: เลือกกะที่เวลาเริ่มใกล้เวลาลงเข้ามากที่สุด
 function detectShift(m){let best=null;ATT.flexShifts.forEach(sh=>{const s0=hm(sh.split('-')[0]);[-1,0,1].forEach(o=>{const c=s0+o*1440,dd=Math.abs(m-c);if(!best||dd<best.dd||(dd===best.dd&&c<best.c))best={sh,c,o,dd}})});return best}
 const OFF_WORDS=['หยุด','off','OFF','Off','วันหยุด','x','X'];
 function shiftOn(e,d){const v=ATT.roster[e.id+'|'+d];
   if(v==='หยุด')return{sh:'',off:true,custom:true};
+  if(v&&fixedOf(e))return{sh:fixedOf(e),off:false,custom:true};
   if(v)return{sh:v,off:false,custom:true};
   const off=WD[D(d).getDay()]===offOf(e);return{sh:off?'':shiftOf(e),off,custom:false}}
 const shStart=(e,d)=>hm((shiftOn(e,d).sh||shiftOf(e)).split('-')[0]);
@@ -2430,7 +2445,7 @@ function normShift(v){v=String(v==null?'':v).trim();if(!v)return null;if(OFF_WOR
   const a=+m[1],b=+(m[2]||0),c=+m[3],d=+(m[4]||0);if(a>23||c>23||b>59||d>59)return undefined;
   return String(a).padStart(2,'0')+':'+String(b).padStart(2,'0')+'-'+String(c).padStart(2,'0')+':'+String(d).padStart(2,'0')}
 const canRoster=(e,d)=>S.role&&(S.role.role!=='spv'||(S.role.branch===e.branch&&d>=attToday()));
-function setRoster(e,d,val,src){const k=e.id+'|'+d,before=shiftOn(e,d);const from=before.off?'หยุด':before.sh;
+function setRoster(e,d,val,src){if(fixedOf(e)&&val&&val!=='หยุด')val=fixedOf(e);const k=e.id+'|'+d,before=shiftOn(e,d);const from=before.off?'หยุด':before.sh;
   const def=WD[D(d).getDay()]===offOf(e)?'หยุด':shiftOf(e);
   if(val===def)delete ATT.roster[k];else ATT.roster[k]=val;
   if(from!==val)S.rosterLog.unshift({emp:e.id,date:d,from,to:val,by:S.role.name,at:new Date().toLocaleString('th-TH'),src});return from!==val}
@@ -2668,7 +2683,7 @@ function bind(){
     const pk=apPick(a),[pos,type]=appPos(pk.key);const br0=$('#ap-br').value;
     if(HC_POS[pos]){const h=hcStatus(br0,pos);if(!h.canAdd){toast('สาขา '+br0+' '+HC_POS[pos]+'เกินเกณฑ์ ต้องขอเพิ่มคนก่อน');return}if(h.act>=h.allow&&!(($('#ap-req')||{}).value)){toast('สาขาเต็มเกณฑ์ ต้องเลือกคำขอเพิ่มคนที่อนุมัติแล้ว');return}}
     const n=seq.pe++;
-    if(pk.key!==a.pos){a.posApplied=a.pos;a.pos=pk.key}if(pk.pt!==!!a.ptime){a.ptApplied=!!a.ptime;a.ptime=pk.pt}
+    if(startErr($('#ap-start').value)){toast(startErr($('#ap-start').value));return}if(pk.key!==a.pos){a.posApplied=a.pos;a.pos=pk.key}if(pk.pt!==!!a.ptime){a.ptApplied=!!a.ptime;a.ptime=pk.pt}
     const e=mk(n,{ptime:pk.pt,name:a.title+a.name,phone:a.phone,sex:a.sex,dob:a.dob||'',nick:a.nick||'',nat:a.nat||'',military:a.military||'',pin:a.pin||'',branch:$('#ap-br').value,pos,type,start:$('#ap-start').value,acct:a.acct,bk2:a.bk2||null,address:a.addr,emerg:a.emerg,licNo:a.licNo||'',licExp:a.licExp||'',plate:a.plate||'',taxExp:a.taxExp||'',payType:$('#ap-paytype').value,payAmt:+$('#ap-rate').value||0,dailyRate:toDaily($('#ap-paytype').value,+$('#ap-rate').value||0),source:'สมัครใหม่ ('+a.no+')',updated:iso(TODAY)});
     e.idCard=a.idCard;e.docs=Object.assign({},a.docs);e.appNo=a.no;if(a.guardian)e.guardian=a.guardian;e.sign=a.sign;e.profileDone=true;S.emp.push(e);a.status='อนุมัติ';a.empId=e.id;if(a.ackAt)ackRec(e.id,a.sign,a.ackAt);
     const rq=($('#ap-req')||{}).value;if(rq){const r=S.hcReq.find(x=>x.no===rq);r.fills=r.fills||[];r.fills.push({emp:e.id,date:iso(TODAY),app:a.no})}
@@ -2694,7 +2709,7 @@ function bind(){
       if(!$('#a-ack').checked){$('#a-msg').textContent='ยังไม่ได้ติ๊กรับทราบ "เอกสารที่ต้องรับทราบ" (หัวข้อ 7)';$('#a-msg').style.color='var(--bad)';return}
       const sg=needSig('sg-apply');if(!sg)return;
       let guardian=null;if(minor){const gs=needSig('sg-guard');if(!gs)return;guardian={name:g('#g-name'),rel:g('#g-rel'),idCard:g('#g-id'),phone:g('#g-phone'),sign:gs,at:nowStamp()}}
-      if(S.page==='oldreg'||S.page==='oldentry'){const st=g('#a-start');if(!st||D(st)>TODAY){$('#a-msg').textContent='ใส่วันที่เริ่มงาน (ไม่เกินวันนี้)';$('#a-msg').style.color='var(--bad)';return}const id=g('#a-id');let e=S.emp.find(x=>x.idCard===id);
+      if(S.page==='oldreg'||S.page==='oldentry'){const st=g('#a-start');if(startErr(st)){$('#a-msg').textContent=startErr(st);$('#a-msg').style.color='var(--bad)';return}const id=g('#a-id');let e=S.emp.find(x=>x.idCard===id);
         if(e&&e.profileDone){$('#a-msg').textContent='เลขบัตรนี้มีข้อมูลในระบบแล้ว ('+e.id+') ไม่ต้องกรอกซ้ำ · เข้าสู่ระบบที่ "พนักงานปัจจุบัน" แล้วใช้เมนูอัปเดตข้อมูล';$('#a-msg').style.color='var(--bad)';return}
         if(!S.who&&S.page==='oldentry'&&!oldRegOpen()){$('#a-msg').textContent='ช่วงเพิ่มข้อมูลพนักงานเดิมปิดแล้ว';return}
         if(!/^0\d{9}$/.test(g('#a-phone'))){$('#a-msg').textContent='ใส่เบอร์โทร 10 หลัก (ใช้เป็นรหัสเข้าสู่ระบบ)';$('#a-msg').style.color='var(--bad)';return}
@@ -2734,9 +2749,9 @@ function bind(){
     if(jm){const dup=S.emp.find(x=>x.jms===jm&&x.id!==e.id);if(dup){toast('รหัส JMS นี้มีคนใช้แล้ว ตรวจสอบอีกครั้ง หรือติดต่อหัวหน้างาน');return}}
     const sg=needSig('sg-upd');if(!sg)return;e.sign=sg;delete S.sigs['sg-upd'];{const fl=[...($('#u-files')?$('#u-files').files:[])];for(const f of fl)(e.upl=e.upl||[]).push({t:'อัปเดต '+th(TODAY)+' · '+f.name,v:await readImg(f)})}
     if(jm&&(jm!==e.jms||jn!==e.jmsName)){if(e.jms&&e.jms!==jm)(e.jmsOld=e.jmsOld||[]).push({code:e.jms,closed:iso(TODAY)});e.jms=jm;e.jmsName=jn;e.jmsSelf=iso(TODAY);e.jmsMove=null}
-    if(e.status==='รอตรวจสอบ'&&$('#u-name')){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}Object.assign(e,{name:g('#u-name'),dob:g('#u-dob'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start')})}
+    if(e.status==='รอตรวจสอบ'&&$('#u-name')){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}if(startErr(g('#u-start'))){toast(startErr(g('#u-start')));return}Object.assign(e,{name:g('#u-name'),dob:g('#u-dob'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start')})}
     document.querySelectorAll('.ua-q').forEach(i=>{const a=S.assets.find(x=>x.no===i.dataset.no);if(!a||!selfPend(a))return;const n=parseInt(i.value)||0;const d=(document.querySelector('.ua-d[data-no="'+a.no+'"]')||{}).value||'';if(n<=0){S.assets.splice(S.assets.indexOf(a),1);return}a.qty=n;a.detail=d.trim()||'พนักงานแจ้งเอง รอหัวหน้าตรวจ'});
-    if(e.status==='ลงทะเบียนใหม่'){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}Object.assign(e,{name:g('#u-name'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start'),status:'รอตรวจสอบ'})}
+    if(e.status==='ลงทะเบียนใหม่'){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}if(startErr(g('#u-start'))){toast(startErr(g('#u-start')));return}Object.assign(e,{name:g('#u-name'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start'),status:'รอตรวจสอบ'})}
     Object.assign(e,readExtra('u',e),{phone:g('#u-phone'),acct:g('#u-acct'),bk2:readBk2('u'),address:g('#u-addr'),emerg:g('#u-emerg'),licNo:g('#u-lic'),licExp:licVal('u-licexp'),plate:g('#u-plate'),taxExp:g('#u-taxexp'),updated:iso(TODAY)});
     const wasNew=$('#u-name')&&!$('#u-dob');toast(wasNew?'ส่งลงทะเบียนแล้ว รอหลังบ้านตรวจยืนยัน':'บันทึกข้อมูลแล้ว');if(wasNew){S.who=null;S.page='home'}else S.page='me';render();scrollTo(0,0)});
   document.querySelectorAll('[data-fxdone]').forEach(b=>b.onclick=async()=>{const r=S.fixReq.find(x=>x.no===b.dataset.fxdone);const e=E(r.emp);const ins=[...document.querySelectorAll('[data-fxfile="'+r.no+'"]')];
@@ -2918,7 +2933,10 @@ REAL.afterBind=function(){
   if(!$('.cam')&&REAL.gpsW!=null){navigator.geolocation.clearWatch(REAL.gpsW);REAL.gpsW=null}
 };
 REAL.blob=function(id){if(!REAL.blobs.has(id))REAL.blobs.set(id,api('blob',{id:id.slice(6)}));return REAL.blobs.get(id)};
-function geoReal(e){const g=ATT.geo[e.branch];if(S.gpsErr&&!S.gps)return{ok:false,dist:null,txt:S.gpsErr};if(!S.gps)return{ok:false,dist:null,txt:'กำลังหาตำแหน่ง GPS… (กดอนุญาตตำแหน่ง)'};if(!g)return{ok:false,dist:null,txt:'ยังไม่ได้ตั้งพิกัดสาขา '+e.branch+' ติดต่อแอดมิน'};
+function geoReal(e){if(typeof anyGeo==='function'&&anyGeo(e)&&S.gps){const L=Object.keys(ATT.geo).filter(b=>/^\d+$/.test(b)&&ATT.geo[b].lat).map(b=>{const g=ATT.geo[b],R=6371000,r=x=>x*Math.PI/180,a=Math.sin(r(g.lat-S.gps.lat)/2)**2+Math.cos(r(S.gps.lat))*Math.cos(r(g.lat))*Math.sin(r(g.lng-S.gps.lng)/2)**2;return{b,g,d:Math.round(2*R*Math.asin(Math.sqrt(a)))}}).sort((x,y)=>x.d-y.d);const n=L[0];
+    if(!n)return{ok:false,dist:null,txt:'ยังไม่ได้ตั้งพิกัดคลัง ติดต่อแอดมิน'};if(S.gps.acc>ATT.accMax)return{ok:false,dist:n.d,txt:'สัญญาณ GPS คลาดเคลื่อน '+S.gps.acc+' ม. ลองใหม่ในที่โล่ง'};
+    return n.d<=n.g.r?{ok:true,dist:n.d,txt:'อยู่ในพื้นที่คลัง '+n.b+' ห่าง '+n.d+' ม. (RM ลงเวลาได้ทุกคลัง)'}:{ok:false,dist:n.d,txt:'ไม่อยู่ในรัศมีคลังใด · คลังที่ใกล้ที่สุด '+n.b+' ห่าง '+(n.d>=1000?(n.d/1000).toFixed(1)+' กม.':n.d+' ม.')+' ลงเวลาไม่ได้'}}
+  const g=ATT.geo[e.branch];if(S.gpsErr&&!S.gps)return{ok:false,dist:null,txt:S.gpsErr};if(!S.gps)return{ok:false,dist:null,txt:'กำลังหาตำแหน่ง GPS… (กดอนุญาตตำแหน่ง)'};if(!g)return{ok:false,dist:null,txt:'ยังไม่ได้ตั้งพิกัดสาขา '+e.branch+' ติดต่อแอดมิน'};
   const R=6371000,r=x=>x*Math.PI/180,a=Math.sin(r(g.lat-S.gps.lat)/2)**2+Math.cos(r(S.gps.lat))*Math.cos(r(g.lat))*Math.sin(r(g.lng-S.gps.lng)/2)**2,d=Math.round(2*R*Math.asin(Math.sqrt(a)));
   if(S.gps.acc>ATT.accMax)return{ok:false,dist:d,txt:'สัญญาณ GPS คลาดเคลื่อน '+S.gps.acc+' ม. (ต้องไม่เกิน '+ATT.accMax+') ลองใหม่ในที่โล่ง'};
   return d<=g.r?{ok:true,dist:d,txt:'อยู่ในพื้นที่สาขา '+e.branch+' ห่าง '+d+' ม.'}:{ok:false,dist:d,txt:'อยู่นอกรัศมีสาขา '+e.branch+' (ห่าง '+(d>=1000?(d/1000).toFixed(1)+' กม.':d+' ม.')+' · รัศมี '+g.r+' ม.) ลงเวลาไม่ได้'}}
