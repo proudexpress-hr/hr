@@ -159,6 +159,18 @@ tr.dim td{opacity:.55}
 .dx-o{position:absolute;right:0;top:0;width:64px;height:100%;opacity:0;border:0;padding:0;margin:0;cursor:pointer;z-index:2;-webkit-appearance:none;appearance:none}.dx-o:disabled{pointer-events:none}
 .rgrid select.rs{border:0;background:transparent;font-size:.72rem;padding:6px 2px;width:100%;min-width:64px;color:inherit;cursor:pointer}.rgrid select.rs:disabled{cursor:default;opacity:.7}
 .rgrid td.r-cus{box-shadow:inset 0 0 0 2px var(--brand)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chip{border:1.5px solid var(--line);background:var(--surface,#fff);border-radius:999px;padding:8px 14px;font:inherit;font-size:.92rem;cursor:pointer;color:inherit;line-height:1.25}
+.chip small{color:var(--muted)}.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}.chip.on small{color:#fde}
+.chip .x{border:0;background:transparent;color:inherit;cursor:pointer;margin-left:6px;font:inherit;padding:0}
+.rq{border:2px solid var(--brand)}
+.rq-st{margin:16px 0 4px;font-weight:600}.rq-st>b{display:inline-block;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;text-align:center;line-height:26px;margin-right:6px}
+.rq-cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;max-width:640px}.rq-cal>i{font-style:normal;text-align:center;font-size:.8rem;color:var(--muted)}
+.rqd{border:1.5px solid var(--line);border-radius:10px;background:var(--surface,#fff);padding:6px 2px;display:flex;flex-direction:column;align-items:center;cursor:pointer;font:inherit;color:inherit;min-width:0}
+.rqd b{font-size:1.05rem}.rqd span{font-size:.7rem;white-space:nowrap}.rqd.off{background:#f6e1e1;border-color:#d9a9a9;color:#7a1a1a}.rqd.work{background:#e3f3e8;border-color:#9fcfaf;color:#14532d}.rqd.ov{box-shadow:inset 0 0 0 2px var(--brand)}
+.rgrid button.rc{border:0;background:transparent;font:inherit;font-size:.74rem;padding:8px 2px;width:100%;min-width:56px;color:inherit;cursor:pointer;border-radius:6px}.rgrid button.rc:hover:not(:disabled){background:rgba(176,20,31,.1)}.rgrid button.rc:disabled{cursor:default;opacity:.6}
+.rgrid .rqp{border:0;background:none;color:var(--brand);font:inherit;font-size:.75rem;padding:0;cursor:pointer;text-decoration:underline}
+.rpop{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;background:var(--surface,#fff);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.3);padding:14px 16px;width:min(560px,calc(100vw - 24px));max-height:72vh;overflow:auto;border:2px solid var(--brand)}
 .wk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0}.wk div{border:1px solid var(--line);border-radius:8px;padding:4px 2px;text-align:center;font-size:.75rem;line-height:1.3}.wk div b{display:block;font-size:.8rem}.wk .off{background:var(--bg);color:var(--muted)}.wk .now{border-color:var(--brand)}
 .gridwrap{max-height:70vh}.attgrid{font-size:.78rem;border-collapse:separate;border-spacing:0}.attgrid th,.attgrid td{padding:0;border-bottom:1px solid var(--line);text-align:center}
 .attgrid th.dcol{min-width:74px;padding:4px 2px;font-weight:600}.attgrid th.today{background:var(--brand-soft)}
@@ -2234,6 +2246,7 @@ const hm=s=>{if(!s)return null;const[a,b]=s.split(':').map(Number);return a*60+b
 const fmtM=m=>String(Math.floor(((m%1440)+1440)%1440/60)).padStart(2,'0')+':'+String(((m%60)+60)%60).padStart(2,'0');
 const shiftOf=e=>fixedOf(e)||e.shift||SHIFT_DEF[e.pos]||'08:00-17:00';
 const offOf=e=>e.offDay||WD[(parseInt(e.id.slice(3))*3)%7];
+const attPer=()=>S.attPrev?periodOf(addDays(periodOf(NOW()).s,-1)):(S.attNext&&S.attView==='roster')?periodOf(addDays(periodOf(NOW()).e,1)):periodOf(NOW());
 function periodOf(d){const x=typeof d==='string'?D(d):d;let y=x.getFullYear(),m=x.getMonth();if(x.getDate()<ATT.startDay){m--;if(m<0){m=11;y--}}const s=new Date(y,m,ATT.startDay),e=new Date(y,m+1,ATT.startDay-1);return{s,e,name:th(s)+' – '+th(e)}}
 function periodDays(p){const out=[];for(let d=new Date(p.s);d<=p.e;d=addDays(d,1))out.push(iso(d));return out}
 const punchOn=(id,d)=>S.punch.find(p=>p.emp===id&&p.date===d);
@@ -2321,7 +2334,7 @@ function myPeriodBox(e){const t=attSum(e,periodOf(NOW()));
 // --- หลังบ้าน ---
 function attScope(){const b=S.attBr||S.role.branch||'';return S.emp.filter(e=>(e.status==='ทำงาน'||e.endDate)&&needAtt(e)&&(b?e.branch===b:inScope(e.branch)))}
 function attAdm(){
-  const v=S.attView||'today';const P=S.attPrev?periodOf(addDays(periodOf(NOW()).s,-1)):periodOf(NOW());
+  const v=S.attView||'today';const P=attPer();
   const brSel=S.role.branch?'':`<label class="f" style="max-width:200px">สาขา<select id="att-br"><option value="">ทุกสาขา</option>${BRANCHES.map(b=>`<option ${S.attBr===b?'selected':''}>${b}</option>`).join('')}</select></label>`;
   const sub=[['today','วันนี้'],['check','ตรวจสาย / ไม่ลงเวลา'],['roster','ตารางเข้างาน'],['grid','ตารางงวด / ทำเงินเดือน'],['cfg','ตั้งค่า กะ รัศมี ค่าปรับ']].map(([k,t])=>`<button data-attv="${k}" aria-pressed="${v===k}">${t}</button>`).join('');
   let body='';
@@ -2331,7 +2344,7 @@ function attAdm(){
   else if(v==='check')body=attCheck();
   else body=attCfg();
   return `<div class="row"><h2>ลงเวลาทำงาน</h2><span class="muted">ถ่ายรูปสด + ตรวจรัศมีสาขา แทนสแกนนิ้ว · ข้อมูลถึง ${th(attToday())} ${NOW().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit'})}</span></div>
-  <div class="tabs" style="margin:8px 0">${sub}</div><div class="fields">${brSel}${v==='grid'||v==='roster'?`<label class="f" style="max-width:260px">งวด<select id="att-per"><option value="0" ${!S.attPrev?'selected':''}>งวดปัจจุบัน ${periodOf(NOW()).name}</option><option value="1" ${S.attPrev?'selected':''}>งวดก่อน ${periodOf(addDays(periodOf(NOW()).s,-1)).name}</option></select></label>`:''}</div>${body}`;
+  <div class="tabs" style="margin:8px 0">${sub}</div><div class="fields">${brSel}${v==='grid'||v==='roster'?`<label class="f" style="max-width:260px">งวด<select id="att-per"><option value="0" ${!S.attPrev&&!S.attNext?'selected':''}>งวดปัจจุบัน ${periodOf(NOW()).name}</option><option value="1" ${S.attPrev?'selected':''}>งวดก่อน ${periodOf(addDays(periodOf(NOW()).s,-1)).name}</option>${v==='roster'?`<option value="2" ${S.attNext?'selected':''}>งวดถัดไป ${periodOf(addDays(periodOf(NOW()).e,1)).name}</option>`:''}</select></label>`:''}</div>${body}`;
 }
 
 // ตรวจสาย / ไม่ลงเวลา: เลือกช่วงวันที่ แล้วเห็นทันทีว่าใครสาย ใครไม่ลงเวลาเข้า/ออก ใครขาด
@@ -2402,7 +2415,9 @@ function attCfg(){const ad=can('users');const dis=ad?'':'disabled';
   <h3>กติกาค่าปรับ (ยกมาจากตารางสแกนนิ้วเดิม)</h3>
   <div class="fields"><label class="f">วันเริ่มงวด (วันที่)<input id="cf-sd" value="${ATT.startDay}" ${dis} inputmode="numeric"></label><label class="f">สายได้ไม่เกิน (นาที)<input id="cf-gr" value="${ATT.grace}" ${dis} inputmode="numeric"></label><label class="f">ค่าปรับมาสาย (บาท/นาที)<input id="cf-lr" value="${ATT.lateRate}" ${dis} inputmode="numeric"></label>
   <label class="f full">ค่าปรับไม่ลงเวลาเข้า (ครั้ง:บาท คั่นด้วย ,)<input id="cf-ti" value="${ATT.tiers.map(t=>t.join(':')).join(', ')}" ${dis}><small class="muted">คิดตามจำนวนครั้งรวมในงวด ไม่สะสม เช่น 4:500 = ครบ 4 ครั้งปรับ 500</small></label>
-  <label class="f full">กะเวลาทำงาน (คั่นด้วย ,)<input id="cf-sh" value="${ATT.shifts.join(', ')}" ${dis}></label></div>
+  <div class="f full"><span>กะเวลาทำงานที่ให้เลือกในตาราง</span><input type="hidden" id="cf-sh" value="${ATT.shifts.join(', ')}">
+  <div class="chips">${ATT.shifts.map(x=>`<span class="chip on">${shShort(x)}${dis?'':`<button type="button" class="x" data-shdel="${x}" aria-label="ลบกะ ${x}">✕</button>`}</span>`).join('')}</div>
+  ${dis?'':`<div class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap"><label class="f" style="max-width:140px">เวลาเข้า<input type="time" id="cf-shs" value="07:00"></label><label class="f" style="max-width:140px">เวลาออก<input type="time" id="cf-she" value="16:00"></label><button type="button" class="btn sm" id="cf-shadd">+ เพิ่มกะ</button></div><small class="muted">เพิ่ม / ลบ แล้วมีผลทันที · ลบกะแล้ว คนที่ใช้กะนั้นอยู่ยังใช้ต่อได้ แค่ไม่ขึ้นเป็นปุ่มให้เลือก</small>`}</div></div>
   <h3>ตำแหน่งที่จับกะอัตโนมัติจากเวลาลงเข้า</h3><p class="muted">สำหรับตำแหน่งที่สลับกะกันบ่อย ไม่ต้องจัดกะล่วงหน้า (ตารางเข้างานกำหนดแค่ ทำงาน/หยุด) · ระบบเลือกกะที่เวลาเริ่มใกล้เวลาลงเข้าที่สุด แล้วคิดสายจากกะนั้น · ตำแหน่งที่ไม่ติ๊กใช้กะตามตารางเข้างาน</p>
   <div class="checks" style="flex-direction:row;flex-wrap:wrap;gap:14px">${POSITIONS.map(p=>`<label><input type="checkbox" class="cf-flex" value="${p}" ${ATT.flexPos.includes(p)?'checked':''} ${dis}> ${p}</label>`).join('')}</div>
   <div class="fields"><label class="f full">กะที่ใช้จับอัตโนมัติ (คั่นด้วย ,)<input id="cf-fs" value="${ATT.flexShifts.join(', ')}" ${dis}><small class="muted">ควรห่างกันอย่างน้อย 4 ชม. ถ้ากะเริ่มใกล้กันมาก คนที่มาสายเยอะจะถูกนับเป็นกะถัดไปแทน</small></label></div>
@@ -2441,7 +2456,7 @@ function bindAtt(){
   {const set=(k,v)=>{S.rf=Object.assign({},S.rf,{[k]:v});render()};['pos','type','emp','sh','off','day','from','to'].forEach(k=>{const el=$('#rf-'+k);if(el)el.onchange=()=>set(k,el.value)});
    const c=$('#rf-cus');if(c)c.onchange=()=>set('cus',c.checked);const cl=$('#rf-clear');if(cl)cl.onclick=()=>{S.rf={};render()};
    const q=$('#rf-q');if(q){let t;q.oninput=()=>{clearTimeout(t);t=setTimeout(()=>{const p=q.selectionStart;S.rf=Object.assign({},S.rf,{q:q.value});render();const n=$('#rf-q');if(n){n.focus();n.setSelectionRange(p,p)}},250)}}}
-  {const s=$('#att-per');if(s)s.onchange=()=>{S.attPrev=s.value==='1';S.attCell=null;render()}}
+  {const s=$('#att-per');if(s)s.onchange=()=>{S.attPrev=s.value==='1';S.attNext=s.value==='2';S.attCell=null;render()}}
   document.querySelectorAll('[data-attcell]').forEach(b=>b.onclick=()=>{S.attCell=b.dataset.attcell;S.attEmp=null;render();const x=$('#att-cellbox');if(x&&x.scrollIntoView)x.scrollIntoView({block:'center'})});
   document.querySelectorAll('[data-attph]').forEach(b=>b.onclick=()=>{S.attCell=b.dataset.attph;render()});
   document.querySelectorAll('[data-attemp]').forEach(b=>b.onclick=()=>{S.attEmp=b.dataset.attemp;S.attCell=null;render()});
@@ -2453,10 +2468,13 @@ function bindAtt(){
   on('#att-esave',()=>{const e=E(S.attEmp);e.shift=$('#att-sh').value;e.offDay=$('#att-off').value;toast('บันทึกกะ '+e.shift+' หยุด'+e.offDay);S.attEmp=null;render()});
   document.querySelectorAll('[data-rain]').forEach(b=>b.onclick=()=>{const k=b.dataset.rain;const[br,d]=k.split('|');if(S.role.role==='spv'&&S.role.branch!==br)return;
     if(ATT.rain[k]){delete ATT.rain[k];toast('ยกเลิกวันฝนตก '+th(d))}else{ATT.rain[k]={note:'ฝนตก',by:S.role.name};toast('ตั้ง '+th(d)+' เป็นวันฝนตก ยกเว้นสายทั้งสาขา '+br)}render()});
-  on('#att-xls',()=>attExport(S.attPrev?periodOf(addDays(periodOf(NOW()).s,-1)):periodOf(NOW())));
+  on('#att-xls',()=>attExport(attPer()));
   document.querySelectorAll('[data-geohere]').forEach(b=>b.onclick=()=>{if(!navigator.geolocation){toast('อุปกรณ์นี้อ่านตำแหน่งไม่ได้');return}
     navigator.geolocation.getCurrentPosition(p=>{const g=ATT.geo[b.dataset.geohere];g.lat=+p.coords.latitude.toFixed(6);g.lng=+p.coords.longitude.toFixed(6);toast('บันทึกพิกัดสาขา '+b.dataset.geohere+' แล้ว');render()},()=>toast('หน้าทดลองนี้อ่านตำแหน่งไม่ได้ · ระบบจริงให้ SPV ยืนกลางสาขาแล้วกดปุ่มนี้'),{enableHighAccuracy:true,timeout:8000})});
   on('#cf-fadd',()=>{const id=$('#cf-fe').value,n=normShift($('#cf-ft').value);if(!id){toast('เลือกพนักงาน');return}if(!n||n==='หยุด'||n==='AUTO'){toast('ใส่เวลาแบบ 10:00-19:00');return}ATT.fixed=Object.assign({},ATT.fixed||FIXED_DEF,{['EMP:'+id]:n});ATT.freeGeo=(ATT.freeGeo||[]).filter(x=>x!==id).concat($('#cf-ffree').checked?[id]:[]);toast('ตั้งเวลาเข้างาน '+E(id).name+' = '+n+' แล้ว');render()});
+  document.querySelectorAll('[data-shdel]').forEach(b=>b.onclick=()=>{if(ATT.shifts.length<=1){toast('ต้องมีอย่างน้อย 1 กะ');return}ATT.shifts=ATT.shifts.filter(x=>x!==b.dataset.shdel);toast('ลบกะ '+shShort(b.dataset.shdel)+' แล้ว');render()});
+  {const a=$('#cf-shs');if(a)a.onchange=()=>{const c=$('#cf-she');if(c&&a.value)c.value=rqPlus9(a.value)}}
+  on('#cf-shadd',()=>{const v=normShift($('#cf-shs').value+'-'+$('#cf-she').value);if(!v||v==='หยุด'||v==='AUTO'){toast('ใส่เวลาเข้าและเวลาออก');return}if(ATT.shifts.includes(v)){toast('มีกะนี้แล้ว');return}ATT.shifts=[...ATT.shifts,v].sort();toast('เพิ่มกะ '+shShort(v)+' แล้ว');render()});
   on('#cf-save',()=>{document.querySelectorAll('.geo').forEach(i=>{ATT.geo[i.dataset.b][i.dataset.k]=+i.value||ATT.geo[i.dataset.b][i.dataset.k]});
     ATT.accMax=+$('#cf-acc').value||ATT.accMax;ATT.startDay=Math.min(28,Math.max(1,+$('#cf-sd').value||25));ATT.grace=+$('#cf-gr').value||0;ATT.lateRate=+$('#cf-lr').value||0;
     const ti=$('#cf-ti').value.split(',').map(x=>x.split(':').map(Number)).filter(x=>x.length===2&&!isNaN(x[0])&&!isNaN(x[1])).sort((a,b)=>a[0]-b[0]);if(ti.length)ATT.tiers=ti;
@@ -2513,11 +2531,11 @@ function rosterFilterBar(P,all,n){const F=S.rf||{},uniq=a=>[...new Set(a.filter(
 function rosterView(P){
   const RF=rosterFilter(P),list=RF.list,days=RF.days;const opts=[...ATT.shifts,'หยุด'];
   const head=days.map(d=>{const x=D(d);return `<th class="dcol${d===attToday()?' today':''}">${x.getDate()}<br><small>${WDS[x.getDay()]}</small></th>`}).join('');
-  const rows=list.map(e=>`<tr><td class="sticky">${esc(e.name)}<br><small class="muted">${e.id} · ${isFlex(e)?'กะอัตโนมัติ':'ปกติ '+shShort(shiftOf(e))} หยุด${offOf(e)}</small></td>${days.map(d=>{const s=shiftOn(e,d),fx=isFlex(e),v=s.off?'หยุด':fx?'AUTO':s.sh,ok=canRoster(e,d)&&(!e.start||d>=e.start);const op2=fx?['AUTO','หยุด']:opts;
-    return `<td class="dc ${s.off?'c-off':''} ${s.custom?'r-cus':''}"><select class="rs" data-rs="${e.id}|${d}" ${ok?'':'disabled'} aria-label="${esc(e.name)} ${d}">${(op2.includes(v)?op2:[v,...op2]).map(o=>`<option value="${o}" ${o===v?'selected':''}>${shShort(o==='หยุด'?'':o)}</option>`).join('')}</select></td>`}).join('')}</tr>`).join('');
+  const rows=list.map(e=>`<tr><td class="sticky">${esc(e.name)}<br><small class="muted">${e.id} · ${isFlex(e)?'กะอัตโนมัติ':'ปกติ '+shShort(shiftOf(e))} หยุด${offOf(e)}</small><br><button type="button" class="rqp" data-rqpick="${e.id}">จัดหลายวัน</button></td>${days.map(d=>{const s=shiftOn(e,d),fx=isFlex(e),v=s.off?'หยุด':fx?'AUTO':s.sh,ok=canRoster(e,d)&&(!e.start||d>=e.start);const op2=fx?['AUTO','หยุด']:opts;
+    return `<td class="dc ${s.off?'c-off':''} ${s.custom?'r-cus':''}"><button type="button" class="rc" data-rc="${e.id}|${d}" ${ok?'':'disabled'} aria-label="${esc(e.name)} ${d}">${s.off?'หยุด':fx?'ทำงาน':shShort(s.sh)}</button></td>`}).join('')}</tr>`).join('');
   const log=S.rosterLog.filter(l=>list.some(e=>e.id===l.emp)).slice(0,15).map(l=>`<tr><td>${esc(l.at)}</td><td>${esc(E(l.emp).name)}</td><td>${th(l.date)}</td><td>${shShort(l.from==='หยุด'?'':l.from)} → <b>${shShort(l.to==='หยุด'?'':l.to)}</b></td><td>${esc(l.src)}</td><td>${esc(l.by)}</td></tr>`).join('');
   const imp=S.rsImport;
-  return `${rosterFilterBar(P,RF.all,list.length)}<p class="muted">งวด ${P.name} · ช่องที่ไม่ได้แก้ = กะปกติและวันหยุดประจำของคนนั้น · ช่องขอบแดง = เปลี่ยนจากปกติ · เปลี่ยนแล้วระบบใช้คิดสาย/ขาดของวันนั้นทันที${S.role.role==='spv'?' · SPV แก้ได้ตั้งแต่วันนี้เป็นต้นไป วันที่ผ่านมาแล้วให้ HR/แอดมินแก้':''}</p>
+  return `${rosterQuick(P)}<h3>ตารางทั้งสาขา <span class="muted" style="font-weight:400;font-size:.9rem">กดที่ช่องเพื่อเปลี่ยนกะ / วันหยุดของวันนั้น</span></h3>${rosterFilterBar(P,RF.all,list.length)}${rosterPop()}<p class="muted">งวด ${P.name} · ช่องที่ไม่ได้แก้ = กะปกติและวันหยุดประจำของคนนั้น · ช่องขอบแดง = เปลี่ยนจากปกติ · เปลี่ยนแล้วระบบใช้คิดสาย/ขาดของวันนั้นทันที${S.role.role==='spv'?' · SPV แก้ได้ตั้งแต่วันนี้เป็นต้นไป วันที่ผ่านมาแล้วให้ HR/แอดมินแก้':''}</p>
   <div class="row"><button class="btn" id="rs-tpl">ดาวน์โหลดเทมเพลต Excel</button><label class="btn ghost" style="cursor:pointer">นำเข้าไฟล์ Excel<input type="file" id="rs-file" accept=".xlsx,.xls" hidden></label><span class="muted">กรอกกะเป็น 07:00-16:00 หรือ หยุด · แถวละ 1 คน คอลัมน์ละ 1 วัน</span></div>
   ${imp?`<div class="panel" style="background:var(--bg)"><b>ตรวจไฟล์ ${esc(imp.name)}</b><p>จะเปลี่ยน <b>${imp.changes.length}</b> ช่อง · ไม่เปลี่ยน ${imp.same} ช่อง${imp.errs.length?` · <span style="color:var(--bad)">ข้ามไป ${imp.errs.length} ช่อง</span>`:''}</p>
     ${imp.errs.length?`<details><summary>รายการที่ข้าม</summary><ul class="doc-ol">${imp.errs.slice(0,40).map(x=>`<li>${esc(x)}</li>`).join('')}${imp.errs.length>40?'<li>…</li>':''}</ul></details>`:''}
@@ -2552,10 +2570,74 @@ function rosterParse(rows,name){
       if(!canRoster(e,d)){errs.push(rn+' '+th(d)+': วันที่ผ่านมาแล้ว SPV แก้ไม่ได้');return}
       changes.push({id,d,from:cur,to:v})})});
   return{name,changes,same,errs}}
+
+// ===== จัดตารางแบบง่าย: เลือกคน → ช่วงวันที่ → เวลาเข้างาน → วันหยุด → บันทึก · และกดช่องในตารางเพื่อแก้วันเดียว =====
+function rqDef(P){const t=attToday(),pd=periodDays(P||attPer());const f=pd[0]>t?pd[0]:t;return{ids:[],q:'',pos:'',from:f,to:pd[pd.length-1]>=f?pd[pd.length-1]:f,sh:'NORMAL',cs:'07:00',ce:'16:00',offW:[],ov:{}}}
+function rqShiftChips(){const u=new Set(ATT.shifts);Object.values(ATT.roster).forEach(v=>{if(/^\d\d:\d\d-\d\d:\d\d$/.test(v||''))u.add(v)});return [...u].sort()}
+const rqPlus9=t=>{const m=hm(t)+540;return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+function rqDays(R){const out=[];if(!R.from||!R.to||R.to<R.from)return out;let d=D(R.from);const z=D(R.to);while(d<=z&&out.length<62){out.push(iso(d));d=addDays(d,1)}return out}
+function rqOff(e,d,R){const wd=D(d).getDay();const o=R.ov[d];if(o)return o==='off';return R.offW.length?R.offW.includes(wd):WD[wd]===offOf(e)}
+function rqVal(e,d,R){if(rqOff(e,d,R))return 'หยุด';if(isFlex(e)||fixedOf(e))return fixedOf(e)||shiftOf(e);if(R.sh==='NORMAL')return shiftOf(e);if(R.sh==='CUSTOM')return normShift(R.cs+'-'+R.ce)||null;return R.sh}
+function rqPlan(R){const ch=[];let skip=0;rqDays(R).forEach(d=>R.ids.forEach(id=>{const e=E(id);if(!e)return;if(!canRoster(e,d)||(e.start&&d<e.start)){skip++;return}const v=rqVal(e,d,R);if(!v)return;const s=shiftOn(e,d),cur=s.off?'หยุด':s.sh;if(cur!==v)ch.push({e,d,v})}));return{ch,skip}}
+function rosterQuick(P){const R=S.rq=S.rq||rqDef(P);const all=rosterFilter(P).all;R.ids=R.ids.filter(id=>all.some(e=>e.id===id));const q=(R.q||'').trim().toLowerCase();
+  const shown=all.filter(e=>(!R.pos||e.pos===R.pos)&&(!q||[e.name,e.id,e.nick,e.jms].some(v=>String(v||'').toLowerCase().includes(q))));
+  const chip=(attr,val,on,txt)=>`<button type="button" class="chip${on?' on':''}" ${attr}="${esc(String(val))}" aria-pressed="${!!on}">${txt}</button>`;
+  const days=rqDays(R),plan=rqPlan(R),one=R.ids.length===1?E(R.ids[0]):null,t=attToday(),pc=periodOf(NOW()),pn=periodOf(addDays(pc.e,1));
+  const quick=[['พรุ่งนี้',iso(addDays(D(t),1)),iso(addDays(D(t),1))],['7 วันข้างหน้า',t,iso(addDays(D(t),6))],['ถึงสิ้นงวดนี้',t,iso(pc.e)],['งวดถัดไปทั้งงวด',iso(pn.s),iso(pn.e)]];
+  const cal=days.length?[...'อา จ อ พ พฤ ศ ส'.split(' ').map(w=>`<i>${w}</i>`),...Array(D(days[0]).getDay()).fill('<span></span>'),...days.map(d=>{let st,lab;
+    if(one){const v=rqVal(one,d,R);st=v==='หยุด'?'off':'work';lab=v==='หยุด'?'หยุด':(isFlex(one)?'ทำงาน':shShort(v||''))}
+    else{const o=R.ov[d];const off=o?o==='off':R.offW.length?R.offW.includes(D(d).getDay()):null;st=off===null?'n':off?'off':'work';lab=off===null?'ตามปกติ':off?'หยุด':'ทำงาน'}
+    return `<button type="button" class="rqd ${st}${R.ov[d]?' ov':''}" data-rqd="${d}" aria-label="${th(d)} ${lab}"><b>${D(d).getDate()}</b><span>${lab}</span></button>`})].join(''):'<span class="muted">เลือกช่วงวันที่ก่อน</span>';
+  const nP=new Set(plan.ch.map(c=>c.e.id)).size;
+  return `<section class="panel rq" id="rq"><h3 style="margin-top:0">จัดตารางแบบง่าย</h3><p class="muted" style="margin:0">เลือกคน → เลือกวันที่ → เลือกเวลาเข้างาน → เลือกวันหยุด → กดบันทึก · จะจัดคนเดียวหรือหลายคนพร้อมกันก็ได้</p>
+  <div class="rq-st"><b>1</b>เลือกพนักงาน <span class="muted" style="font-weight:400">เลือกแล้ว ${R.ids.length} คน</span></div>
+  <div class="row" style="flex-wrap:wrap;gap:8px"><input id="rq-q" value="${esc(R.q)}" placeholder="พิมพ์ชื่อ / รหัส เพื่อค้นหา" style="max-width:260px" aria-label="ค้นหาพนักงาน"><select id="rq-pos" style="max-width:240px" aria-label="ตำแหน่ง"><option value="">ทุกตำแหน่ง</option>${[...new Set(all.map(e=>e.pos))].map(p=>`<option value="${esc(p)}"${p===R.pos?' selected':''}>${esc(posLabel(p))}</option>`).join('')}</select><button type="button" class="btn ghost sm" id="rq-all">เลือกทุกคนที่แสดง</button><button type="button" class="btn ghost sm" id="rq-none">ล้างที่เลือก</button></div>
+  <div class="chips">${shown.map(e=>chip('data-rqe',e.id,R.ids.includes(e.id),esc(e.name)+` <small>${esc(posLabel(e.pos,e.type))}</small>`)).join('')||'<span class="muted">ไม่พบพนักงาน</span>'}</div>
+  <div class="rq-st"><b>2</b>ช่วงวันที่</div>
+  <div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><label class="f" style="max-width:200px">ตั้งแต่วันที่<input type="date" id="rq-from" value="${R.from}"></label><label class="f" style="max-width:200px">ถึงวันที่<input type="date" id="rq-to" value="${R.to}"></label>${quick.map(([l,a,b])=>`<button type="button" class="btn ghost sm" data-rqr="${a}|${b}">${l}</button>`).join('')}</div>
+  <div class="rq-st"><b>3</b>เวลาเข้างาน</div>
+  <div class="chips">${chip('data-rqs','NORMAL',R.sh==='NORMAL','กะปกติของแต่ละคน')}${rqShiftChips().map(x=>chip('data-rqs',x,R.sh===x,shShort(x))).join('')}${chip('data-rqs','CUSTOM',R.sh==='CUSTOM','+ กำหนดเวลาเอง')}</div>
+  ${R.sh==='CUSTOM'?`<div class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap"><label class="f" style="max-width:150px">เวลาเข้า<input type="time" id="rq-cs" value="${R.cs}"></label><label class="f" style="max-width:150px">เวลาออก<input type="time" id="rq-ce" value="${R.ce}"></label><span class="muted">ใส่เวลาเข้าแล้ว เวลาออกบวก 9 ชม. ให้เอง แก้ได้</span></div>`:''}
+  ${R.ids.some(id=>isFlex(E(id)))?'<p class="muted" style="margin:4px 0">คัดแยก (กะอัตโนมัติ) ไม่ใช้เวลาข้อนี้ ระบบจับกะจากเวลาที่ลงเอง ใช้แค่วันทำงาน / วันหยุด</p>':''}${R.ids.some(id=>fixedOf(E(id)))?'<p class="muted" style="margin:4px 0">คนที่แอดมินล็อกเวลาเข้างานไว้ (RM / SPV) ใช้เวลาที่ล็อกเสมอ เปลี่ยนได้แค่วันหยุด</p>':''}
+  <div class="rq-st"><b>4</b>วันหยุด <span class="muted" style="font-weight:400">ไม่เลือก = ใช้วันหยุดประจำของแต่ละคน</span></div>
+  <div class="chips">${[1,2,3,4,5,6,0].map(w=>chip('data-rqw',w,R.offW.includes(w),'หยุดทุกวัน'+WD[w])).join('')}</div>
+  <div class="rq-st"><b>5</b>ตรวจปฏิทิน <span class="muted" style="font-weight:400">กดวันที่เพื่อสลับ ทำงาน ↔ หยุด เฉพาะวันนั้น${one?'':' · เลือกคนเดียวจะเห็นเวลาของคนนั้น'}</span></div>
+  <div class="rq-cal">${cal}</div>
+  <div class="row" style="margin-top:14px;align-items:center;gap:12px;flex-wrap:wrap"><button class="btn ok" id="rq-save" ${plan.ch.length?'':'disabled'}>บันทึกตาราง${plan.ch.length?' ('+plan.ch.length+' ช่อง)':''}</button><span class="muted">${!R.ids.length?'ยังไม่ได้เลือกพนักงาน':plan.ch.length?'จะเปลี่ยน '+plan.ch.length+' ช่อง ของ '+nP+' คน':'ไม่มีอะไรเปลี่ยน ตรงกับตารางเดิมแล้ว'}${plan.skip?' · ข้าม '+plan.skip+' ช่อง (วันที่ผ่านมาแล้ว / ก่อนเริ่มงาน)':''}</span><button type="button" class="btn ghost sm" id="rq-reset">เริ่มใหม่</button></div></section>`}
+function rosterPop(){const p=S.rpop;if(!p)return '';const e=E(p.id);if(!e)return '';const s=shiftOn(e,p.d),fx=isFlex(e),fix=fixedOf(e),cur=s.off?'หยุด':s.sh;
+  const opts=fx||fix?[['ทำงาน',fix||shiftOf(e)],['หยุด','หยุด']]:[...rqShiftChips().map(x=>[shShort(x),x]),['หยุด','หยุด']];const base=(s.sh||shiftOf(e)||'07:00-16:00').split('-');
+  return `<div class="rpop" role="dialog" aria-label="แก้ตารางวันเดียว"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b>${esc(e.name)} · วัน${WD[D(p.d).getDay()]} ${th(p.d)}</b><button type="button" class="btn ghost sm" id="rpp-x">ปิด</button></div>
+  <p class="muted" style="margin:4px 0">ตอนนี้: <b>${cur==='หยุด'?'หยุด':fx?'ทำงาน (จับกะอัตโนมัติ)':shShort(cur)}</b> · ปกติ: ${fx?'กะอัตโนมัติ':shShort(fix||shiftOf(e))} หยุด${offOf(e)}</p>
+  <div class="chips">${opts.map(([t,v])=>`<button type="button" class="chip${v===cur?' on':''}" data-rpv="${esc(v)}">${esc(t)}</button>`).join('')}</div>
+  ${fx||fix?'':`<div class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap"><label class="f" style="max-width:130px">เข้า<input type="time" id="rpp-cs" value="${base[0]}"></label><label class="f" style="max-width:130px">ออก<input type="time" id="rpp-ce" value="${base[1]}"></label><button type="button" class="btn sm" id="rpp-cus">ใช้เวลานี้</button></div>`}
+  <div class="row" style="margin-top:6px"><button type="button" class="btn ghost sm" data-rqpick="${e.id}">จัดหลายวันให้คนนี้</button></div></div>`}
+function bindRq(){const keep=f=>{const y=scrollY,g=document.querySelector('.rgrid')&&document.querySelector('.rgrid').closest('.gridwrap'),x=g?g.scrollLeft:0;f&&f();render();scrollTo(0,y);const g2=document.querySelector('.rgrid')&&document.querySelector('.rgrid').closest('.gridwrap');if(g2)g2.scrollLeft=x};
+  const ck=(sel,f)=>{const x=$(sel);if(x)x.onclick=f};
+  document.querySelectorAll('[data-rc]').forEach(b=>b.onclick=()=>{const[id,d]=b.dataset.rc.split('|');keep(()=>{S.rpop={id,d}})});
+  document.querySelectorAll('[data-rpv]').forEach(b=>b.onclick=()=>{const p=S.rpop,e=E(p.id);if(!canRoster(e,p.d)){toast('แก้วันนี้ไม่ได้');return}const v=b.dataset.rpv;setRoster(e,p.d,v,'หน้าระบบ');toast(e.name+' '+th(p.d)+': '+(v==='หยุด'?'หยุด':isFlex(e)?'ทำงาน':'กะ '+shShort(v)));keep(()=>{S.rpop=null})});
+  {const a=$('#rpp-cs');if(a)a.onchange=()=>{const c=$('#rpp-ce');if(c&&a.value)c.value=rqPlus9(a.value)}}
+  ck('#rpp-cus',()=>{const p=S.rpop,e=E(p.id),v=normShift($('#rpp-cs').value+'-'+$('#rpp-ce').value);if(!v||v==='หยุด'||v==='AUTO'){toast('ใส่เวลาเข้าและเวลาออก');return}if(!canRoster(e,p.d)){toast('แก้วันนี้ไม่ได้');return}setRoster(e,p.d,v,'หน้าระบบ');toast(e.name+' '+th(p.d)+': กะ '+shShort(v));keep(()=>{S.rpop=null})});
+  ck('#rpp-x',()=>keep(()=>{S.rpop=null}));
+  document.querySelectorAll('[data-rqpick]').forEach(b=>b.onclick=()=>{S.rq=rqDef();S.rq.ids=[b.dataset.rqpick];S.rpop=null;render();const r=$('#rq');if(r&&r.scrollIntoView)r.scrollIntoView({block:'start'})});
+  const R=S.rq;if(!R||!$('#rq'))return;
+  document.querySelectorAll('[data-rqe]').forEach(b=>b.onclick=()=>{const id=b.dataset.rqe;keep(()=>{R.ids=R.ids.includes(id)?R.ids.filter(x=>x!==id):[...R.ids,id]})});
+  {const q=$('#rq-q');if(q)q.oninput=()=>{R.q=q.value;clearTimeout(bindRq.t);bindRq.t=setTimeout(()=>{keep();const n=$('#rq-q');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}},300)}}
+  {const p=$('#rq-pos');if(p)p.onchange=()=>keep(()=>{R.pos=p.value})}
+  ck('#rq-all',()=>{const ids=[...document.querySelectorAll('[data-rqe]')].map(b=>b.dataset.rqe);keep(()=>{R.ids=[...new Set([...R.ids,...ids])]})});
+  ck('#rq-none',()=>keep(()=>{R.ids=[]}));
+  const clampOv=()=>{const ds=new Set(rqDays(R));Object.keys(R.ov).forEach(d=>{if(!ds.has(d))delete R.ov[d]})};
+  {const f=$('#rq-from'),t=$('#rq-to');if(f)f.onchange=()=>{if(!f.value)return;keep(()=>{R.from=f.value;if(!R.to||R.to<R.from)R.to=R.from;clampOv()})};if(t)t.onchange=()=>{if(!t.value)return;keep(()=>{R.to=t.value;if(R.to<R.from)R.from=R.to;clampOv()})}}
+  document.querySelectorAll('[data-rqr]').forEach(b=>b.onclick=()=>{const[a,c]=b.dataset.rqr.split('|');keep(()=>{R.from=a;R.to=c;clampOv()})});
+  document.querySelectorAll('[data-rqs]').forEach(b=>b.onclick=()=>keep(()=>{R.sh=b.dataset.rqs}));
+  {const a=$('#rq-cs'),c=$('#rq-ce');if(a)a.onchange=()=>keep(()=>{R.cs=a.value;R.ce=rqPlus9(a.value)});if(c)c.onchange=()=>keep(()=>{R.ce=c.value})}
+  document.querySelectorAll('[data-rqw]').forEach(b=>b.onclick=()=>{const w=+b.dataset.rqw;keep(()=>{R.offW=R.offW.includes(w)?R.offW.filter(x=>x!==w):[...R.offW,w]})});
+  document.querySelectorAll('[data-rqd]').forEach(b=>b.onclick=()=>{const d=b.dataset.rqd;keep(()=>{if(R.ov[d]){delete R.ov[d];return}const one=R.ids.length===1?E(R.ids[0]):null;const off=one?rqOff(one,d,R):R.offW.length?R.offW.includes(D(d).getDay()):false;R.ov[d]=off?'work':'off'})});
+  ck('#rq-save',()=>{const pl=rqPlan(R);let n=0;pl.ch.forEach(c=>{if(setRoster(c.e,c.d,c.v,'จัดแบบง่าย'))n++});toast('บันทึกตารางแล้ว '+n+' ช่อง');keep(()=>{R.ov={}})});
+  ck('#rq-reset',()=>keep(()=>{S.rq=null}));
+}
 function bindRoster(){
-  document.querySelectorAll('select.rs').forEach(s=>s.onchange=()=>{const[id,d]=s.dataset.rs.split('|');const e=E(id);if(!canRoster(e,d)){toast('แก้วันนี้ไม่ได้');render();return}
-    const val=s.value==='AUTO'?shiftOf(e):s.value;setRoster(e,d,val,'หน้าระบบ');toast(e.name+' '+th(d)+': '+(s.value==='หยุด'?'หยุด':s.value==='AUTO'?'ทำงาน (จับกะอัตโนมัติ)':'กะ '+s.value));render()});
-  const P=()=>S.attPrev?periodOf(addDays(periodOf(NOW()).s,-1)):periodOf(NOW());
+  bindRq();
+  const P=()=>attPer();
   {const b=$('#rs-tpl');if(b)b.onclick=()=>rosterTpl(P())}
   {const f=$('#rs-file');if(f)f.onchange=async()=>{const x=f.files[0];if(!x)return;if(!window.XLSX){toast('โหลดตัวอ่าน Excel ไม่สำเร็จ');return}
     try{const wb=XLSX.read(await x.arrayBuffer(),{type:'array'});const ws=wb.Sheets['ตารางเข้างาน']||wb.Sheets[wb.SheetNames[0]];
