@@ -46,7 +46,7 @@ p{margin:0}
 .back{align-self:flex-start;border:0;background:none;color:var(--brand);font:600 .95rem var(--f-display);cursor:pointer;padding:0}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--muted);min-width:0}
-label.f.full{grid-column:1/-1}
+label.f.full,div.f.full{grid-column:1/-1}
 input,select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;box-sizing:border-box}
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .btn{border:0;border-radius:8px;padding:10px 16px;font:600 .95rem var(--f-display);cursor:pointer;background:var(--brand);color:var(--brand-ink)}
@@ -159,6 +159,8 @@ tr.dim td{opacity:.55}
 .dx-o{position:absolute;right:0;top:0;width:64px;height:100%;opacity:0;border:0;padding:0;margin:0;cursor:pointer;z-index:2;-webkit-appearance:none;appearance:none}.dx-o:disabled{pointer-events:none}
 .rgrid select.rs{border:0;background:transparent;font-size:.72rem;padding:6px 2px;width:100%;min-width:64px;color:inherit;cursor:pointer}.rgrid select.rs:disabled{cursor:default;opacity:.7}
 .rgrid td.r-cus{box-shadow:inset 0 0 0 2px var(--brand)}
+.nm{font-size:.9rem;color:var(--muted)}.nm input{color:var(--fg)}.nm .nm-t{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}.nm .nm-r{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:560px){.nm .nm-r{grid-template-columns:1fr}}
+.nm .nm-r label{display:flex;flex-direction:column;gap:4px}.nm .nm-m{display:block;margin-top:4px}.nm .nm-m.bad{color:var(--bad);font-weight:600}.nm input.bad{border:2px solid var(--bad)!important;background:#fff5f5}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
 .chip{border:1.5px solid var(--line);background:var(--surface,#fff);border-radius:999px;padding:8px 14px;font:inherit;font-size:.92rem;cursor:pointer;color:inherit;line-height:1.25}
 .chip small{color:var(--muted)}.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}.chip.on small{color:#fde}
@@ -237,6 +239,41 @@ const appPos=l=>APPLY_POS[l]||LEGACY_APPLY[l]||[l||'',''];
 const STD_POS=[...POSITIONS],STD_APPLY=JSON.parse(JSON.stringify(APPLY_POS));
 const POS_LABEL={RM:'ผู้จัดการภาค (RM)',SPV:'ผู้จัดการคลัง (SPV)',CRD:'ผู้ช่วยผู้จัดการคลัง (CRD)',ADMIN:'ธุรการ (ADMIN)','คัดแยก':'คัดแยกพัสดุ (STK)','พนักงานขับรถบริษัท':'พนักงานขับรถบริษัท (TR)'};
 const posLabel=(p,t)=>p==='พนักงานนำจ่ายพัสดุ'?(t==='SPT+C'?'พนักงานนำจ่ายพัสดุรถใหญ่ (DC-SPT+C)':t==='SPT'?'พนักงานนำจ่ายพัสดุรถเล็ก (DC-SPT)':'พนักงานนำจ่ายพัสดุ (DC)'):p==='พนักงานรับพัสดุ'?(t==='SPT+C'?'พนักงานรับพัสดุรถใหญ่ (CV-SPT+C)':t==='SPT'?'พนักงานรับพัสดุรถเล็ก (CV-SPT)':'พนักงานรับพัสดุ (CV)'):(POS_LABEL[p]||p||'-');
+
+// ===== ชื่อ: แยก คำนำหน้า / ชื่อ / นามสกุล · บังคับภาษาไทย =====
+const TITLES=['นาย','นาง','นางสาว'];
+function nmSplit(n){n=String(n||'').replace(/\s+/g,' ').trim();let t=['นางสาว','น.ส.','นาง','นาย'].find(x=>n.startsWith(x))||'';let r=n.slice(t.length).trim();if(t==='น.ส.')t='นางสาว';const i=r.indexOf(' ');return{t,f:i<0?r:r.slice(0,i),l:i<0?'':r.slice(i+1)}}
+function nameFields(id,val,o={}){const p=nmSplit(o.title?(o.t||'')+(val||''):val);if(o.title&&o.t)p.t=o.t;
+  return `<div class="f full nm" data-nm="${id}" data-orig="${esc(val||'')}" ${o.title?`data-tid="${o.title}"`:''}><span>${o.label||'ชื่อ-นามสกุล'} *</span>
+  <div class="nm-t" role="group" aria-label="คำนำหน้า">${TITLES.map(t=>`<button type="button" class="chip${p.t===t?' on':''}" data-nmt="${t}" aria-pressed="${p.t===t}">${t}</button>`).join('')}</div>
+  <div class="nm-r"><label>ชื่อ (ภาษาไทย)<input class="nm-f" value="${esc(p.f)}" placeholder="เช่น สมชาย" lang="th" autocomplete="given-name"></label><label>นามสกุล (ภาษาไทย)<input class="nm-l" value="${esc(p.l)}" placeholder="เช่น ใจดี" lang="th" autocomplete="family-name"></label></div>
+  <small class="nm-m muted">เลือกคำนำหน้า แล้วกรอกชื่อและนามสกุลเป็น<b>ภาษาไทย</b> แยกช่องกัน</small>
+  <input type="hidden" id="${id}" value="${esc(val||'')}">${o.title?`<input type="hidden" id="${o.title}" value="${esc(p.t)}">`:''}</div>`}
+const NM_TH=/^[ก-ฺเ-๎ .]+$/;
+function nmCalc(w){const f=w.querySelector('.nm-f'),l=w.querySelector('.nm-l'),b=w.querySelector('[data-nmt].on');const t=b?b.dataset.nmt:'';
+  const fv=f.value.replace(/\s+/g,' ').trim(),lv=l.value.replace(/\s+/g,' ').trim(),free=w.dataset.free==='1';let err='',bad=[];
+  if(!t)err='เลือกคำนำหน้า (นาย / นาง / นางสาว)';
+  else if(!fv){err='กรอกชื่อ';bad=[f]}else if(!lv){err='กรอกนามสกุล';bad=[l]}
+  else if(!free&&!NM_TH.test(fv)){err='ชื่อต้องกรอกเป็นภาษาไทย';bad=[f]}else if(!free&&!NM_TH.test(lv)){err='นามสกุลต้องกรอกเป็นภาษาไทย';bad=[l]}
+  else if(/\s/.test(fv)){err='ช่องชื่อใส่แค่ชื่อ นามสกุลให้ใส่ช่องถัดไป';bad=[f]}
+  else if(['นาย','นาง','นางสาว','น.ส.'].some(x=>fv===x)){err='ช่องชื่อไม่ต้องใส่คำนำหน้า';bad=[f]}
+  return{t,fv,lv,err,bad,f,l}}
+function nmSync(w){const c=nmCalc(w),h=document.getElementById(w.dataset.nm),th=w.dataset.tid&&document.getElementById(w.dataset.tid),m=w.querySelector('.nm-m');
+  [c.f,c.l].forEach(x=>x.classList.toggle('bad',c.bad.includes(x)));
+  if(th)th.value=c.t;
+  if(!w.dataset.dirty){return}
+  h.value=c.err?'':(th?c.fv+' '+c.lv:c.t+c.fv+' '+c.lv);
+  m.classList.toggle('bad',!!c.err);m.innerHTML=c.err?'⚠ '+esc(c.err):'ชื่อที่จะบันทึก: <b>'+esc(c.t+c.fv+' '+c.lv)+'</b>'}
+function nmErr(id){const w=document.querySelector(id?`[data-nm="${id}"]`:'[data-nm]');if(!w||!w.dataset.dirty&&w.dataset.orig)return '';w.dataset.dirty='1';nmSync(w);const c=nmCalc(w);if(c.err&&c.bad[0])c.bad[0].focus();return c.err}
+function nmSet(id,full){const w=document.querySelector(`[data-nm="${id}"]`);if(!w)return;const p=nmSplit(full);w.querySelector('.nm-f').value=p.f;w.querySelector('.nm-l').value=p.l;w.querySelectorAll('[data-nmt]').forEach(b=>{b.classList.toggle('on',b.dataset.nmt===p.t);b.setAttribute('aria-pressed',b.dataset.nmt===p.t)});w.dataset.dirty='1';nmSync(w)}
+function nmBind(){document.querySelectorAll('[data-nm]').forEach(w=>{if(w.dataset.nmb)return;w.dataset.nmb='1';
+  const nat=w.dataset.nm==='a-name'&&$('#a-nat');const setFree=()=>{if(nat){w.dataset.free=nat.value!=='ไทย'?'1':'';const m=w.querySelectorAll('.nm-r label');m[0].firstChild.textContent=w.dataset.free?'ชื่อ':'ชื่อ (ภาษาไทย)';m[1].firstChild.textContent=w.dataset.free?'นามสกุล':'นามสกุล (ภาษาไทย)';nmSync(w)}};if(nat){nat.addEventListener('change',setFree);setFree()}
+  w.querySelectorAll('[data-nmt]').forEach(b=>b.onclick=()=>{w.querySelectorAll('[data-nmt]').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-pressed',x===b)});w.dataset.dirty='1';nmSync(w)});
+  const f=w.querySelector('.nm-f'),l=w.querySelector('.nm-l');
+  [f,l].forEach(x=>x.addEventListener('input',()=>{w.dataset.dirty='1';nmSync(w)}));
+  f.addEventListener('blur',()=>{let v=f.value.replace(/\s+/g,' ').trim();const t=['นางสาว','น.ส.','นาง','นาย'].find(x=>v.startsWith(x+' '));if(t){v=v.slice(t.length).trim();const tt=t==='น.ส.'?'นางสาว':t;w.querySelectorAll('[data-nmt]').forEach(x=>x.classList.toggle('on',x.dataset.nmt===tt))}
+    if(v.includes(' ')&&!l.value.trim()){const i=v.indexOf(' ');l.value=v.slice(i+1);v=v.slice(0,i)}if(v!==f.value){f.value=v;w.dataset.dirty='1';nmSync(w)}});
+  nmSync(w)})}
 const apPick=a=>{const o=(S.apPick||{})[a.no];if(o)return o;let key=APPLY_POS[a.pos]?a.pos:(Object.keys(APPLY_POS).find(k=>String(APPLY_POS[k])===String(appPos(a.pos)))||a.pos);return{key,pt:!!a.ptime}};
 const isPT=e=>!!(e&&(e.ptime||e.pos==='พาร์ทไทม์'));   // พาร์ทไทม์ = ประเภทการจ้าง (ใช้ได้กับทุกตำแหน่ง)
 const BANK2=['กรุงเทพ','กรุงไทย','ไทยพาณิชย์','กรุงศรีอยุธยา','ทหารไทยธนชาต (ttb)','ออมสิน','ธ.ก.ส.','ยูโอบี','ซีไอเอ็มบี','อื่น ๆ'];
@@ -733,8 +770,7 @@ function applyView(mode){
     <label class="f">เริ่มงานได้วันที่ *<input type="date" id="a-avail" value="${iso(addDays(TODAY,3))}"></label>
     <label class="f">ทำงานวันหยุด/กะดึกได้<select id="a-shift"><option>ได้</option><option>ได้บางวัน</option><option>ไม่ได้</option></select></label>`)}
   ${sec(2,'ข้อมูลส่วนตัว',`
-    <label class="f">คำนำหน้า *<select id="a-title"><option value="">เลือก</option><option>นาย</option><option>นาง</option><option>นางสาว</option></select></label>
-    <label class="f">ชื่อ-นามสกุล *<input id="a-name" autocomplete="name"></label>
+    ${nameFields('a-name','',{title:'a-title'})}
     <label class="f">ชื่อเล่น<input id="a-nick"></label>
     <label class="f">วันเกิด *<input type="date" id="a-dob"></label>
     <label class="f">สัญชาติ<select id="a-nat"><option>ไทย</option><option>เมียนมา</option><option>กัมพูชา</option><option>ลาว</option><option>อื่น ๆ</option></select></label>
@@ -855,13 +891,13 @@ function updateView(e,who){
   return `<section class="panel"><h2>${isNew?'ลงทะเบียนพนักงานเดิม':'อัปเดตข้อมูลของฉัน'}</h2>${isNew?'':who}
   <p class="muted">แก้เฉพาะช่องที่เปลี่ยน ระบบเก็บประวัติการแก้ไขทุกครั้ง${isNew?' · จำวันเริ่มงานไม่ได้ใส่โดยประมาณได้':''}</p>
   <div class="fields">
-    ${isNew?`<label class="f">ชื่อ-นามสกุล<input id="u-name" value=""></label>
+    ${isNew?`${nameFields('u-name','')}
       <label class="f">สาขา<select id="u-branch">${BRANCHES.map(b=>`<option>${b}</option>`).join('')}</select></label>
       <label class="f">ตำแหน่ง<select id="u-pos">${POSITIONS.map(p=>`<option value="${esc(p)}">${esc(posLabel(p))}</option>`).join('')}</select></label>
       <label class="f">ประเภทรถ (นำจ่าย)<select id="u-type"><option value="">-</option><option>SPT</option><option>SPT+C</option></select></label>
       <label class="f">วันเริ่มงาน * (ประมาณได้ · ไม่ก่อน ${OPEN_TXT})<input type="date" id="u-start" min="${OPEN_DATE}" max="${iso(TODAY)}"></label>
       `:''}${isPend?`<div class="note warn full">ข้อมูลยังรอหัวหน้าตรวจ แก้ชื่อ สาขา ตำแหน่ง วันเริ่มงานได้จนกว่าหัวหน้าจะยืนยัน</div>
-      <label class="f">ชื่อ-นามสกุล (มีคำนำหน้า)<input id="u-name" value="${esc(e.name)}"></label>
+      ${nameFields('u-name',e.name)}
       <label class="f">วันเกิด<input type="date" id="u-dob" value="${esc(e.dob||'')}"></label>
       <label class="f">สาขา<select id="u-branch">${BRANCHES.map(b=>`<option ${b===e.branch?'selected':''}>${b}</option>`).join('')}</select></label>
       <label class="f">ตำแหน่ง<select id="u-pos">${POSITIONS.map(p=>`<option value="${esc(p)}" ${p===e.pos?'selected':''}>${esc(posLabel(p))}</option>`).join('')}</select></label>
@@ -1238,7 +1274,7 @@ function absentDoc(r){const e=E(r.emp);return paper('บันทึกการ
 function empEditForm(e){const o=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
   return `<section class="panel"><h3>แก้ไขข้อมูล ${esc(e.id)}</h3><p class="muted">เฉพาะแอดมิน / HR · ทุกครั้งที่บันทึก ระบบเก็บประวัติว่าใครแก้ช่องไหน · ย้ายสาขาหรือเปลี่ยนตำแหน่งของคนที่ทำงานอยู่ ควรใช้ปุ่ม "โยกย้าย / เปลี่ยนตำแหน่ง" เพื่อให้มีหนังสือและประวัติ ช่องนี้ใช้แก้ข้อมูลที่กรอกผิดหรือยังไม่ครบ เช่น รายชื่อที่นำเข้าจากไฟล์ประกัน</p>
   <div class="fields">
-    <label class="f">ชื่อ-นามสกุล (มีคำนำหน้า)<input id="ee-name" value="${esc(e.name)}"></label>
+    ${nameFields('ee-name',e.name)}
     <label class="f">เพศ<select id="ee-sex">${o(['ชาย','หญิง'],e.sex)}</select></label>
     <label class="f">วันเกิด<input type="date" id="ee-dob" value="${esc(e.dob||'')}"></label>
     <label class="f">เบอร์โทร<input id="ee-phone" value="${esc(e.phone||'')}" inputmode="tel"></label>
@@ -1282,8 +1318,7 @@ function ptAdm(){const L=S.emp.filter(e=>isPT(e)&&inScope(e.branch));const P=per
   return `<h2>ทะเบียนพาร์ทไทม์</h2><p class="muted">พาร์ทไทม์เป็น "ประเภทการจ้าง" ใช้ได้กับทุกตำแหน่ง · ข้อมูลทั้งหมดอยู่ในทะเบียนพนักงานเดียวกัน (กดชื่อเพื่อดู/แก้ไข) · วันที่มาและชั่วโมงนับจากการลงเวลางวด ${esc(P.name)}${spv?' · SPV เพิ่มได้เฉพาะสาขาตัวเอง แล้วรอ HR ตรวจ':''}</p>
   <div class="row" style="flex-wrap:wrap">${['ทำงาน','รอตรวจสอบ','พ้นสภาพ','ทั้งหมด'].map(k=>`<button class="btn ${f===k?'':'ghost'} sm" data-ptf="${k}">${k} (${k==='ทั้งหมด'?L.length:L.filter(e=>e.status===k).length})</button>`).join('')}<span style="margin-left:auto"></span><button class="btn sm" id="pt-new">${S.ptNew?'ปิด':'+ เพิ่มพาร์ทไทม์'}</button></div>
   ${S.ptNew?`<section class="panel"><h3>เพิ่มพาร์ทไทม์</h3><div class="fields">
-    <label class="f">คำนำหน้า<select id="pt-title"><option>นาย</option><option>นาง</option><option>นางสาว</option></select></label>
-    <label class="f">ชื่อ-นามสกุล *<input id="pt-name"></label><label class="f">ชื่อเล่น<input id="pt-nick"></label>
+    ${nameFields('pt-name','',{title:'pt-title'})}<label class="f">ชื่อเล่น<input id="pt-nick"></label>
     <label class="f">เลขบัตรประชาชน *<input id="pt-id" inputmode="numeric" maxlength="13"></label><label class="f">เบอร์โทร *<input id="pt-phone" inputmode="tel" maxlength="10"></label>
     <label class="f">สาขา<select id="pt-br">${brs.map(b=>`<option>${esc(b)}</option>`).join('')}</select></label>
     <label class="f">ตำแหน่ง<select id="pt-pos">${Object.keys(APPLY_POS).map(k=>`<option>${esc(k)}</option>`).join('')}</select></label>
@@ -1681,7 +1716,7 @@ function bindHr2(){
   document.querySelectorAll('[data-empedit]').forEach(b=>b.onclick=()=>{S.empEdit=S.empEdit===b.dataset.empedit?null:b.dataset.empedit;render()});
   document.querySelectorAll('[data-eesave]').forEach(b=>b.onclick=()=>{if(!can('import'))return;const e=E(b.dataset.eesave),v=id=>$('#'+id).value.trim();
     const nid=v('ee-id').replace(/\D/g,''),nac=v('ee-acct').replace(/\D/g,'');
-    if(!v('ee-name'))return toast('กรอกชื่อ-นามสกุล');
+    {const er=nmErr('ee-name');if(er)return toast(er)}if(!v('ee-name'))return toast('กรอกชื่อ-นามสกุล');
     if(nid&&!idValid(nid))return toast('เลขบัตรประชาชนไม่ถูกต้อง');
     if(nid&&nid!==e.idCard&&S.emp.some(x=>x.id!==e.id&&x.idCard===nid))return toast('เลขบัตรนี้มีในทะเบียนแล้ว ('+S.emp.find(x=>x.id!==e.id&&x.idCard===nid).id+')');
     if(v('ee-start')&&startErr(v('ee-start'))){toast(startErr(v('ee-start')));return}
@@ -2142,7 +2177,7 @@ function bindAdm(){
   document.querySelectorAll('[data-ptopen]').forEach(b=>b.onclick=()=>{S.admTab='reg';S.selEmp=b.dataset.ptopen;render()});
   on('#pt-new',()=>{S.ptNew=!S.ptNew;render()});
   on('#pt-save',()=>{const v=id=>($('#'+id)||{}).value.trim();const id=v('pt-id').replace(/\D/g,''),ph=v('pt-phone').replace(/\D/g,'');
-    if(!v('pt-name'))return toast('กรอกชื่อ-นามสกุล');if(!idValid(id))return toast('เลขบัตรประชาชนไม่ถูกต้อง');if(!/^0\d{9}$/.test(ph))return toast('เบอร์โทร 10 หลัก');
+    {const er=nmErr('pt-name');if(er)return toast(er)}if(!v('pt-name'))return toast('กรอกชื่อ-นามสกุล');if(!idValid(id))return toast('เลขบัตรประชาชนไม่ถูกต้อง');if(!/^0\d{9}$/.test(ph))return toast('เบอร์โทร 10 หลัก');
     const dup=S.emp.find(e=>e.idCard===id);if(dup)return toast('เลขบัตรนี้มีในทะเบียนแล้ว ('+dup.id+' '+dup.name+')');
     const [pos,type]=appPos(v('pt-pos'));const t=v('pt-title');const spv=S.role.role==='spv';
     if(startErr(v('pt-start'))){toast(startErr(v('pt-start')));return}
@@ -2836,9 +2871,9 @@ function bind(){
     $('#a-pos').onchange=sync;$('#a-title').onchange=sync;$('#a-dob').addEventListener('change',sync);$('#a-dob').addEventListener('input',sync);sync();
     $('#a-id').oninput=()=>{const v=$('#a-id').value.trim();const bl=idValid(v)&&isBlack(v);$('#a-idmsg').textContent=v.length<13?'':(bl?'เลขบัตรนี้ติดแบล็กลิสต์ ไม่สามารถสมัครงานได้':idValid(v)?'✓ เลขบัตรถูกต้อง':'เลขบัตรไม่ถูกต้อง');$('#a-idmsg').style.color=idValid(v)&&!bl?'var(--ok)':'var(--bad)';$('#a-send').disabled=bl};
     $('#a-gps').onclick=()=>{$('#a-pin').value='https://maps.google.com/?q=13.7206,100.6215';toast('ทดลอง: ใส่ตำแหน่งจำลองแล้ว (ระบบจริงใช้ GPS มือถือ)')};
-    $('#a-fill').onclick=()=>{const v={'#a-name':'ทดสอบ ใจสู้','#a-dob':'1997-02-14','#a-id':idCheck('110080000009'),'#a-phone':'0830000099','#a-addr':'12/3 ถ.เฉลิมพระเกียรติ ร.9 แขวงดอกไม้ เขตประเวศ กทม.','#a-ename':'นางใจดี ใจสู้','#a-ephone':'0830000098','#a-lic':'65001234','#a-licexp':'2030-02-13','#a-plate':'2กง 5521 กรุงเทพฯ','#a-acct':'0142223334'};
+    $('#a-fill').onclick=()=>{nmSet('a-name','นายทดสอบ ใจสู้');const v={'#a-dob':'1997-02-14','#a-id':idCheck('110080000009'),'#a-phone':'0830000099','#a-addr':'12/3 ถ.เฉลิมพระเกียรติ ร.9 แขวงดอกไม้ เขตประเวศ กทม.','#a-ename':'นางใจดี ใจสู้','#a-ephone':'0830000098','#a-lic':'65001234','#a-licexp':'2030-02-13','#a-plate':'2กง 5521 กรุงเทพฯ','#a-acct':'0142223334'};
       Object.entries(v).forEach(([k,x])=>{if(!$(k).readOnly&&!(k==='#a-phone'&&$('#a-id').readOnly))$(k).value=x});if($('#a-start'))$('#a-start').value='2025-08-01';$('#a-pos').value='นำจ่ายพัสดุรถมอเตอร์ไซค์';$('#a-id').oninput();document.querySelectorAll('.a-con').forEach(c=>c.checked=true);if($('#a-ack'))$('#a-ack').checked=true;sync();toast('กรอกตัวอย่างแล้ว (ไฟล์แนบข้ามได้ในโหมดทดลอง)')};
-    $('#a-send').onclick=async()=>{const g=k=>$(k).value.trim();const p=g('#a-pos'),veh=NEEDS_VEHICLE(p);const miss=[];
+    $('#a-send').onclick=async()=>{{const er=nmErr('a-name');if(er){toast(er);return}}const g=k=>$(k).value.trim();const p=g('#a-pos'),veh=NEEDS_VEHICLE(p);const miss=[];
       [['#a-title','คำนำหน้า'],['#a-name','ชื่อ'],['#a-dob','วันเกิด'],['#a-phone','เบอร์โทร'],['#a-addr','ที่อยู่'],['#a-ename','ผู้ติดต่อฉุกเฉิน'],['#a-ephone','เบอร์ฉุกเฉิน'],['#a-acct','บัญชีกสิกร']].forEach(([k,t])=>{if(!g(k))miss.push(t)});
       const noLic=!!($('#a-nolic')&&$('#a-nolic').checked);if(veh)[['#a-lic','ใบขับขี่'],['#a-licexp','วันหมดอายุใบขับขี่'],['#a-plate','ทะเบียนรถ']].forEach(([k,t])=>{if(noLic&&k!=='#a-plate')return;if(!(k==='#a-licexp'?licVal('a-licexp'):g(k)))miss.push(t)});
       if(!idValid(g('#a-id')))miss.push('เลขบัตรประชาชนที่ถูกต้อง');
@@ -2872,7 +2907,7 @@ function bind(){
   document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>{const x=DEMO_ACC()[+b.dataset.demo];$('#lg-id').value=x[1];$('#lg-ph').value=x[2];$('#lg-msg').textContent='';});
   on('#logout','onclick',()=>{S.who=null;S.newReg=null;S.photo=null;S.shot=null;S.page='home';render()});
   if($('#a-id')&&S.page!=='apply'&&!$('#a-id').dataset.pf){const x=S.who&&E(S.who),nr=S.newReg;const set=(k,v)=>{const el=$(k);if(el&&v)el.value=v};$('#a-id').dataset.pf='1';
-    if(x){const t=['นางสาว','นาง','นาย'].find(t=>x.name.startsWith(t))||'นาย';set('#a-title',t);set('#a-name',x.name.slice(t.length).trim());set('#a-id',x.idCard);set('#a-phone',x.phone);set('#a-dob',x.dob);set('#a-branch',x.branch);set('#a-start',x.start);set('#a-jms',x.jms);set('#a-jmsname',x.jmsName);set('#a-acct',x.acct);set('#a-addr',x.address);
+    if(x){nmSet('a-name',x.name);set('#a-id',x.idCard);set('#a-phone',x.phone);set('#a-dob',x.dob);set('#a-branch',x.branch);set('#a-start',x.start);set('#a-jms',x.jms);set('#a-jmsname',x.jmsName);set('#a-acct',x.acct);set('#a-addr',x.address);
       const k=Object.keys(APPLY_POS).find(k=>APPLY_POS[k][0]===x.pos&&(!x.type||APPLY_POS[k][1]===x.type));if(k)set('#a-pos',k);if(isPT(x))set('#a-ptime','1')}
     else if(nr){set('#a-id',nr.id);set('#a-phone',nr.ph)}
     if(x||nr){$('#a-id').readOnly=true;$('#a-id').oninput&&$('#a-id').oninput();$('#a-pos').onchange&&$('#a-pos').onchange()}}
@@ -2892,9 +2927,9 @@ function bind(){
     if(jm){const dup=S.emp.find(x=>x.jms===jm&&x.id!==e.id);if(dup){toast('รหัส JMS นี้มีคนใช้แล้ว ตรวจสอบอีกครั้ง หรือติดต่อหัวหน้างาน');return}}
     const sg=needSig('sg-upd');if(!sg)return;e.sign=sg;delete S.sigs['sg-upd'];{const fl=[...($('#u-files')?$('#u-files').files:[])];for(const f of fl)(e.upl=e.upl||[]).push({t:'อัปเดต '+th(TODAY)+' · '+f.name,v:await readImg(f)})}
     if(jm&&(jm!==e.jms||jn!==e.jmsName)){if(e.jms&&e.jms!==jm)(e.jmsOld=e.jmsOld||[]).push({code:e.jms,closed:iso(TODAY)});e.jms=jm;e.jmsName=jn;e.jmsSelf=iso(TODAY);e.jmsMove=null}
-    if(e.status==='รอตรวจสอบ'&&$('#u-name')){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}if(startErr(g('#u-start'))){toast(startErr(g('#u-start')));return}Object.assign(e,{name:g('#u-name'),dob:g('#u-dob'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start')})}
+    if(e.status==='รอตรวจสอบ'&&$('#u-name')){{const er=nmErr('u-name');if(er||!g('#u-name')){toast(er||'กรอกชื่อ-นามสกุล');return}}if(startErr(g('#u-start'))){toast(startErr(g('#u-start')));return}Object.assign(e,{name:g('#u-name'),dob:g('#u-dob'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start')})}
     document.querySelectorAll('.ua-q').forEach(i=>{const a=S.assets.find(x=>x.no===i.dataset.no);if(!a||!selfPend(a))return;const n=parseInt(i.value)||0;const d=(document.querySelector('.ua-d[data-no="'+a.no+'"]')||{}).value||'';if(n<=0){S.assets.splice(S.assets.indexOf(a),1);return}a.qty=n;a.detail=d.trim()||'พนักงานแจ้งเอง รอหัวหน้าตรวจ'});
-    if(e.status==='ลงทะเบียนใหม่'){if(!g('#u-name')){toast('กรอกชื่อ-นามสกุล');return}if(startErr(g('#u-start'))){toast(startErr(g('#u-start')));return}Object.assign(e,{name:g('#u-name'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start'),status:'รอตรวจสอบ'})}
+    if(e.status==='ลงทะเบียนใหม่'){{const er=nmErr('u-name');if(er||!g('#u-name')){toast(er||'กรอกชื่อ-นามสกุล');return}}if(startErr(g('#u-start'))){toast(startErr(g('#u-start')));return}Object.assign(e,{name:g('#u-name'),branch:g('#u-branch'),pos:g('#u-pos'),type:g('#u-type'),start:g('#u-start'),status:'รอตรวจสอบ'})}
     Object.assign(e,readExtra('u',e),{phone:g('#u-phone'),acct:g('#u-acct'),bk2:readBk2('u'),address:g('#u-addr'),emerg:g('#u-emerg'),licNo:g('#u-lic'),licExp:licVal('u-licexp'),plate:g('#u-plate'),taxExp:g('#u-taxexp'),updated:iso(TODAY)});
     const wasNew=$('#u-name')&&!$('#u-dob');toast(wasNew?'ส่งลงทะเบียนแล้ว รอหลังบ้านตรวจยืนยัน':'บันทึกข้อมูลแล้ว');if(wasNew){S.who=null;S.page='home'}else S.page='me';render();scrollTo(0,0)});
   document.querySelectorAll('[data-fxdone]').forEach(b=>b.onclick=async()=>{const r=S.fixReq.find(x=>x.no===b.dataset.fxdone);const e=E(r.emp);const ins=[...document.querySelectorAll('[data-fxfile="'+r.no+'"]')];
@@ -2962,7 +2997,7 @@ function bind(){
       try{const r=await dl.save({filename:'ProudExpress_'+tab.replace(/[0-9\s]+$/,'').trim()+'_'+iso(TODAY)+'.xlsx',data:new Blob([XLSX.write(wb,{type:'array',bookType:'xlsx'})])});toast('บันทึก Excel แล้ว')}catch(e){toast(e&&e.code==='declined'?'ยกเลิกการบันทึก':'บันทึกไม่สำเร็จ')}}}
   document.querySelectorAll('section.panel .tablewrap table').forEach(t=>{if(t.closest('.letter')||t.dataset.mv)return;const hr=t.rows[0];if(!hr)return;const last=hr.cells[hr.cells.length-1];if(!last||last.tagName!=='TH')return;const lab=last.textContent.trim();
     if(!['สถานะ','','สถานะบัตร'].includes(lab)&&!/สถานะ/.test(lab))return;t.dataset.mv='1';[...t.rows].forEach(r=>{if(r.cells.length<3)return;const c=r.cells[r.cells.length-1];r.insertBefore(c,r.cells[1])});t.classList.add('stfirst')});
-  initSigs();enhancePickers();enhanceDates();bindDocs();bindMove();bindAtt();bindRoster();bindPdpa();bindAck();bindAdm();bindAdm2();bindHr2();bindHc();REAL.afterBind();
+  initSigs();nmBind();enhancePickers();enhanceDates();bindDocs();bindMove();bindAtt();bindRoster();bindPdpa();bindAck();bindAdm();bindAdm2();bindHr2();bindHc();REAL.afterBind();
 }
 
 $('#lb-x').onclick=()=>{$('#lb').hidden=true};$('#lb').onclick=ev=>{if(ev.target.id==='lb')$('#lb').hidden=true};
