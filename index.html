@@ -1453,12 +1453,12 @@ function minorAdm(){const L=S.emp.filter(e=>inScope(e.branch)&&minorAtStart(e)&&
 function regTable(){
   const list=S.emp.filter(e=>inScope(e.branch));
   const sel=S.selEmp&&list.find(e=>e.id===S.selEmp);
-  const rows=list.map(e=>`<tr data-br="${e.branch}" data-pos="${esc(e.pos)}" data-st="${e.status}" data-prob="${e.status==='ทำงาน'&&!isPT(e)?probation(e):''}" data-src="${esc((e.source||'').split(' (')[0])}" data-iss="${e.status==='พ้นสภาพ'?'':issBad(e).length?'ต้องแก้':'ครบ'}" data-chk="${dataIssues(e).some(x=>x[0]==='chk')?'มีรูปรอตรวจ':''}" data-q="${esc([e.id,e.name,e.phone,e.idCard,e.jms,e.jmsName,e.branch,e.pos].join(' ').toLowerCase())}"><td>${e.id}</td><td><button class="back" data-sel="${e.id}">${esc(e.name)}</button></td><td class="iss">${issCell(e)}</td><td>${statusPill(e.status)}${isBlack(e.idCard)?' <span class="pill p-bad">แบล็กลิสต์</span>':''}</td><td>${e.branch}</td><td>${esc(e.pos)}${e.type?` <span class="pill p-n">${e.type}</span>`:''}</td><td>${e.start?th(e.start):'<span class="muted">ไม่ทราบ</span>'}</td><td>${tenure(e)}</td><td>${e.status==='ทำงาน'&&!isPT(e)?probPill(e):'-'}</td><td>${esc(e.source)}</td><td>${th(e.updated)}</td></tr>`).join('');
+  const rows=list.map(e=>`<tr data-br="${e.branch}" data-pos="${esc(e.pos)}" data-st="${e.status}" data-prob="${e.status==='ทำงาน'&&!isPT(e)?probation(e):''}" data-src="${esc((e.source||'').split(' (')[0])}" data-vt="${esc(e.type||'ไม่ใช้รถ')}" data-iss="${e.status==='พ้นสภาพ'?'':issBad(e).length?'ต้องแก้':'ครบ'}" data-chk="${dataIssues(e).some(x=>x[0]==='chk')?'มีรูปรอตรวจ':''}" data-q="${esc([e.id,e.name,e.phone,e.idCard,e.jms,e.jmsName,e.branch,e.pos].join(' ').toLowerCase())}"><td>${e.id}</td><td><button class="back" data-sel="${e.id}">${esc(e.name)}</button></td><td class="iss">${issCell(e)}</td><td>${statusPill(e.status)}${isBlack(e.idCard)?' <span class="pill p-bad">แบล็กลิสต์</span>':''}</td><td>${e.branch}</td><td>${esc(e.pos)}${e.type?` <span class="pill p-n">${e.type}</span>`:''}</td><td>${e.start?th(e.start):'<span class="muted">ไม่ทราบ</span>'}</td><td>${tenure(e)}</td><td>${e.status==='ทำงาน'&&!isPT(e)?probPill(e):'-'}</td><td>${esc(e.source)}</td><td>${th(e.updated)}</td></tr>`).join('');
   const nBad=list.filter(e=>e.status!=='พ้นสภาพ'&&issBad(e).length).length,nChk=list.filter(e=>e.status!=='พ้นสภาพ'&&dataIssues(e).some(x=>x[0]==='chk')).length;
   const mvP=S.moves.filter(m=>m.status==='รออนุมัติ'&&(inScope(m.from)||inScope(m.to)));
   const opts=(k,vals,lab)=>`<label class="f">${lab}<select class="reg-f" data-k="${k}"><option value="">ทั้งหมด</option>${vals.map(v=>`<option ${(S.regF||{})[k]===v?'selected':''}>${esc(v)}</option>`).join('')}</select></label>`;
   const uniq=f=>[...new Set(list.map(f).filter(Boolean))].sort();
-  const regFilters=`<div class="fields regf">${opts('br',uniq(e=>e.branch),'สาขา')}${opts('pos',uniq(e=>e.pos),'ตำแหน่ง')}${opts('st',uniq(e=>e.status),'สถานะ')}${opts('prob',['ทดลองงาน','ผ่านทดลองงาน','ไม่ผ่านทดลองงาน'],'ทดลองงาน')}${opts('iss',['ต้องแก้','ครบ'],'ข้อมูล / เอกสาร')}${opts('chk',['มีรูปรอตรวจ'],'ตรวจรูป')}${opts('src',uniq(e=>(e.source||'').split(' (')[0]),'ที่มา')}</div><div class="row"><button class="btn ghost sm" id="reg-clear">ล้างตัวกรอง</button></div>`;
+  const regFilters=`<div class="fields regf">${opts('br',uniq(e=>e.branch),'สาขา')}${opts('pos',uniq(e=>e.pos),'ตำแหน่ง')}${opts('st',uniq(e=>e.status),'สถานะ')}${opts('prob',['ทดลองงาน','ผ่านทดลองงาน','ไม่ผ่านทดลองงาน'],'ทดลองงาน')}${opts('vt',uniq(e=>e.type||'ไม่ใช้รถ'),'ประเภทรถ (SPT / SPT+C)')}${opts('iss',['ต้องแก้','ครบ'],'ข้อมูล / เอกสาร')}${opts('chk',['มีรูปรอตรวจ'],'ตรวจรูป')}${opts('src',uniq(e=>(e.source||'').split(' (')[0]),'ที่มา')}</div><div class="row"><button class="btn ghost sm" id="reg-clear">ล้างตัวกรอง</button></div>`;
   const regSearch=`<div class="row" style="justify-content:flex-end"><button class="btn ghost sm" id="xls-out">ส่งออก Excel</button></div><div class="fields"><label class="f">ค้นหาพนักงาน<input type="search" id="reg-q" value="${esc(S.regQ||'')}" placeholder="พิมพ์ชื่อ รหัส PE เบอร์ เลขบัตร หรือรหัส JMS"></label></div>`;
   return `${mvP.length?`<div class="note warn"><b>คำขอโยกย้าย / เปลี่ยนตำแหน่งรออนุมัติ ${mvP.length} รายการ</b> · ดูและอนุมัติที่แท็บ "โยกย้าย / เปลี่ยนตำแหน่ง"</div>`:''}<div class="row"><h2>ทะเบียนพนักงาน</h2><span class="muted">${list.length} คน · กดชื่อเพื่อดูรายละเอียด</span></div>
   ${nBad||nChk?`<div class="note warn"><b>ต้องตรวจ:</b> ${nBad?`ข้อมูล / เอกสารไม่ครบหรือไม่ถูกต้อง <b>${nBad} คน</b> <button class="btn sm" data-issf="iss|ต้องแก้">ดูเฉพาะคนที่ต้องแก้</button>`:''} ${nChk?`มีรูปเอกสารรอตรวจ <b>${nChk} คน</b> <button class="btn ghost sm" data-issf="chk|มีรูปรอตรวจ">ดูเฉพาะรูปรอตรวจ</button>`:''}</div>`:''}${regSearch}${regFilters}<p class="muted" id="reg-count"></p>
@@ -2755,7 +2755,11 @@ function shiftOn(e,d){const v=ATT.roster[e.id+'|'+d];
   if(v==='หยุด')return{sh:'',off:true,custom:true};
   if(v&&fixedOf(e))return{sh:fixedOf(e),off:false,custom:true};
   if(v)return{sh:v,off:false,custom:true};
-  const off=WD[D(d).getDay()]===offOf(e);return{sh:off?'':shiftOf(e),off,custom:false}}
+  const b=baseOn(e,d);return{sh:b.sh,off:b.off,custom:false}}
+// ตารางประจำ (ตั้งครั้งเดียว ใช้ทุกเดือน): e.pat=[{from,sh,offW}] · ใช้รูปแบบล่าสุดที่เริ่มก่อน/ในวันนั้น · วันที่แก้เฉพาะวัน (ATT.roster) ยังมีผลก่อน
+const patOn=(e,d)=>(e.pat||[]).filter(p=>p.from<=d).sort((a,b)=>a.from<b.from?-1:1).pop()||null;
+function baseOn(e,d){const p=patOn(e,d),wd=D(d).getDay();const off=p&&p.offW&&p.offW.length?p.offW.includes(wd):WD[wd]===offOf(e);const sh=fixedOf(e)||(p&&p.sh&&!isFlex(e)?p.sh:shiftOf(e));return{off,sh:off?'':sh}}
+function patLbl(e,d){d=d||iso(TODAY);const p=patOn(e,d);const sh=isFlex(e)?'กะอัตโนมัติ':shShort(fixedOf(e)||(p&&p.sh)||shiftOf(e));const off=p&&p.offW&&p.offW.length?p.offW.slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map(w=>WD[w]).join(','):offOf(e);return sh+' · หยุด'+off+(p?' (ประจำตั้งแต่ '+th(p.from)+')':'')}
 const shStart=(e,d)=>hm((shiftOn(e,d).sh||shiftOf(e)).split('-')[0]);
 const shShort=s=>s==='AUTO'?'อัตโนมัติ':s?s.replace(/:00/g,'').replace('-','–'):'หยุด';
 function normShift(v){v=String(v==null?'':v).trim();if(!v)return null;if(OFF_WORDS.includes(v))return 'หยุด';if(['ทำงาน','อัตโนมัติ','auto','AUTO'].includes(v))return 'AUTO';
@@ -2764,7 +2768,7 @@ function normShift(v){v=String(v==null?'':v).trim();if(!v)return null;if(OFF_WOR
   return String(a).padStart(2,'0')+':'+String(b).padStart(2,'0')+'-'+String(c).padStart(2,'0')+':'+String(d).padStart(2,'0')}
 const canRoster=(e,d)=>S.role&&(S.role.role!=='spv'||(S.role.branch===e.branch&&d>=attToday()));
 function setRoster(e,d,val,src){if(fixedOf(e)&&val&&val!=='หยุด')val=fixedOf(e);const k=e.id+'|'+d,before=shiftOn(e,d);const from=before.off?'หยุด':before.sh;
-  const def=WD[D(d).getDay()]===offOf(e)?'หยุด':shiftOf(e);
+  const bb=baseOn(e,d),def=bb.off?'หยุด':bb.sh;
   if(val===def)delete ATT.roster[k];else ATT.roster[k]=val;
   if(from!==val)S.rosterLog.unshift({emp:e.id,date:d,from,to:val,by:S.role.name,at:new Date().toLocaleString('th-TH'),src});return from!==val}
 // ตัวกรองตารางงาน: ตำแหน่ง ประเภทรถ ประจำ/พาร์ทไทม์ กะปกติ วันหยุดประจำ เปลี่ยนจากปกติ ช่วงวันที่ และค้นหาชื่อ/รหัส/JMS
@@ -2793,7 +2797,7 @@ function rosterFilterBar(P,all,n){const F=S.rf||{},uniq=a=>[...new Set(a.filter(
 function rosterView(P){
   const RF=rosterFilter(P),list=RF.list,days=RF.days;const opts=[...ATT.shifts,'หยุด'];
   const head=days.map(d=>{const x=D(d);return `<th class="dcol${d===attToday()?' today':''}">${x.getDate()}<br><small>${WDS[x.getDay()]}</small></th>`}).join('');
-  const rows=list.map(e=>`<tr><td class="sticky">${esc(e.name)}<br><small class="muted">${e.id} · ${isFlex(e)?'กะอัตโนมัติ':'ปกติ '+shShort(shiftOf(e))} หยุด${offOf(e)}</small><br><button type="button" class="rqp" data-rqpick="${e.id}">จัดหลายวัน</button></td>${days.map(d=>{const s=shiftOn(e,d),fx=isFlex(e),v=s.off?'หยุด':fx?'AUTO':s.sh,ok=canRoster(e,d)&&(!e.start||d>=e.start);const op2=fx?['AUTO','หยุด']:opts;
+  const rows=list.map(e=>`<tr><td class="sticky">${esc(e.name)}<br><small class="muted">${e.id} · ${esc(patLbl(e))}</small><br><button type="button" class="rqp" data-rqpick="${e.id}">จัดหลายวัน</button></td>${days.map(d=>{const s=shiftOn(e,d),fx=isFlex(e),v=s.off?'หยุด':fx?'AUTO':s.sh,ok=canRoster(e,d)&&(!e.start||d>=e.start);const op2=fx?['AUTO','หยุด']:opts;
     return `<td class="dc ${s.off?'c-off':''} ${s.custom?'r-cus':''}"><button type="button" class="rc" data-rc="${e.id}|${d}" ${ok?'':'disabled'} aria-label="${esc(e.name)} ${d}">${s.off?'หยุด':fx?'ทำงาน':shShort(s.sh)}</button></td>`}).join('')}</tr>`).join('');
   const log=S.rosterLog.filter(l=>list.some(e=>e.id===l.emp)).slice(0,15).map(l=>`<tr><td>${esc(l.at)}</td><td>${esc(E(l.emp).name)}</td><td>${th(l.date)}</td><td>${shShort(l.from==='หยุด'?'':l.from)} → <b>${shShort(l.to==='หยุด'?'':l.to)}</b></td><td>${esc(l.src)}</td><td>${esc(l.by)}</td></tr>`).join('');
   const imp=S.rsImport;
@@ -2838,38 +2842,40 @@ function rqDef(P){const t=attToday(),pd=periodDays(P||attPer());const f=pd[0]>t?
 function rqShiftChips(){const u=new Set(ATT.shifts);Object.values(ATT.roster).forEach(v=>{if(/^\d\d:\d\d-\d\d:\d\d$/.test(v||''))u.add(v)});return [...u].sort()}
 const rqPlus9=t=>{const m=hm(t)+540;return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
 function rqDays(R){const out=[];if(!R.from||!R.to||R.to<R.from)return out;let d=D(R.from);const z=D(R.to);while(d<=z&&out.length<62){out.push(iso(d));d=addDays(d,1)}return out}
-function rqOff(e,d,R){const wd=D(d).getDay();const o=R.ov[d];if(o)return o==='off';return R.offW.length?R.offW.includes(wd):WD[wd]===offOf(e)}
-function rqVal(e,d,R){if(rqOff(e,d,R))return 'หยุด';if(isFlex(e)||fixedOf(e))return fixedOf(e)||shiftOf(e);if(R.sh==='NORMAL')return shiftOf(e);if(R.sh==='CUSTOM')return normShift(R.cs+'-'+R.ce)||null;return R.sh}
+function rqOff(e,d,R){const wd=D(d).getDay();const o=R.perm?null:R.ov[d];if(o)return o==='off';return R.offW.length?R.offW.includes(wd):baseOn(e,d).off}
+function rqVal(e,d,R){if(rqOff(e,d,R))return 'หยุด';if(isFlex(e)||fixedOf(e))return fixedOf(e)||shiftOf(e);if(R.sh==='NORMAL')return baseOn(e,d).sh||shiftOf(e);if(R.sh==='CUSTOM')return normShift(R.cs+'-'+R.ce)||null;return R.sh}
 function rqPlan(R){const ch=[];let skip=0;rqDays(R).forEach(d=>R.ids.forEach(id=>{const e=E(id);if(!e)return;if(!canRoster(e,d)||(e.start&&d<e.start)){skip++;return}const v=rqVal(e,d,R);if(!v)return;const s=shiftOn(e,d),cur=s.off?'หยุด':s.sh;if(cur!==v)ch.push({e,d,v})}));return{ch,skip}}
 function rosterQuick(P){const R=S.rq=S.rq||rqDef(P);const all=rosterFilter(P).all;R.ids=R.ids.filter(id=>all.some(e=>e.id===id));const q=(R.q||'').trim().toLowerCase();
   const shown=all.filter(e=>(!R.pos||e.pos===R.pos)&&(!q||[e.name,e.id,e.nick,e.jms].some(v=>String(v||'').toLowerCase().includes(q))));
   const chip=(attr,val,on,txt)=>`<button type="button" class="chip${on?' on':''}" ${attr}="${esc(String(val))}" aria-pressed="${!!on}">${txt}</button>`;
-  const days=rqDays(R),plan=rqPlan(R),one=R.ids.length===1?E(R.ids[0]):null,t=attToday(),pc=periodOf(NOW()),pn=periodOf(addDays(pc.e,1));
+  const days=R.perm?rqDays({from:R.from,to:iso(addDays(D(R.from),13))}):rqDays(R),plan=R.perm?{ch:[],skip:0}:rqPlan(R),one=R.ids.length===1?E(R.ids[0]):null,t=attToday(),pc=periodOf(NOW()),pn=periodOf(addDays(pc.e,1));
   const quick=[['พรุ่งนี้',iso(addDays(D(t),1)),iso(addDays(D(t),1))],['7 วันข้างหน้า',t,iso(addDays(D(t),6))],['ถึงสิ้นงวดนี้',t,iso(pc.e)],['งวดถัดไปทั้งงวด',iso(pn.s),iso(pn.e)]];
   const cal=days.length?[...'อา จ อ พ พฤ ศ ส'.split(' ').map(w=>`<i>${w}</i>`),...Array(D(days[0]).getDay()).fill('<span></span>'),...days.map(d=>{let st,lab;
     if(one){const v=rqVal(one,d,R);st=v==='หยุด'?'off':'work';lab=v==='หยุด'?'หยุด':(isFlex(one)?'ทำงาน':shShort(v||''))}
     else{const o=R.ov[d];const off=o?o==='off':R.offW.length?R.offW.includes(D(d).getDay()):null;st=off===null?'n':off?'off':'work';lab=off===null?'ตามปกติ':off?'หยุด':'ทำงาน'}
-    return `<button type="button" class="rqd ${st}${R.ov[d]?' ov':''}" data-rqd="${d}" aria-label="${th(d)} ${lab}"><b>${D(d).getDate()}</b><span>${lab}</span></button>`})].join(''):'<span class="muted">เลือกช่วงวันที่ก่อน</span>';
+    return `<button type="button" class="rqd ${st}${R.ov[d]&&!R.perm?' ov':''}" ${R.perm?'disabled':`data-rqd="${d}"`} aria-label="${th(d)} ${lab}"><b>${D(d).getDate()}</b><span>${lab}</span></button>`})].join(''):'<span class="muted">เลือกช่วงวันที่ก่อน</span>';
   const nP=new Set(plan.ch.map(c=>c.e.id)).size;
   return `<section class="panel rq" id="rq"><h3 style="margin-top:0">จัดตารางแบบง่าย</h3><p class="muted" style="margin:0">เลือกคน → เลือกวันที่ → เลือกเวลาเข้างาน → เลือกวันหยุด → กดบันทึก · จะจัดคนเดียวหรือหลายคนพร้อมกันก็ได้</p>
   <div class="rq-st"><b>1</b>เลือกพนักงาน <span class="muted" style="font-weight:400">เลือกแล้ว ${R.ids.length} คน</span></div>
   <div class="row" style="flex-wrap:wrap;gap:8px"><input id="rq-q" value="${esc(R.q)}" placeholder="พิมพ์ชื่อ / รหัส เพื่อค้นหา" style="max-width:260px" aria-label="ค้นหาพนักงาน"><select id="rq-pos" style="max-width:240px" aria-label="ตำแหน่ง"><option value="">ทุกตำแหน่ง</option>${[...new Set(all.map(e=>e.pos))].map(p=>`<option value="${esc(p)}"${p===R.pos?' selected':''}>${esc(posLabel(p))}</option>`).join('')}</select><button type="button" class="btn ghost sm" id="rq-all">เลือกทุกคนที่แสดง</button><button type="button" class="btn ghost sm" id="rq-none">ล้างที่เลือก</button></div>
   <div class="chips">${shown.map(e=>chip('data-rqe',e.id,R.ids.includes(e.id),esc(e.name)+` <small>${esc(posLabel(e.pos,e.type))}</small>`)).join('')||'<span class="muted">ไม่พบพนักงาน</span>'}</div>
-  <div class="rq-st"><b>2</b>ช่วงวันที่</div>
-  <div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><label class="f" style="max-width:200px">ตั้งแต่วันที่<input type="date" id="rq-from" value="${R.from}"></label><label class="f" style="max-width:200px">ถึงวันที่<input type="date" id="rq-to" value="${R.to}"></label>${quick.map(([l,a,b])=>`<button type="button" class="btn ghost sm" data-rqr="${a}|${b}">${l}</button>`).join('')}</div>
+  <div class="rq-st"><b>2</b>ใช้แบบไหน</div>
+  <div class="chips">${chip('data-rqm','perm',!!R.perm,'🔁 ตั้งเป็นตารางประจำ ใช้ทุกเดือน')}${chip('data-rqm','range',!R.perm,'📅 เปลี่ยนเฉพาะช่วงวันที่')}</div>
+  ${R.perm?`<div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><label class="f" style="max-width:220px">เริ่มใช้ตั้งแต่วันที่<input type="date" id="rq-from" value="${R.from}"></label><span class="muted">ใช้ต่อไปทุกเดือนจนกว่าจะเปลี่ยนใหม่</span></div>`
+  :`<div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-end"><label class="f" style="max-width:200px">ตั้งแต่วันที่<input type="date" id="rq-from" value="${R.from}"></label><label class="f" style="max-width:200px">ถึงวันที่<input type="date" id="rq-to" value="${R.to}"></label>${quick.map(([l,a,b])=>`<button type="button" class="btn ghost sm" data-rqr="${a}|${b}">${l}</button>`).join('')}</div>`}
   <div class="rq-st"><b>3</b>เวลาเข้างาน</div>
   <div class="chips">${chip('data-rqs','NORMAL',R.sh==='NORMAL','กะปกติของแต่ละคน')}${rqShiftChips().map(x=>chip('data-rqs',x,R.sh===x,shShort(x))).join('')}${chip('data-rqs','CUSTOM',R.sh==='CUSTOM','+ กำหนดเวลาเอง')}</div>
   ${R.sh==='CUSTOM'?`<div class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap"><label class="f" style="max-width:150px">เวลาเข้า<input type="time" id="rq-cs" value="${R.cs}"></label><label class="f" style="max-width:150px">เวลาออก<input type="time" id="rq-ce" value="${R.ce}"></label><span class="muted">ใส่เวลาเข้าแล้ว เวลาออกบวก 9 ชม. ให้เอง แก้ได้</span></div>`:''}
   ${R.ids.some(id=>isFlex(E(id)))?'<p class="muted" style="margin:4px 0">คัดแยก (กะอัตโนมัติ) ไม่ใช้เวลาข้อนี้ ระบบจับกะจากเวลาที่ลงเอง ใช้แค่วันทำงาน / วันหยุด</p>':''}${R.ids.some(id=>fixedOf(E(id)))?'<p class="muted" style="margin:4px 0">คนที่แอดมินล็อกเวลาเข้างานไว้ (RM / SPV) ใช้เวลาที่ล็อกเสมอ เปลี่ยนได้แค่วันหยุด</p>':''}
   <div class="rq-st"><b>4</b>วันหยุด <span class="muted" style="font-weight:400">ไม่เลือก = ใช้วันหยุดประจำของแต่ละคน</span></div>
   <div class="chips">${[1,2,3,4,5,6,0].map(w=>chip('data-rqw',w,R.offW.includes(w),'หยุดทุกวัน'+WD[w])).join('')}</div>
-  <div class="rq-st"><b>5</b>ตรวจปฏิทิน <span class="muted" style="font-weight:400">กดวันที่เพื่อสลับ ทำงาน ↔ หยุด เฉพาะวันนั้น${one?'':' · เลือกคนเดียวจะเห็นเวลาของคนนั้น'}</span></div>
+  <div class="rq-st"><b>5</b>ตรวจปฏิทิน <span class="muted" style="font-weight:400">${R.perm?'ตัวอย่าง 2 สัปดาห์แรก':'กดวันที่เพื่อสลับ ทำงาน ↔ หยุด เฉพาะวันนั้น'}${one?'':' · เลือกคนเดียวจะเห็นเวลาของคนนั้น'}</span></div>
   <div class="rq-cal">${cal}</div>
-  <div class="row" style="margin-top:14px;align-items:center;gap:12px;flex-wrap:wrap"><button class="btn ok" id="rq-save" ${plan.ch.length?'':'disabled'}>บันทึกตาราง${plan.ch.length?' ('+plan.ch.length+' ช่อง)':''}</button><span class="muted">${!R.ids.length?'ยังไม่ได้เลือกพนักงาน':plan.ch.length?'จะเปลี่ยน '+plan.ch.length+' ช่อง ของ '+nP+' คน':'ไม่มีอะไรเปลี่ยน ตรงกับตารางเดิมแล้ว'}${plan.skip?' · ข้าม '+plan.skip+' ช่อง (วันที่ผ่านมาแล้ว / ก่อนเริ่มงาน)':''}</span><button type="button" class="btn ghost sm" id="rq-reset">เริ่มใหม่</button></div></section>`}
+  <div class="row" style="margin-top:14px;align-items:center;gap:12px;flex-wrap:wrap">${R.perm?`<button class="btn ok" id="rq-perm" ${R.ids.length?'':'disabled'}>บันทึกตารางประจำ (${R.ids.length} คน)</button><span class="muted">${R.ids.length?'ตั้งแต่ '+th(R.from)+' ใช้ทุกเดือน · วันที่เคยแก้เฉพาะวันหลังจากนี้จะถูกแทนด้วยตารางประจำ':'ยังไม่ได้เลือกพนักงาน'}</span>`:`<button class="btn ok" id="rq-save" ${plan.ch.length?'':'disabled'}>บันทึกตาราง${plan.ch.length?' ('+plan.ch.length+' ช่อง)':''}</button>`}${R.perm?'':`<span class="muted">${!R.ids.length?'ยังไม่ได้เลือกพนักงาน':plan.ch.length?'จะเปลี่ยน '+plan.ch.length+' ช่อง ของ '+nP+' คน':'ไม่มีอะไรเปลี่ยน ตรงกับตารางเดิมแล้ว'}${plan.skip?' · ข้าม '+plan.skip+' ช่อง (วันที่ผ่านมาแล้ว / ก่อนเริ่มงาน)':''}</span>`}<button type="button" class="btn ghost sm" id="rq-reset">เริ่มใหม่</button></div></section>`}
 function rosterPop(){const p=S.rpop;if(!p)return '';const e=E(p.id);if(!e)return '';const s=shiftOn(e,p.d),fx=isFlex(e),fix=fixedOf(e),cur=s.off?'หยุด':s.sh;
   const opts=fx||fix?[['ทำงาน',fix||shiftOf(e)],['หยุด','หยุด']]:[...rqShiftChips().map(x=>[shShort(x),x]),['หยุด','หยุด']];const base=(s.sh||shiftOf(e)||'07:00-16:00').split('-');
   return `<div class="rpop" role="dialog" aria-label="แก้ตารางวันเดียว"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b>${esc(e.name)} · วัน${WD[D(p.d).getDay()]} ${th(p.d)}</b><button type="button" class="btn ghost sm" id="rpp-x">ปิด</button></div>
-  <p class="muted" style="margin:4px 0">ตอนนี้: <b>${cur==='หยุด'?'หยุด':fx?'ทำงาน (จับกะอัตโนมัติ)':shShort(cur)}</b> · ปกติ: ${fx?'กะอัตโนมัติ':shShort(fix||shiftOf(e))} หยุด${offOf(e)}</p>
+  <p class="muted" style="margin:4px 0">ตอนนี้: <b>${cur==='หยุด'?'หยุด':fx?'ทำงาน (จับกะอัตโนมัติ)':shShort(cur)}</b> · ปกติ: ${esc(patLbl(e,p.d))}</p>
   <div class="chips">${opts.map(([t,v])=>`<button type="button" class="chip${v===cur?' on':''}" data-rpv="${esc(v)}">${esc(t)}</button>`).join('')}</div>
   ${fx||fix?'':`<div class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap"><label class="f" style="max-width:130px">เข้า<input type="time" id="rpp-cs" value="${base[0]}"></label><label class="f" style="max-width:130px">ออก<input type="time" id="rpp-ce" value="${base[1]}"></label><button type="button" class="btn sm" id="rpp-cus">ใช้เวลานี้</button></div>`}
   <div class="row" style="margin-top:6px"><button type="button" class="btn ghost sm" data-rqpick="${e.id}">จัดหลายวันให้คนนี้</button></div></div>`}
@@ -2896,6 +2902,13 @@ function bindRq(){const keep=f=>{const y=scrollY,g=document.querySelector('.rgri
   document.querySelectorAll('[data-rqd]').forEach(b=>b.onclick=()=>{const d=b.dataset.rqd;keep(()=>{if(R.ov[d]){delete R.ov[d];return}const one=R.ids.length===1?E(R.ids[0]):null;const off=one?rqOff(one,d,R):R.offW.length?R.offW.includes(D(d).getDay()):false;R.ov[d]=off?'work':'off'})});
   ck('#rq-save',()=>{const pl=rqPlan(R);let n=0;pl.ch.forEach(c=>{if(setRoster(c.e,c.d,c.v,'จัดแบบง่าย'))n++});toast('บันทึกตารางแล้ว '+n+' ช่อง');keep(()=>{R.ov={}})});
   ck('#rq-reset',()=>keep(()=>{S.rq=null}));
+  document.querySelectorAll('[data-rqm]').forEach(b=>b.onclick=()=>keep(()=>{R.perm=b.dataset.rqm==='perm'}));
+  ck('#rq-perm',()=>{const from=R.from;if(!from)return toast('เลือกวันที่เริ่มใช้');const sh=R.sh==='CUSTOM'?normShift(R.cs+'-'+R.ce):R.sh==='NORMAL'?'':R.sh;let n=0,cl=0,bad=0;
+    R.ids.forEach(id=>{const e=E(id);if(!e)return;if(!canRoster(e,from)){bad++;return}
+      e.pat=(e.pat||[]).filter(p=>p.from<from).concat([{from,sh:isFlex(e)||fixedOf(e)?'':sh,offW:R.offW.length?R.offW.slice():null,by:S.role.name,at:nowStamp()}]);
+      Object.keys(ATT.roster).forEach(k=>{if(k.startsWith(e.id+'|')&&k.slice(e.id.length+1)>=from){delete ATT.roster[k];cl++}});
+      S.rosterLog.unshift({emp:e.id,date:from,from:'',to:'ตารางประจำ: '+patLbl(e,from),by:S.role.name,at:new Date().toLocaleString('th-TH'),src:'ตารางประจำ'});e.updated=iso(TODAY);n++});
+    toast('ตั้งตารางประจำ '+n+' คนแล้ว ใช้ทุกเดือนตั้งแต่ '+th(from)+(bad?' · ข้าม '+bad+' คน (วันที่ผ่านมาแล้ว)':''));keep(()=>{R.ids=[]})});
 }
 function bindRoster(){
   bindRq();

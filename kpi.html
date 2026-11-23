@@ -81,7 +81,7 @@ const TH_M=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ
 const mLabel=m=>{const[y,mo]=m.split('-');return TH_M[+mo-1]+' '+(+y+543)};
 const dLabel=s=>{const d=new Date(s+'T00:00:00');return d.getDate()+' '+TH_M[d.getMonth()]+' '+(d.getFullYear()+543)};
 const money=()=>K.d&&['admin','hr'].includes(K.d.me.role);
-const kind=()=>K.d&&K.d.who.kind;   // admin hr rm spv adm
+const kind=()=>K.d&&K.d.who.kind;const solo=()=>kind()==='adm'&&K.d.who.pos!=='CRD';   // ธุรการ เห็นเฉพาะหัวข้อตัวเอง   // admin hr rm spv adm
 const setOf=b=>K.d.def.sets[K.d.def.branchSet[b]];
 const hm=m=>{m=((m%1440)+1440)%1440;return pad(Math.floor(m/60))+':'+pad(Math.round(m%60))};
 const hasTg=k=>k&&k.tg!==''&&k.tg!=null&&!isNaN(k.tg);
@@ -108,7 +108,7 @@ const dedTxt=p=>(p.ded||[]).length?p.ded.map(d=>esc(d[0])+' <b>'+baht(d[1])+'</b
 async function load(m){K.busy=true;try{K.d=await api('kpiLoad',{month:m||K.month||thisMonth()});K.month=K.d.month;if(!K.branch||!K.d.branches[K.branch])K.branch=branches()[0]||'';if(!K.date)K.date=K.d.today;
   const tabs=tabList().map(t=>t[0]);if(!tabs.includes(K.tab))K.tab=tabs[0]}finally{K.busy=false}render()}
 function tabList(){const k=kind(),t=[];if(k!=='rm')t.push(['entry','📝 กรอกผลรายวัน']);t.push(['daily','📅 ผลรายวัน'],['sum','🏆 สรุปคะแนน']);
-  if(['spv','admin','hr','rm','adm'].includes(k))t.push(['asg','👥 ผู้รับผิดชอบ']);
+  if(['spv','admin','hr','rm'].includes(k)||(k==='adm'&&!solo()))t.push(['asg','👥 ผู้รับผิดชอบ']);
   if(money())t.push(['close','🧾 ปิดเดือน / พิมพ์']);if(k==='admin')t.push(['set','⚙️ ตั้งค่าหัวข้อ']);return t}
 
 function cardify(){$$('.tbl table').forEach(t=>{if(t.classList.contains('set')||t.classList.contains('mx'))return;const th=t.tHead&&t.tHead.rows[0];if(!th)return;const lab=[];[...th.cells].forEach(c=>{for(let i=0;i<(c.colSpan||1);i++)lab.push(c.textContent.trim())});if(lab.length>12)return;
@@ -119,6 +119,7 @@ function render(){const app=$('#app');
   $('#who').innerHTML=`<b>${esc(me.name)}</b> · ${RN[me.role]||me.role}${K.d.who.branch?' คลัง '+esc(K.d.who.branch):''}<br><button class="btn ghost sm" id="k-out">ออกจากระบบ</button> <a class="btn ghost sm" href="./" style="text-decoration:none">ระบบพนักงาน</a>`;
   const ms=[];{const d=new Date();d.setDate(1);for(let i=0;i<13;i++){ms.push(iso(d).slice(0,7));d.setMonth(d.getMonth()-1)}}if(!ms.includes(K.month))ms.push(K.month);
   const bs=branches();
+  {const tl=tabList().map(t=>t[0]);if(!tl.includes(K.tab))K.tab=tl[0]}
   app.innerHTML=`<div class="row noprint" style="margin-top:12px"><label class="f">เดือน<select id="k-m">${ms.map(m=>`<option value="${m}"${m===K.month?' selected':''}>${mLabel(m)}</option>`).join('')}</select></label>
    ${bs.length>1?`<label class="f">คลัง<select id="k-b">${bs.map(b=>`<option${b===K.branch?' selected':''}>${esc(b)}</option>`).join('')}</select></label>`:''}
    <span class="muted sm" style="margin-left:auto">${K.d.closed?'🔒 เดือนนี้ปิดแล้ว':'เดือนนี้ยังเปิดอยู่'}</span><button class="btn ghost sm" id="k-ref">🔄 โหลดใหม่</button></div>
@@ -222,7 +223,7 @@ function sumView(){const bs=branches(),M=money();
   const ppl=B.people.filter(p=>kind()!=='adm'||p.id===K.d.me.emp||p.pos==='SPV');
   const nm=id=>esc((st.kpis.find(k=>k.id===id)||{}).name||id);
   return `${over}<h2>คลัง ${esc(K.branch)} · ${esc(st.name)}</h2>
-   <div class="cards"><div class="card"><b>คะแนนคลัง</b><div class="big">${B.pct.toFixed(1)}%</div><div class="bar"><i style="width:${Math.min(100,B.pct)}%"></i></div><div class="muted sm">ผ่าน ${B.nPass} จาก ${B.nScored} หัวข้อ · ผ่านเดือนนี้เมื่อได้ ≥ ${(K.d.def.program||{}).passPct||80}%</div></div>
+   <div class="cards"><div class="card"><b>${solo()?'คะแนนหัวข้อของฉัน':'คะแนนคลัง'}</b><div class="big">${B.pct.toFixed(1)}%</div><div class="bar"><i style="width:${Math.min(100,B.pct)}%"></i></div><div class="muted sm">ผ่าน ${B.nPass} จาก ${B.nScored} หัวข้อ · ผ่านเดือนนี้เมื่อได้ ≥ ${(K.d.def.program||{}).passPct||80}%</div></div>
     ${B.volAvg!==undefined?`<div class="card"><b>ยอดพัสดุเฉลี่ย</b><div class="big">${B.volAvg==null?'–':(+B.volAvg).toLocaleString()}</div><div class="muted sm">ชิ้น/วัน${B.tier?' · ขั้น '+B.tier:''}</div></div>`:''}
     ${B.crashDays?`<div class="card"><b>${esc(B.crashName||'คลังแตก')}</b><div class="big" style="color:${B.crashDays.length?'var(--bad)':'var(--ok)'}">${B.crashDays.length} วัน</div><div class="muted sm">${B.crashDays.length?B.crashDays.map(d=>+d.slice(8)).join(', '):'ยังไม่มี'}</div></div>`:''}</div>
    <div class="tbl"><table><thead><tr><th>หัวข้อ</th><th>เป้าหมาย</th><th>ผลทั้งเดือน</th><th>ผล</th><th>สัดส่วน</th><th>กรอกแล้ว</th></tr></thead><tbody>
@@ -230,7 +231,7 @@ function sumView(){const bs=branches(),M=money();
    <tr class="sum"><td style="text-align:left">รวม</td><td></td><td></td><td>ผ่าน ${B.nPass}/${B.nScored}</td><td>${B.pct.toFixed(2)}%</td><td></td></tr></tbody></table></div>
    <h3>รายบุคคล</h3>${ppl.length?`<div class="tbl"><table><thead><tr><th>ชื่อ</th><th>ตำแหน่ง</th><th>หัวข้อที่รับผิดชอบ</th><th>คะแนน</th><th>เงื่อนไขเดือนนี้</th>${M&&progOn()?'<th>เงินเดือนฐาน</th><th>ค่าตำแหน่ง</th><th>ค่า KPI</th><th>รายการหัก</th><th>สุทธิ (ตำแหน่ง+KPI)</th><th>ยกไปหักเดือนหน้า</th>':''}</tr></thead><tbody>
    ${ppl.map(p=>`<tr><td>${esc(p.name)}</td><td>${posN(p.pos)}</td><td style="white-space:normal;text-align:left">${p.pos==='SPV'||p.pos==='CRD'?'ทุกหัวข้อ (เท่า SPV)':p.kpis.length?p.kpis.map(nm).join(', '):'<span class="muted">ยังไม่ได้มอบหมาย</span>'}</td><td>${p.pct==null?'–':p.pct.toFixed(2)+'%'}</td><td style="white-space:normal;text-align:left;min-width:170px">${progOn()?condTxt(p):'-'}</td>${M&&progOn()?`<td>${baht(p.salary)}</td><td>${baht(p.p1)}</td><td>${baht(p.p2)}</td><td style="white-space:normal;text-align:left;min-width:200px">${dedTxt(p)}</td><td class="money">${baht(p.total)}</td><td>${p.carry?baht(p.carry):'-'}</td>`:''}</tr>`).join('')}</tbody></table></div>`:'<p class="muted">ยังไม่มี SPV / CRD / ADMIN ของคลังนี้ในทะเบียนพนักงาน</p>'}
-   ${progOn()?`<p class="muted sm">วิธีคิด: หัวข้อ "ผ่าน" = ผลทั้งเดือนถึงเป้า · คะแนน % = น้ำหนักหัวข้อที่ผ่าน ÷ น้ำหนักรวม · ค่า KPI = ค่า KPI สูงสุด × คะแนน % · SPV ได้ค่าตำแหน่ง/ค่า KPI ตามยอดพัสดุเฉลี่ยต่อวัน · ${(()=>{const C=cfgOf(K.branch),k=st.kpis.find(x=>x.id===C.crashK),nm=esc(C.crashName||'คลังแตก');return !k?'ชุดนี้ไม่มีเกณฑ์ค่าปรับรายวัน':C.crashMode==='time'?nm+' = วันที่ "'+esc(k.name)+'" เลย '+esc(C.crashAfter||'20:00')+' น.':nm+' = วันที่ "'+esc(k.name)+'" ไม่เกิน '+C.crashWd+'% (จ.–ศ.) / '+C.crashWe+'% (ส.–อา.)'})()} · ประเมิน ${mLabel(K.month)} จ่ายพร้อมเงินเดือนสิ้นเดือน ${mLabel(K.d.payMonth)}</p>`:''}`}
+   ${progOn()&&!solo()?`<p class="muted sm">วิธีคิด: หัวข้อ "ผ่าน" = ผลทั้งเดือนถึงเป้า · คะแนน % = น้ำหนักหัวข้อที่ผ่าน ÷ น้ำหนักรวม · ค่า KPI = ค่า KPI สูงสุด × คะแนน % · SPV ได้ค่าตำแหน่ง/ค่า KPI ตามยอดพัสดุเฉลี่ยต่อวัน · ${(()=>{const C=cfgOf(K.branch),k=st.kpis.find(x=>x.id===C.crashK),nm=esc(C.crashName||'คลังแตก');return !k?'ชุดนี้ไม่มีเกณฑ์ค่าปรับรายวัน':C.crashMode==='time'?nm+' = วันที่ "'+esc(k.name)+'" เลย '+esc(C.crashAfter||'20:00')+' น.':nm+' = วันที่ "'+esc(k.name)+'" ไม่เกิน '+C.crashWd+'% (จ.–ศ.) / '+C.crashWe+'% (ส.–อา.)'})()} · ประเมิน ${mLabel(K.month)} จ่ายพร้อมเงินเดือนสิ้นเดือน ${mLabel(K.d.payMonth)}</p>`:''}`}
 
 // ---------- ผู้รับผิดชอบ ----------
 function asgView(){const B=K.d.branches[K.branch],st=setOf(K.branch),adm=B.staff.filter(x=>x.pos==='ADMIN'),spv=B.staff.filter(x=>x.pos==='SPV'||x.pos==='CRD');
