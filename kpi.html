@@ -12,7 +12,7 @@
 :root[data-theme="dark"]{--bg:#171212;--surface:#211a19;--line:#3a2f2d;--fg:#f2eceb;--muted:#b3a5a2;--brand:#d8343f;--brand-soft:#3a1d1f;--ok:#5cc58a;--ok-soft:#18301f;--warn:#e3a94a;--warn-soft:#352914;--bad:#ef6b72;--bad-soft:#3a1d1f;--mid:#7fa7e0;--mid-soft:#1c2636;color-scheme:dark}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.55}
 [hidden]{display:none!important}
-.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+.wrap{max-width:1400px;margin:0 auto;padding:0 16px}
 header.top{background:var(--brand);color:var(--brand-ink);position:sticky;top:0;z-index:5}
 header.top .wrap{display:flex;align-items:center;gap:10px;padding-block:10px;flex-wrap:wrap}
 .logo{font:700 1.1rem var(--f-display);line-height:1.2}.logo small{display:block;font-weight:500;font-size:.78rem;opacity:.85}
@@ -36,13 +36,16 @@ label.f{display:flex;flex-direction:column;gap:3px;font-size:.9rem;color:var(--m
 .kin:last-child{border-bottom:0}.kin .nm{font-weight:600}.kin .tg{font-size:.84rem;color:var(--muted)}
 .kin input{width:140px;text-align:right}.kin .parts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.kin .parts label{font-size:.78rem;color:var(--muted);display:flex;flex-direction:column}.kin .parts input{width:90px}
 .tbl{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-height:70vh}
-table{border-collapse:collapse;width:100%;font-size:.86rem}th,td{border-bottom:1px solid var(--line);padding:5px 7px;text-align:right;white-space:nowrap}
-th{position:sticky;top:0;background:var(--surface);font-family:var(--f-display);font-weight:600;z-index:1;text-align:center;white-space:normal;min-width:70px}
+table{border-collapse:collapse;width:100%;font-size:.86rem}th,td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:right;white-space:nowrap}td[style*="text-align:left"],td:first-child{white-space:normal}
+th{position:sticky;top:0;background:var(--surface);font-family:var(--f-display);font-weight:600;z-index:1;text-align:center;white-space:normal;min-width:50px;font-size:.8rem}
 td:first-child,th:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:2}
 tr.sum td{font-weight:700;background:var(--mid-soft)}tr.sum td:first-child{background:var(--mid-soft)}
 .s5,.s4{background:var(--ok-soft)}.s3,.s2{background:var(--warn-soft)}.s1,.s0{background:var(--bad-soft)}
 .seg{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}.seg button{border:1.5px solid var(--line);background:var(--card,transparent);color:inherit;border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}.seg button.on{background:var(--brand,#b0141f);border-color:var(--brand,#b0141f);color:#fff}
-.tabs.sub{margin-top:4px}.savebar{position:sticky;bottom:0;background:var(--bg);padding:10px 0;border-top:1px solid var(--line);z-index:5}.nowrap{white-space:nowrap}table.st2 td{padding:4px 6px}table.st2 input.nm{min-width:260px}
+.tabs.sub{margin-top:4px}.savebar{position:sticky;bottom:0;background:var(--bg);padding:10px 0;border-top:1px solid var(--line);z-index:5}.nowrap{white-space:nowrap}table.st2 td{padding:4px 5px}table.st2 input.nm{min-width:0;width:100%}table.st2 td:nth-child(2){min-width:220px}table.st2 select{max-width:140px}
+@media (max-width:760px){.tbl.cards{border:0;background:none;max-height:none;overflow:visible}.tbl.cards table,.tbl.cards thead,.tbl.cards tbody,.tbl.cards tr,.tbl.cards td{display:block;width:auto}.tbl.cards thead{display:none}
+ .tbl.cards tr{border:1px solid var(--line);border-radius:12px;margin:0 0 10px;padding:8px 12px;background:var(--surface)}.tbl.cards td{border:0;padding:4px 0 4px 40%;position:relative;text-align:left;white-space:normal;min-height:1.5em}
+ .tbl.cards td::before{content:attr(data-l);position:absolute;left:0;top:5px;width:37%;color:var(--muted);font-size:.78rem;font-weight:400;line-height:1.3}.tbl.cards td.nol{padding-left:0}.tbl.cards td.nol::before{display:none}.tbl.cards td:empty{display:none}}
 .badge{display:inline-block;min-width:26px;padding:1px 7px;border-radius:999px;font-weight:700;text-align:center;font-size:.85rem}
 .badge.s5,.badge.s4{color:var(--ok)}.badge.s3,.badge.s2{color:var(--warn)}.badge.s1,.badge.s0{color:var(--bad)}.badge.na{background:var(--line);color:var(--muted)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
@@ -108,6 +111,8 @@ function tabList(){const k=kind(),t=[];if(k!=='rm')t.push(['entry','📝 กร�
   if(['spv','admin','hr','rm','adm'].includes(k))t.push(['asg','👥 ผู้รับผิดชอบ']);
   if(money())t.push(['close','🧾 ปิดเดือน / พิมพ์']);if(k==='admin')t.push(['set','⚙️ ตั้งค่าหัวข้อ']);return t}
 
+function cardify(){$$('.tbl table').forEach(t=>{if(t.classList.contains('set')||t.classList.contains('mx'))return;const th=t.tHead&&t.tHead.rows[0];if(!th)return;const lab=[];[...th.cells].forEach(c=>{for(let i=0;i<(c.colSpan||1);i++)lab.push(c.textContent.trim())});if(lab.length>12)return;
+  [...t.tBodies].forEach(b=>[...b.rows].forEach(r=>{let i=0;[...r.cells].forEach(c=>{const sp=c.colSpan||1;if(sp>1||!lab[i])c.classList.add('nol');else c.dataset.l=lab[i];i+=sp})}));t.closest('.tbl').classList.add('cards')})}
 function render(){const app=$('#app');
   if(!K.d){$('#who').innerHTML='';app.innerHTML=loginView();bindLogin();return}
   const me=K.d.me,RN={admin:'แอดมิน',hr:'HR',rm:'RM',spv:'SPV',emp:'ธุรการ (ADMIN)'};
@@ -124,7 +129,7 @@ function render(){const app=$('#app');
   if($('#k-b'))$('#k-b').onchange=e=>{K.branch=e.target.value;render()};
   $('#k-ref').onclick=()=>load().then(()=>toast('โหลดข้อมูลล่าสุดแล้ว')).catch(x=>toast(x.message));
   $$('[data-tab]').forEach(b=>b.onclick=()=>{K.tab=b.dataset.tab;render()});
-  ({entry:bindEntry,daily:bindDaily,asg:bindAsg,sub:bindSub,close:bindClose,set:bindSet}[K.tab]||(()=>{}))();
+  ({entry:bindEntry,daily:bindDaily,asg:bindAsg,sub:bindSub,close:bindClose,set:bindSet}[K.tab]||(()=>{}))();cardify();
   $$('[data-img]').forEach(b=>b.onclick=async()=>{try{const u=await api('kpiImg',{id:b.dataset.img});const lb=$('#lb');lb.innerHTML=`<img src="${u}" alt="หลักฐาน">`;lb.hidden=false;lb.onclick=()=>lb.hidden=true}catch(e){toast(e.message)}});
 }
 

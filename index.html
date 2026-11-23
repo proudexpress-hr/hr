@@ -60,7 +60,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .p-ok{background:var(--ok-soft);color:var(--ok)} .p-warn{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)} .p-n{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
 table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
-th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;white-space:normal;overflow-wrap:anywhere}
+td .btn,td .pill,td.num,th.num,td input,td select{white-space:nowrap}td .btn+.btn{margin-top:4px}
+body.wide .wrap{max-width:1400px}
+table.dense th,table.dense td{padding:3px 4px;font-size:.72rem;line-height:1.25}table.dense th{font-size:.68rem}table.dense td .btn{padding:3px 7px;font-size:.72rem}
+@media (max-width:760px){
+ .tablewrap.cards{border:0;overflow:visible;border-radius:0}
+ .tablewrap.cards table,.tablewrap.cards tbody,.tablewrap.cards tr,.tablewrap.cards td{display:block;width:auto;min-width:0;box-sizing:border-box}
+ .tablewrap.cards tr.hdr{display:none}
+ .tablewrap.cards tr{border:1px solid var(--line);border-radius:12px;margin:0 0 10px;padding:8px 12px;background:var(--surface)}
+ .tablewrap.cards tr[hidden]{display:none}
+ .tablewrap.cards td{border:0;padding:4px 0 4px 36%;position:relative;text-align:left;min-height:1.6em}
+ .tablewrap.cards td::before{content:attr(data-l);position:absolute;left:0;top:5px;width:33%;color:var(--muted);font-size:.8rem;line-height:1.3}
+ .tablewrap.cards td .row{flex-wrap:wrap!important}.tablewrap.cards td input,.tablewrap.cards td select{max-width:100%}
+ .tablewrap.cards td.nol{padding-left:0}.tablewrap.cards td.nol::before{display:none}.tablewrap.cards td:empty{display:none}
+}
 th{font:600 .8rem var(--f-display);color:var(--muted);background:var(--bg);letter-spacing:.02em}
 td.num,th.num{text-align:right}
 tr:last-child td{border-bottom:0}
@@ -484,8 +498,15 @@ function render(){_render();REAL.queue()}
 function _render(){
   syncResign();syncMoves();
   $('#sw-emp').setAttribute('aria-pressed',S.view==='emp');$('#sw-adm').setAttribute('aria-pressed',S.view==='adm');
-  $('#app').innerHTML=S.view==='emp'?empView():admView();bind();
+  document.body.classList.toggle('wide',S.view==='adm');
+  $('#app').innerHTML=S.view==='emp'?empView():admView();bind();cardify();
 }
+// ตารางบนมือถือ → แสดงเป็นการ์ดทีละแถว (ไม่ต้องเลื่อนซ้ายขวา) · คอมพิวเตอร์ตัดคำให้พอดีหน้า
+function cardify(){document.querySelectorAll('.tablewrap table').forEach(t=>{if(t.classList.contains('rgrid')||t.classList.contains('nocard'))return;const rows=[...t.rows];if(!rows.length)return;
+  const h=rows.find(r=>r.cells.length&&[...r.cells].every(c=>c.tagName==='TH'));if(!h||rows.some(r=>r!==h&&[...r.cells].some(c=>c.tagName==='TH')))return;
+  const lab=[];[...h.cells].forEach(c=>{for(let i=0;i<(c.colSpan||1);i++)lab.push(c.textContent.trim())});h.classList.add('hdr');if(lab.length>12)t.classList.add('dense');if(lab.length>16)return;
+  rows.forEach(r=>{if(r===h)return;let i=0;[...r.cells].forEach(c=>{const span=c.colSpan||1;if(span>1||!lab[i])c.classList.add('nol');else c.dataset.l=lab[i];i+=span})});
+  t.closest('.tablewrap').classList.add('cards')})}
 const oldRegOpen=()=>S.oldRegOn&&!!S.oldRegUntil&&TODAY<=D(S.oldRegUntil);
 const maskAcct=a=>a&&a.length>4?'xxx-x-x'+a.slice(-4):(a||'-');
 function meView(e,who){const p=payOf(e);const h=held(e.id);const y=TODAY.getFullYear();const st=insStage(e);
