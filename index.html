@@ -57,7 +57,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .note{background:var(--brand-soft);border-radius:8px;padding:10px 12px;font-size:.92rem}
 .note.ok{background:var(--ok-soft)} .note.warn{background:var(--warn-soft)}
 .pill{display:inline-block;font:600 .75rem var(--f-display);padding:2px 9px;border-radius:999px;white-space:nowrap}
-.p-ok{background:var(--ok-soft);color:var(--ok)} .p-warn{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)} .p-n{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.p-ok{background:var(--ok-soft);color:var(--ok)} .p-mid{background:#e3ecf7;color:#2f5f9e}.p-warn{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)} .p-n{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
 table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
 th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;white-space:normal;overflow-wrap:anywhere}
@@ -72,7 +72,7 @@ table.dense th,table.dense td{padding:3px 4px;font-size:.72rem;line-height:1.25}
  .tablewrap.cards tr[hidden]{display:none}
  .tablewrap.cards td{border:0;padding:4px 0 4px 36%;position:relative;text-align:left;min-height:1.6em}
  .tablewrap.cards td::before{content:attr(data-l);position:absolute;left:0;top:5px;width:33%;color:var(--muted);font-size:.8rem;line-height:1.3}
- .tablewrap.cards td .row{flex-wrap:wrap!important}.tablewrap.cards td input,.tablewrap.cards td select{max-width:100%}
+ .tablewrap.cards td .row{flex-wrap:wrap!important}.tablewrap.cards td .pill{white-space:normal}.tablewrap.cards td input,.tablewrap.cards td select{max-width:100%}
  .tablewrap.cards td.nol{padding-left:0}.tablewrap.cards td.nol::before{display:none}.tablewrap.cards td:empty{display:none}
 }
 th{font:600 .8rem var(--f-display);color:var(--muted);background:var(--bg);letter-spacing:.02em}
@@ -548,6 +548,7 @@ function empView(){
   if(S.page==='leave')return menu+leaveView(e,who);
   if(S.page==='resign')return menu+resignView(e,who);
   if(S.page==='uni')return menu+uniView(e,who);
+  if(S.page==='myasset')return menu+myAssetView(e);
   if(S.page==='gap')return menu+gapView(e,who);
   if(S.page==='ctr')return menu+ctrEmpView(e,who);
   if(S.page==='card')return menu+cardView(e,who);
@@ -560,6 +561,7 @@ function empView(){
   return `${who}${clk}${e.status==='รอตรวจสอบ'?'<div class="note warn">ข้อมูลของคุณรอหัวหน้างานตรวจสอบ ใช้เมนูได้ตามปกติ</div>':''}
     <div class="mecard"><div><span class="muted">รหัส</span><b>${e.id}</b></div><div><span class="muted">JMS</span><b>${esc(e.jms||'-')}</b></div><div><span class="muted">อายุงาน</span><b>${tenure(e)}</b></div><div><span class="muted">สถานะ</span><b>${isPT(e)?'พาร์ทไทม์':probation(e)}</b></div><div><span class="muted">เงินประกันสะสม</span><b>${money(depSum(e.id))}</b></div>${hasLeave(e)?`<div><span class="muted">ลากิจคงเหลือ</span><b>${Math.max(0,quota(e,'personal')-leaveUsed(e.id,'personal',TODAY.getFullYear()))} วัน</b></div>`:''}</div>
     <div><h1>เมนูพนักงาน</h1></div>${fixOpen(e.id).length?`<div class="note warn" style="border-width:2px"><b>📌 บริษัทแจ้งให้แก้ไข/ส่งเอกสารเพิ่ม ${fixOpen(e.id).length} เรื่อง</b> <button class="btn sm" data-go="fix">ดูและแก้ไข</button></div>`:''}${noticeOk(e.id)?'':'<div class="note warn">บริษัทมีประกาศความเป็นส่วนตัว (PDPA) ฉบับใหม่ กรุณาอ่านและกดรับทราบ <button class="back" data-go="pdpa">อ่านเลย</button></div>'}
+    ${S.assets.filter(a=>a.emp===e.id&&asReq(a)).length?`<div class="note warn" style="border-width:2px"><b>📦 หัวหน้าขอข้อมูลทรัพย์สินที่คุณถือ ${S.assets.filter(a=>a.emp===e.id&&asReq(a)).length} รายการ</b> (รูป / ยี่ห้อ / รุ่น / SN) <button class="btn sm" data-go="myasset">ส่งข้อมูล</button></div>`:''}
     ${ctrPending(e.id).length?`<div class="note warn" style="border-width:2px"><b>✍️ มีสัญญารอคุณลงนาม ${ctrPending(e.id).length} ฉบับ</b> <button class="btn sm" data-go="ctr">อ่านและลงนาม</button></div>`:''}
     ${docGaps(e).length?`<div class="note warn" style="border-width:2px"><b>📄 เอกสาร/ข้อมูลของคุณยังไม่ครบ:</b> ${docGaps(e).map(x=>esc(x[1])).join(', ')} <button class="btn sm" data-go="gap">ส่งเอกสาร</button></div>`:''}
     <div class="grid">
@@ -951,7 +953,7 @@ function updateView(e,who){
     <label class="f">ภาษีรถ/พ.ร.บ. หมดอายุ<input type="date" id="u-taxexp" value="${esc(e.taxExp)}"></label>
     <label class="f">แนบรูปเอกสารใหม่ (บัตร/สมุดบัญชี/ใบขับขี่)<input type="file" id="u-files" accept="image/*,application/pdf" multiple></label>
   </div>
-  ${isNew?'':`<h3>ของบริษัทที่ถืออยู่</h3><p class="muted">ลืมแจ้ง หรือแจ้งจำนวนผิด แก้ตรงนี้ได้ รายการที่หัวหน้ายืนยันแล้วแก้เองไม่ได้ ถ้าผิดให้แจ้งหัวหน้า</p>
+  ${isNew?'':`<h3>ของบริษัทที่ถืออยู่ <button class="btn ghost sm" data-go="myasset" type="button">ดูรายละเอียด / เพิ่มรูป SN</button></h3><p class="muted">ลืมแจ้ง หรือแจ้งจำนวนผิด แก้ตรงนี้ได้ รายการที่หัวหน้ายืนยันแล้วแก้เองไม่ได้ ถ้าผิดให้แจ้งหัวหน้า</p>
   <div class="ua-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">${h.map(a=>selfPend(a)?`<div class="ua-item" style="border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface)"><div class="row" style="justify-content:space-between;margin:0"><b>${esc(a.type)}</b><span class="pill p-warn">รอหัวหน้าตรวจ</span></div><div class="row" style="margin:8px 0 0;gap:8px;flex-wrap:nowrap"><label style="flex:0 0 80px">จำนวน<input class="ua-q" data-no="${a.no}" value="${a.qty}" inputmode="numeric" style="text-align:right"></label><label style="flex:1;min-width:0">SN / ไซซ์ (ถ้ามี)<input class="ua-d" data-no="${a.no}" value="${esc(a.detail==='พนักงานแจ้งเอง รอหัวหน้าตรวจ'?'':a.detail)}"></label><button class="btn ghost sm" type="button" data-uadel="${a.no}" style="align-self:flex-end">ลบ</button></div></div>`:`<div class="ua-item" style="border:1px solid var(--line);border-radius:10px;padding:10px"><div class="row" style="justify-content:space-between;margin:0"><b>${esc(a.type)} × ${a.qty}</b><span class="pill p-ok">ยืนยันแล้ว</span></div>${a.detail?`<div class="muted">${esc(a.detail)}</div>`:''}</div>`).join('')||'<div class="muted">ยังไม่มีรายการ</div>'}</div>
   <div class="row"><select id="ua-type" style="max-width:200px">${[...new Set([...OLD_ASSETS,...ASSET_TYPES])].map(t=>`<option>${esc(t)}</option>`).join('')}</select><input id="ua-qty" inputmode="numeric" placeholder="จำนวน" style="max-width:90px"><button class="btn ghost sm" type="button" id="ua-add">+ เพิ่มของที่ถืออยู่</button></div>`}
   ${sigPad('sg-upd','ลายมือชื่อผู้แก้ไขข้อมูล')}
@@ -1641,26 +1643,93 @@ function depAdm(){
     ${S.depResult?`<div class="note ${S.depResult.miss.length?'warn':'ok'}">${S.depResult.text}${S.depResult.miss.length?'<br>หาไม่เจอในทะเบียน: '+S.depResult.miss.slice(0,15).map(esc).join(', ')+(S.depResult.miss.length>15?' …':''):''}</div>`:''}
   </div>`:''}`;
 }
+// ===== ทรัพย์สินบริษัท: รายละเอียด (รูป ยี่ห้อ รุ่น SN) · ดูตามคน / ตามของ · ขอข้อมูลเพิ่มจากพนักงาน =====
+const AS_F=[['photo','รูปทรัพย์สิน'],['brand','ยี่ห้อ'],['model','รุ่น'],['sn','Serial No. / เลขเครื่อง'],['size','ไซซ์'],['qty','จำนวนที่ถืออยู่']];
+const asWear=t=>/เสื้อ|แจ็คเก็ต|หมวก|กางเกง|ยูนิฟอร์ม|รองเท้า/.test(t||'');
+const asNeed=a=>asWear(a.type)?['size']:/ซิม/.test(a.type||'')?['sn']:['photo','brand','model','sn'];
+const asMiss=a=>a.returned?[]:asNeed(a).filter(f=>!a[f]);
+const asLbl=f=>(AS_F.find(x=>x[0]===f)||[f,f])[1];
+const asReq=a=>!!(a.needInfo&&!a.needInfo.doneAt&&!a.returned);
+const asDone=a=>!!(a.needInfo&&a.needInfo.doneAt&&!a.returned);
+const asDesc=a=>{const s=[[a.brand,a.model].filter(Boolean).join(' '),a.sn?'SN '+a.sn:'',a.size?'ไซซ์ '+a.size:''].filter(Boolean).join(' · ');return s||(a.detail&&!/พนักงานแจ้งเอง/.test(a.detail)?a.detail:'')};
+function asPill(a){if(a.returned)return `<span class="pill p-n">คืนแล้ว ${th(a.returned)}</span>`;if(selfPend(a))return '<span class="pill p-warn">พนักงานแจ้งเอง รอตรวจ</span>';if(asReq(a))return '<span class="pill p-warn">รอพนักงานเพิ่มข้อมูล</span>';if(asDone(a))return '<span class="pill p-mid">พนักงานส่งข้อมูลแล้ว รอตรวจ</span>';
+  const m=asMiss(a);return m.length?`<span class="pill p-bad">ขาด ${m.map(asLbl).join(', ')}</span>`:'<span class="pill p-ok">ถืออยู่ ข้อมูลครบ</span>'}
+function asDetail(a){const e=E(a.emp)||{},ed=can('card'),miss=asMiss(a),ni=a.needInfo;
+  return `<div class="panel as-det" id="as-det" style="border:2px solid var(--brand)"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${a.no} · ${esc(a.type)} ${asPill(a)}</h3><button class="btn ghost sm" id="asd-x">ปิด</button></div>
+   <p style="margin:6px 0">ผู้ถือ <b>${esc(e.name||a.emp)}</b> (${esc(a.emp)}) · สาขา ${esc(e.branch||'')} ${statusPill(e.status||'')} · แจกวันที่ ${th(a.issued)} โดย ${esc(a.by||'')}${a.ok?' · ยืนยันโดย '+esc(a.ok.by):''}</p>
+   <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap"><div style="min-width:180px">${a.photo?attachGrid({},[{t:'รูปทรัพย์สิน',v:a.photo}]):'<div class="muted" style="border:1px dashed var(--line);border-radius:10px;padding:26px 18px">ยังไม่มีรูป</div>'}</div>
+    <div style="flex:1;min-width:240px">${ed?`<div class="fields">
+     <label class="f">ประเภท<select id="asd-type">${[...new Set([...ASSET_TYPES,...OLD_ASSETS,a.type])].map(t=>`<option${t===a.type?' selected':''}>${esc(t)}</option>`).join('')}</select></label>
+     <label class="f">ยี่ห้อ<input id="asd-brand" value="${esc(a.brand||'')}" placeholder="เช่น Urovo, Samsung"></label>
+     <label class="f">รุ่น<input id="asd-model" value="${esc(a.model||'')}" placeholder="เช่น DT40"></label>
+     <label class="f">Serial No. / เลขเครื่อง<input id="asd-sn" value="${esc(a.sn||'')}"></label>
+     <label class="f">ไซซ์<input id="asd-size" value="${esc(a.size||'')}" placeholder="เสื้อ: S M L XL"></label>
+     <label class="f">จำนวน<input id="asd-qty" value="${a.qty}" inputmode="numeric"></label>
+     <label class="f">วันที่แจก<input type="date" id="asd-date" value="${esc(a.issued||'')}"></label>
+     <label class="f">หมายเหตุ<input id="asd-note" value="${esc(a.note||(a.detail&&!/พนักงานแจ้งเอง/.test(a.detail)?a.detail:''))}"></label>
+     <label class="f">${a.photo?'เปลี่ยนรูป':'แนบรูปทรัพย์สิน'}<input type="file" id="asd-photo" accept="image/*"></label></div>
+     <div class="row"><button class="btn" id="asd-save" data-no="${a.no}">บันทึกการแก้ไข</button>${selfPend(a)?`<button class="btn ok sm" data-aok="${a.no}">ยืนยันถูกต้อง</button><button class="btn ghost sm" data-ano="${a.no}">ไม่ถูกต้อง ลบ</button>`:''}${!a.returned?`<button class="btn ghost sm" data-aret="${a.no}">รับคืนแล้ว</button>`:''}</div>`
+    :`<p>${esc(asDesc(a))||'<span class="muted">ยังไม่มีรายละเอียด</span>'}</p>`}</div></div>
+   ${miss.length?`<div class="note warn" style="margin-top:8px">ข้อมูลที่ยังขาด: <b>${miss.map(asLbl).join(', ')}</b></div>`:''}
+   ${ni?`<div class="note" style="margin-top:8px"><b>ขอข้อมูลจากพนักงาน</b> ${th((ni.at||'').slice(0,10))} โดย ${esc(ni.by||'')}: ${ni.fields.map(asLbl).join(', ')}${ni.note?' · "'+esc(ni.note)+'"':''}<br>${ni.doneAt?'<b style="color:var(--ok)">พนักงานส่งข้อมูลแล้ว '+esc(ni.doneAt)+'</b>'+(ed?` <button class="btn ok sm" id="asd-reqok">ตรวจแล้ว ข้อมูลถูกต้อง</button>`:''):'<span class="muted">รอพนักงานส่ง (ขึ้นแจ้งเตือนในเมนูพนักงานแล้ว)</span>'}</div>`:''}
+   ${ed&&!a.returned?`<h4 style="margin:12px 0 4px">แจ้งพนักงานให้เพิ่ม / แก้ข้อมูล</h4><div class="chips">${AS_F.map(([f,t])=>`<label class="chip${(ni&&!ni.doneAt?ni.fields:miss).includes(f)?' on':''}"><input type="checkbox" class="asd-rf" value="${f}"${(ni&&!ni.doneAt?ni.fields:miss).includes(f)?' checked':''} style="margin-right:6px">${t}</label>`).join('')}</div>
+     <div class="row"><input id="asd-msg" placeholder="ข้อความถึงพนักงาน เช่น ถ่ายรูปให้เห็นเลข SN ด้านหลังเครื่อง" style="flex:1;min-width:220px"><button class="btn sm" id="asd-req">ส่งให้พนักงาน</button></div>`:''}
+   ${(a.hist||[]).length?`<details style="margin-top:8px"><summary class="muted">ประวัติการแก้ไข (${a.hist.length})</summary><ul class="muted sm">${a.hist.slice().reverse().map(h=>`<li>${esc(h.at)} · ${esc(h.by)} · ${esc(h.what)}</li>`).join('')}</ul></details>`:''}</div>`}
 function assetIssued(){
-  const all=S.assets.filter(a=>inScope(E(a.emp).branch));
-  const f=S.asF||(all.some(selfPend)?'พนักงานแจ้งเอง รอตรวจ':'ค้างคืนจากคนออก');
-  const filt={'พนักงานแจ้งเอง รอตรวจ':selfPend,'ค้างคืนจากคนออก':a=>!a.returned&&E(a.emp).status==='พ้นสภาพ','ถืออยู่ทั้งหมด':a=>!a.returned,'คืนแล้ว':a=>!!a.returned,'ทั้งหมด':()=>true};
-  const list=all.filter(filt[f]);
-  const out={};ASSET_TYPES.forEach(t=>out[t]=0);all.filter(a=>!a.returned).forEach(a=>out[a.type]+=a.qty);
-  const active=S.emp.filter(e=>inScope(e.branch)&&e.status==='ทำงาน');
-  const rows=list.map(a=>{const e=E(a.emp);return `<tr><td>${a.no}</td><td>${esc(e.name)}</td><td>${e.branch}</td><td>${statusPill(e.status)}</td><td>${a.type}</td><td>${esc(a.detail)}</td><td class="num">${a.qty}</td><td>${th(a.issued)}</td><td>${esc(a.by)}</td><td>${selfPend(a)&&can('card')?`<button class="btn ok sm" data-aok="${a.no}">ยืนยันถูกต้อง</button> <button class="btn ghost sm" data-ano="${a.no}">ไม่ถูกต้อง ลบ</button>`:a.returned?th(a.returned):(can('card')?`<button class="btn sm ${e.status==='พ้นสภาพ'?'':'ghost'}" data-aret="${a.no}">รับคืนแล้ว</button>`:'-')}</td></tr>`}).join('');
-  return `<p class="muted">บันทึกทุกครั้งที่แจกของให้พนักงาน (ตัดจากสต็อกคลังสาขาอัตโนมัติ) · ตอนอนุมัติใบลาออก ระบบจะขึ้นรายการที่คนนั้นรับไปให้หัวหน้าตรวจรับคืนก่อน</p>
-  <div class="stats">${ASSET_TYPES.filter(t=>out[t]).map(t=>`<div class="stat"><b>${out[t]}</b><span>${t} อยู่กับพนักงาน</span></div>`).join('')}</div>
-  <div class="tabs" role="group" aria-label="ตัวกรอง">${Object.keys(filt).map(k=>`<button data-asf="${k}" aria-pressed="${f===k}">${k} (${all.filter(filt[k]).length})</button>`).join('')}</div>
-  <div class="tablewrap"><table><tr><th>เลขที่</th><th>พนักงาน</th><th>สาขา</th><th>สถานะพนักงาน</th><th>ประเภท</th><th>รายละเอียด / SN / ไซซ์</th><th class="num">จำนวน</th><th>วันที่แจก</th><th>ผู้แจก</th><th>คืนแล้ว</th></tr>${rows||'<tr><td colspan="10" class="muted">ไม่มีรายการ</td></tr>'}</table></div>
+  const all=S.assets.filter(a=>inScope((E(a.emp)||{}).branch));const F=S.asq=S.asq||{q:'',br:'',type:'',st:'',mode:'list',emp:'',pg:1};
+  if(S.asF){F.st={'พนักงานแจ้งเอง รอตรวจ':'self','ค้างคืนจากคนออก':'left','ถืออยู่ทั้งหมด':'hold','คืนแล้ว':'ret','ทั้งหมด':''}[S.asF]||F.st;S.asF=null}
+  const stF={'':['ทั้งหมด',()=>true],hold:['ถืออยู่',a=>!a.returned],self:['พนักงานแจ้งเอง รอตรวจ',selfPend],miss:['ข้อมูลไม่ครบ',a=>asMiss(a).length>0],req:['รอพนักงานเพิ่มข้อมูล',asReq],done:['พนักงานส่งข้อมูลแล้ว รอตรวจ',asDone],left:['ค้างคืนจากคนออก',a=>!a.returned&&(E(a.emp)||{}).status==='พ้นสภาพ'],ret:['คืนแล้ว',a=>!!a.returned]};
+  const q=(F.q||'').trim().toLowerCase();
+  const base=all.filter(a=>{const e=E(a.emp)||{};return (!F.br||e.branch===F.br)&&(!F.type||a.type===F.type)&&(!F.emp||a.emp===F.emp)&&(!q||q.split(/\s+/).every(w=>[a.no,e.name,e.id,e.nick,a.type,a.brand,a.model,a.sn,a.size,a.detail,a.note].some(v=>String(v||'').toLowerCase().includes(w))))});
+  const list=base.filter((stF[F.st]||stF[''])[1]);
+  const out={};all.filter(a=>!a.returned).forEach(a=>out[a.type]=(out[a.type]||0)+a.qty);
+  const active=S.emp.filter(e=>inScope(e.branch)&&e.status==='ทำงาน');const brs=[...new Set(all.map(a=>(E(a.emp)||{}).branch).filter(Boolean))].sort();
+  const types=[...new Set([...ASSET_TYPES,...all.map(a=>a.type)])];
+  const fe=F.emp&&E(F.emp);
+  const bar=`<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+   <label class="f" style="flex:1;min-width:220px">ค้นหา<input id="asq-q" value="${esc(F.q)}" placeholder="ชื่อ รหัส เลขที่ SN ยี่ห้อ รุ่น"></label>
+   ${brs.length>1?`<label class="f" style="max-width:160px">สาขา<select id="asq-br"><option value="">ทุกสาขา</option>${brs.map(b=>`<option${b===F.br?' selected':''}>${b}</option>`).join('')}</select></label>`:''}
+   <label class="f" style="max-width:220px">ประเภท<select id="asq-type"><option value="">ทุกประเภท</option>${types.map(t=>`<option${t===F.type?' selected':''}>${esc(t)}</option>`).join('')}</select></label>
+   <button class="btn ghost sm" id="asq-clr">ล้างตัวกรอง</button></div>
+   ${fe?`<div class="note">กำลังดูของที่ <b>${esc(fe.name)}</b> (${fe.id}) ถือ <button class="btn ghost sm" id="asq-emp0">ดูทุกคน</button></div>`:''}
+   <div class="tabs" role="group" aria-label="สถานะ">${Object.entries(stF).map(([k,[t,f]])=>`<button data-asst="${k}" aria-pressed="${(F.st||'')===k}">${t} (${base.filter(f).length})</button>`).join('')}</div>
+   <div class="tabs sub" role="group" aria-label="มุมมอง">${[['list','📋 รายการ'],['emp','👤 ตามพนักงาน (ใครถืออะไร)'],['type','📦 ตามประเภท (ของนี้อยู่กับใคร)']].map(([k,t])=>`<button data-asmode="${k}" aria-pressed="${F.mode===k}">${t}</button>`).join('')}</div>`;
+  let body='';
+  if(F.mode==='emp'){const g={};list.forEach(a=>{(g[a.emp]=g[a.emp]||[]).push(a)});const ks=Object.keys(g).sort((x,y)=>(E(x)||{}).name>(E(y)||{}).name?1:-1);
+    body=`<div class="tablewrap"><table><tr><th>พนักงาน</th><th>สาขา</th><th>สถานะ</th><th>ของที่ถือ</th><th>ข้อมูลไม่ครบ / รอตรวจ</th><th></th></tr>${ks.map(id=>{const e=E(id)||{},L=g[id],bad=L.filter(a=>asMiss(a).length||selfPend(a)||asReq(a)||asDone(a)).length;
+      const sm={};L.filter(a=>!a.returned).forEach(a=>sm[a.type]=(sm[a.type]||0)+a.qty);return `<tr><td><b>${esc(e.name||id)}</b><br><small class="muted">${id}</small></td><td>${esc(e.branch||'')}</td><td>${statusPill(e.status||'')}</td><td>${Object.entries(sm).map(([t,n])=>`<span class="pill p-n">${esc(t)} ×${n}</span>`).join(' ')||'<span class="muted">คืนครบแล้ว</span>'}</td><td>${bad?`<span class="pill p-bad">${bad} รายการ</span>`:'-'}</td><td><button class="btn ghost sm" data-asemp="${id}">ดูรายการ</button></td></tr>`}).join('')||'<tr><td colspan="6" class="muted">ไม่มีรายการ</td></tr>'}</table></div>`}
+  else if(F.mode==='type'){const g={};list.forEach(a=>{(g[a.type]=g[a.type]||[]).push(a)});
+    body=`<div class="tablewrap"><table><tr><th>ประเภท</th><th class="num">อยู่กับพนักงาน (ชิ้น)</th><th class="num">จำนวนคนที่ถือ</th><th>อยู่กับใครบ้าง</th><th>ข้อมูลไม่ครบ</th><th></th></tr>${Object.keys(g).map(t=>{const L=g[t].filter(a=>!a.returned),who=[...new Set(L.map(a=>a.emp))];
+      return `<tr><td><b>${esc(t)}</b></td><td class="num">${L.reduce((x,a)=>x+a.qty,0)}</td><td class="num">${who.length}</td><td>${who.slice(0,8).map(id=>`<button class="btn ghost sm" data-asemp="${id}">${esc((E(id)||{}).name||id)}</button>`).join(' ')}${who.length>8?' <span class="muted">+'+(who.length-8)+' คน</span>':''}</td><td>${L.filter(a=>asMiss(a).length).length||'-'}</td><td><button class="btn ghost sm" data-astype="${esc(t)}">ดูรายการ</button></td></tr>`}).join('')||'<tr><td colspan="6" class="muted">ไม่มีรายการ</td></tr>'}</table></div>`}
+  else{const sz=20,pg=Math.max(1,Math.ceil(list.length/sz));F.pg=Math.min(Math.max(1,F.pg||1),pg);const L=list.slice((F.pg-1)*sz,F.pg*sz);
+    body=`<div class="tablewrap"><table><tr><th>เลขที่</th><th>พนักงาน</th><th>สาขา</th><th>ประเภท</th><th>ยี่ห้อ / รุ่น / SN / ไซซ์</th><th class="num">จำนวน</th><th>วันที่แจก</th><th>สถานะ</th><th></th></tr>${L.map(a=>{const e=E(a.emp)||{};return `<tr${S.asSel===a.no?' style="background:var(--brand-soft,#f7e3e4)"':''}><td>${a.no}${a.photo?' 📷':''}</td><td>${esc(e.name||a.emp)}${e.status&&e.status!=='ทำงาน'?' '+statusPill(e.status):''}</td><td>${esc(e.branch||'')}</td><td>${esc(a.type)}</td><td>${esc(asDesc(a))||'<span class="muted">-</span>'}</td><td class="num">${a.qty}</td><td>${th(a.issued)}</td><td>${asPill(a)}</td><td><button class="btn ghost sm" data-assel="${a.no}">ดู / แก้</button></td></tr>`}).join('')||'<tr><td colspan="9" class="muted">ไม่มีรายการ</td></tr>'}</table></div>
+     ${pg>1?`<div class="row pager"><button class="btn ghost sm" data-aspg="${F.pg-1}" ${F.pg<=1?'disabled':''}>◀ ก่อนหน้า</button><span>หน้า <b>${F.pg}</b> / ${pg} <small class="muted">(${list.length} รายการ)</small></span><button class="btn ghost sm" data-aspg="${F.pg+1}" ${F.pg>=pg?'disabled':''}>ถัดไป ▶</button></div>`:`<p class="muted sm">${list.length} รายการ</p>`}`}
+  const sel=S.asSel&&S.assets.find(a=>a.no===S.asSel);
+  return `<p class="muted">บันทึกทุกครั้งที่แจกของให้พนักงาน (ตัดจากสต็อกคลังสาขาอัตโนมัติ) · กด <b>ดู / แก้</b> เพื่อดูรูป ยี่ห้อ รุ่น SN แก้ไข หรือแจ้งพนักงานให้ส่งข้อมูลเพิ่ม</p>
+  <div class="stats">${Object.keys(out).filter(t=>out[t]).map(t=>`<button type="button" class="stat atk${F.type===t?' on':''}" data-astype="${esc(t)}"><b>${out[t]}</b><span>${esc(t)} อยู่กับพนักงาน</span></button>`).join('')}</div>
+  ${bar}${sel?asDetail(sel):''}${body}
   ${can('card')?`<div class="panel" style="background:var(--bg)"><h3>บันทึกการแจกทรัพย์สิน</h3><div class="fields">
     <label class="f">พนักงาน<select id="as-emp"><option value="">เลือก…</option>${active.map(e=>`<option value="${e.id}">${e.id} ${esc(e.name)} (${e.branch})</option>`).join('')}</select></label>
     <label class="f">ประเภท<select id="as-type">${ASSET_TYPES.map(t=>`<option>${t}</option>`).join('')}</select></label>
-    <label class="f">รายละเอียด / SN / ไซซ์<input id="as-detail" placeholder="เช่น SN PDA-301714-020, ไซซ์ L"></label>
+    <label class="f">ยี่ห้อ<input id="as-brand"></label><label class="f">รุ่น<input id="as-model"></label><label class="f">Serial No.<input id="as-sn"></label><label class="f">ไซซ์<input id="as-size"></label>
     <label class="f">จำนวน<input id="as-qty" inputmode="numeric" value="1"></label>
-    <label class="f">วันที่แจก<input type="date" id="as-date" value="${iso(TODAY)}"></label></div>
+    <label class="f">วันที่แจก<input type="date" id="as-date" value="${iso(TODAY)}"></label>
+    <label class="f">รูปทรัพย์สิน<input type="file" id="as-photo" accept="image/*"></label>
+    <label class="f">หมายเหตุ<input id="as-detail" placeholder="เช่น สภาพ / อุปกรณ์เสริม"></label></div>
     <div class="row"><button class="btn" id="as-add">บันทึกการแจก</button></div></div>`:''}`;
 }
+function myAssetView(e){const L=S.assets.filter(a=>a.emp===e.id&&!a.returned);
+  const card=a=>{const ni=asReq(a)?a.needInfo:null,canEdit=selfPend(a)||!!ni||asMiss(a).length>0,need=ni?ni.fields:asMiss(a);
+    return `<div class="panel" style="${ni?'border:2px solid var(--warn)':''}"><div class="row" style="justify-content:space-between;margin:0"><b>${esc(a.type)} ×${a.qty}</b>${asPill(a)}</div>
+     <p class="muted" style="margin:4px 0">${a.no} · ได้รับ ${th(a.issued)}${asDesc(a)?' · '+esc(asDesc(a)):''}</p>
+     ${a.photo?attachGrid({},[{t:'รูปทรัพย์สิน',v:a.photo}]):''}
+     ${ni?`<div class="note warn"><b>หัวหน้าขอให้ส่ง:</b> ${ni.fields.map(asLbl).join(', ')}${ni.note?'<br>'+esc(ni.note):''}</div>`:need.length?`<div class="note">ยังขาด: ${need.map(asLbl).join(', ')}</div>`:''}
+     ${canEdit?`<div class="fields">${['brand','model','sn','size'].filter(f=>need.includes(f)||!a[f]||selfPend(a)).map(f=>`<label class="f">${asLbl(f)}${need.includes(f)?' *':''}<input class="mya-f" data-no="${a.no}" data-f="${f}" value="${esc(a[f]||'')}"></label>`).join('')}
+       ${need.includes('qty')||selfPend(a)?`<label class="f">จำนวนที่ถืออยู่${need.includes('qty')?' *':''}<input class="mya-f" data-no="${a.no}" data-f="qty" value="${a.qty}" inputmode="numeric"></label>`:''}
+       ${need.includes('photo')||!a.photo?`<label class="f">รูปทรัพย์สิน${need.includes('photo')?' *':''} <small class="muted">ถ่ายให้เห็นตัวเครื่องและเลข SN ชัด ๆ</small><input type="file" class="mya-ph" data-no="${a.no}" accept="image/*"></label>`:''}</div>
+       <div class="row"><button class="btn sm" data-myas="${a.no}">ส่งข้อมูล</button></div>`:''}</div>`};
+  return `<section class="panel"><h2>ของบริษัทที่ฉันถืออยู่</h2><p class="muted">ข้อมูลทรัพย์สินที่บริษัทให้ยืม · ถ้าหัวหน้าขอข้อมูลเพิ่ม (รูป ยี่ห้อ รุ่น SN) กรอกแล้วกดส่งได้ที่นี่ · ของที่ถืออยู่แต่ยังไม่มีในรายการ เพิ่มได้ที่เมนู <button class="btn ghost sm" data-go="update">แก้ไขข้อมูล</button></p>
+   ${L.length?L.sort((x,y)=>(asReq(y)?1:0)-(asReq(x)?1:0)).map(card).join(''):'<p class="muted">ยังไม่มีรายการ</p>'}</section>`}
 const REPAIR_ST=['แจ้งแล้ว','กำลังซ่อม','ซ่อมเสร็จ','ซ่อมไม่ได้/ตัดจำหน่าย'];
 const stk=(b,t)=>((S.stock[b]||{})[t]||0);
 const addStk=(b,t,n)=>{S.stock[b]=S.stock[b]||{};S.stock[b][t]=Math.max(0,stk(b,t)+n)};
@@ -2228,7 +2297,7 @@ function bindAdm(){
     const n=held(e.id).length+(e.ins&&e.ins.got&&!e.ins.returned?1:0);
     toast('เคลียร์วันออกแล้ว · '+(e.depDecision.refund?'คืนเงินประกัน':'ไม่คืนเงินประกัน')+(n?` · ยังค้างคืน ${n} รายการ`:' · คืนของครบ')+(e.jms&&!e.jmsClosed?' · ต้องแจ้งปิดรหัส J&T':''));render()});
   document.querySelectorAll('[data-aok]').forEach(b=>b.onclick=()=>{const a=S.assets.find(a=>a.no===b.dataset.aok);a.ok={by:S.role.name,date:iso(TODAY)};if(a.detail==='พนักงานแจ้งเอง รอหัวหน้าตรวจ')a.detail='พนักงานแจ้งเอง · '+S.role.name+' ตรวจแล้ว';toast('ยืนยันแล้ว');render()});
-  document.querySelectorAll('[data-ano]').forEach(b=>b.onclick=()=>{const a=S.assets.find(a=>a.no===b.dataset.ano);S.assets.splice(S.assets.indexOf(a),1);toast('ลบรายการที่แจ้งผิดแล้ว');render()});
+  document.querySelectorAll('[data-ano]').forEach(b=>b.onclick=()=>{const a=S.assets.find(a=>a.no===b.dataset.ano);S.assets.splice(S.assets.indexOf(a),1);if(S.asSel===a.no)S.asSel=null;toast('ลบรายการที่แจ้งผิดแล้ว');render()});
   document.querySelectorAll('[data-aret]').forEach(b=>b.onclick=()=>{const a=S.assets.find(a=>a.no===b.dataset.aret);a.returned=iso(TODAY);addStk(E(a.emp).branch,a.type,a.qty);toast('บันทึกรับคืนแล้ว');render()});
   document.querySelectorAll('[data-asv]').forEach(b=>b.onclick=()=>{S.asView=b.dataset.asv;render()});
   on('#sk-addtype',()=>{const t=$('#sk-newtype').value.trim();if(!t||ASSET_TYPES.includes(t)){toast('ใส่ชื่อประเภทใหม่');return}ASSET_TYPES.splice(ASSET_TYPES.length-1,0,t);toast('เพิ่มประเภท '+t+' แล้ว');render()});
@@ -2246,10 +2315,29 @@ function bindAdm(){
     S.repairs.push({no:'RP-'+String(seq.rp++).padStart(4,'0'),date:iso(TODAY),branch:br,type:ty,detail:$('#rp-detail').value.trim(),qty:q,problem:prob,emp:$('#rp-emp').value,by:S.role.name,status:'แจ้งแล้ว',cost:'',fromStock:fs,photo});toast('ส่งแจ้งซ่อมแล้ว');render()});
   document.querySelectorAll('[data-rpst]').forEach(sl=>sl.onchange=()=>{const r=S.repairs.find(x=>x.no===sl.dataset.rpst);r.status=sl.value;if(r.fromStock&&sl.value==='ซ่อมเสร็จ')addStk(r.branch,r.type,r.qty);toast('อัปเดตสถานะแล้ว');render()});
   document.querySelectorAll('[data-rpcost]').forEach(i=>i.onchange=()=>{S.repairs.find(x=>x.no===i.dataset.rpcost).cost=i.value;toast('บันทึกค่าซ่อมแล้ว')});
-  document.querySelectorAll('[data-asf]').forEach(b=>b.onclick=()=>{S.asF=b.dataset.asf;render()});
-  on('#as-add',()=>{const emp=$('#as-emp').value,qty=+$('#as-qty').value||1;if(!emp){toast('เลือกพนักงาน');return}
-    const br=E(emp).branch,ty=$('#as-type').value;if(stk(br,ty)<qty)toast('สต็อกคลัง '+br+' มี '+ty+' ไม่พอ · บันทึกไว้ แต่ควรตรวจนับคลัง');addStk(br,ty,-qty);
-    S.assets.push({no:'AS-'+String(seq.as++).padStart(4,'0'),emp,type:ty,detail:$('#as-detail').value.trim(),qty,issued:$('#as-date').value||iso(TODAY),by:S.role.name,returned:''});toast('บันทึกการแจกแล้ว');render()});
+  {const F=S.asq;if(F&&$('#asq-q')){const q=$('#asq-q');q.oninput=()=>{F.q=q.value;F.pg=1;clearTimeout(q._t);q._t=setTimeout(()=>{render();const n=$('#asq-q');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}},300)};
+    const sb=$('#asq-br');if(sb)sb.onchange=()=>{F.br=sb.value;F.pg=1;render()};const st=$('#asq-type');if(st)st.onchange=()=>{F.type=st.value;F.pg=1;render()};
+    on('#asq-clr',()=>{Object.assign(F,{q:'',br:'',type:'',st:'',emp:'',pg:1});render()});on('#asq-emp0',()=>{F.emp='';render()});
+    document.querySelectorAll('[data-asst]').forEach(b=>b.onclick=()=>{F.st=b.dataset.asst;F.pg=1;render()});
+    document.querySelectorAll('[data-asmode]').forEach(b=>b.onclick=()=>{F.mode=b.dataset.asmode;render()});
+    document.querySelectorAll('[data-asemp]').forEach(b=>b.onclick=()=>{F.emp=b.dataset.asemp;F.mode='list';F.pg=1;render()});
+    document.querySelectorAll('[data-astype]').forEach(b=>b.onclick=()=>{F.type=F.type===b.dataset.astype&&F.mode==='list'?'':b.dataset.astype;F.mode='list';F.pg=1;render()});
+    document.querySelectorAll('[data-aspg]').forEach(b=>b.onclick=()=>{F.pg=+b.dataset.aspg;render()});}}
+  document.querySelectorAll('[data-assel]').forEach(b=>b.onclick=()=>{S.asSel=b.dataset.assel;render();const d=$('#as-det');if(d&&d.scrollIntoView)d.scrollIntoView({block:'start',behavior:'smooth'})});
+  on('#asd-x',()=>{S.asSel=null;render()});
+  on('#asd-save',async()=>{const a=S.assets.find(x=>x.no===$('#asd-save').dataset.no);if(!a)return;const g=id=>($(id)||{}).value.trim();const ch=[];
+    const nv={type:g('#asd-type'),brand:g('#asd-brand'),model:g('#asd-model'),sn:g('#asd-sn'),size:g('#asd-size'),qty:Math.max(1,parseInt(g('#asd-qty'))||1),issued:g('#asd-date')||a.issued,note:g('#asd-note')};
+    Object.entries(nv).forEach(([k,v])=>{if(String(a[k]==null?'':a[k])!==String(v))ch.push(asLbl(k)==='qty'?'จำนวน':({type:'ประเภท',issued:'วันที่แจก',note:'หมายเหตุ'}[k]||asLbl(k))+': '+(v||'-'))});
+    const f=$('#asd-photo');if(f&&f.files.length){nv.photo=await readImg(f.files[0]);ch.push('เปลี่ยนรูป')}
+    if(!ch.length)return toast('ไม่มีอะไรเปลี่ยน');if(nv.qty!==a.qty&&!a.returned){addStk(E(a.emp).branch,a.type,a.qty-nv.qty)}
+    Object.assign(a,nv);(a.hist=a.hist=a.hist||[]).push({at:nowStamp(),by:S.role.name,what:ch.join(' · ')});toast('บันทึกแล้ว');render()});
+  on('#asd-req',()=>{const a=S.assets.find(x=>x.no===S.asSel);const fs=[...document.querySelectorAll('.asd-rf:checked')].map(c=>c.value);if(!fs.length)return toast('เลือกข้อมูลที่ต้องการให้พนักงานส่ง');
+    a.needInfo={fields:fs,note:($('#asd-msg')||{}).value.trim(),by:S.role.name,at:nowStamp()};(a.hist=a.hist||[]).push({at:nowStamp(),by:S.role.name,what:'ขอข้อมูลจากพนักงาน: '+fs.map(asLbl).join(', ')});toast('แจ้ง '+E(a.emp).name+' แล้ว · ขึ้นในเมนูพนักงาน');render()});
+  on('#asd-reqok',()=>{const a=S.assets.find(x=>x.no===S.asSel);(a.hist=a.hist||[]).push({at:nowStamp(),by:S.role.name,what:'ตรวจข้อมูลที่พนักงานส่งแล้ว'});delete a.needInfo;if(selfPend(a))a.ok={by:S.role.name,date:iso(TODAY)};toast('ตรวจแล้ว');render()});
+  on('#as-add',async()=>{const emp=$('#as-emp').value,qty=+$('#as-qty').value||1;if(!emp){toast('เลือกพนักงาน');return}
+    const br=E(emp).branch,ty=$('#as-type').value;const g=id=>($(id)||{}).value.trim();const ph=$('#as-photo');const photo=ph&&ph.files.length?await readImg(ph.files[0]):'';
+    if(stk(br,ty)<qty)toast('สต็อกคลัง '+br+' มี '+ty+' ไม่พอ · บันทึกไว้ แต่ควรตรวจนับคลัง');addStk(br,ty,-qty);
+    S.assets.push({no:'AS-'+String(seq.as++).padStart(4,'0'),emp,type:ty,brand:g('#as-brand'),model:g('#as-model'),sn:g('#as-sn'),size:g('#as-size'),photo,detail:g('#as-detail'),qty,issued:$('#as-date').value||iso(TODAY),by:S.role.name,returned:''});toast('บันทึกการแจกแล้ว');render()});
   document.querySelectorAll('[data-insf]').forEach(b=>b.onclick=()=>{S.insF=b.dataset.insf;S.insOut=null;render()});
   document.querySelectorAll('[data-give]').forEach(b=>b.onclick=()=>{const e=E(b.dataset.give);e.ins.got=iso(TODAY);e.ins.by='หลังบ้านบันทึก';toast('บันทึกแจกบัตรแล้ว');render()});
   document.querySelectorAll('[data-ret]').forEach(b=>b.onclick=()=>{E(b.dataset.ret).ins.returned=iso(TODAY);toast('รับบัตรคืนแล้ว → ย้ายไป "รอแจ้งออก"');render()});
@@ -3084,6 +3172,10 @@ function bind(){
     const miss=ins.filter(i=>!i.files.length).map(i=>fixLabel(i.dataset.k));if(miss.length)return toast('ยังไม่ได้แนบ: '+miss.join(', '));
     b.disabled=true;b.textContent='กำลังส่ง…';const files=[];e.docs=Object.assign({},e.docs);for(const i of ins){e.docs[i.dataset.k]=await readDocFile(i.files[0]);files.push(i.dataset.k)}
     if(files.length)e.updated=iso(TODAY);r.status='พนักงานแก้แล้ว';r.doneAt=nowStamp();r.log.push({at:nowStamp(),by:e.name,t:'emp',msg:(($('#fx-msg-'+r.no)||{}).value||'').trim()||'แก้ไขแล้ว',files});toast('ส่งแล้ว รอหัวหน้าตรวจ');render()});
+  document.querySelectorAll('[data-myas]').forEach(b=>b.onclick=async()=>{const a=S.assets.find(x=>x.no===b.dataset.myas);if(!a)return;const fs=[...document.querySelectorAll('.mya-f[data-no="'+a.no+'"]')],ph=document.querySelector('.mya-ph[data-no="'+a.no+'"]');
+    const nv={};fs.forEach(i=>{const v=i.value.trim();if(i.dataset.f==='qty'){const n=parseInt(v)||0;if(n>0)nv.qty=n}else nv[i.dataset.f]=v});if(ph&&ph.files.length)nv.photo=await readImg(ph.files[0]);
+    const need=asReq(a)?a.needInfo.fields:[];const miss=need.filter(f=>f==='photo'?!(nv.photo||a.photo):f==='qty'?!nv.qty:!(nv[f]||a[f]));if(miss.length)return toast('ยังไม่ได้กรอก: '+miss.map(asLbl).join(', '));
+    Object.assign(a,nv);if(asReq(a))a.needInfo=Object.assign({},a.needInfo,{doneAt:nowStamp()});(a.hist=a.hist||[]).push({at:nowStamp(),by:E(a.emp).name,what:'พนักงานส่งข้อมูล: '+Object.keys(nv).map(asLbl).join(', ')});toast('ส่งแล้ว รอหัวหน้าตรวจ');render()});
   on('#ua-add','onclick',()=>{const e=E(S.who);const n=parseInt($('#ua-qty').value)||0;if(n<=0){toast('ใส่จำนวน');return}S.assets.push({no:'AS-'+String(seq.as++).padStart(4,'0'),emp:e.id,type:$('#ua-type').value,detail:'พนักงานแจ้งเอง รอหัวหน้าตรวจ',qty:n,issued:iso(TODAY),by:'พนักงานแจ้งเอง',returned:''});toast('เพิ่มแล้ว · รอหัวหน้าตรวจ');render()});
   document.querySelectorAll('[data-uadel]').forEach(b=>b.onclick=()=>{const a=S.assets.find(x=>x.no===b.dataset.uadel);if(a&&selfPend(a)){S.assets.splice(S.assets.indexOf(a),1);toast('ลบแล้ว');render()}});
   if($('#l-type')){const calc=()=>{const e=E(S.who),t=$('#l-type').value,f=$('#l-from').value,to=$('#l-to').value,p=$('#l-part').value;
