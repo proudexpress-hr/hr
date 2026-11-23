@@ -159,6 +159,9 @@ tr.dim td{opacity:.55}
 .dx-o{position:absolute;right:0;top:0;width:64px;height:100%;opacity:0;border:0;padding:0;margin:0;cursor:pointer;z-index:2;-webkit-appearance:none;appearance:none}.dx-o:disabled{pointer-events:none}
 .rgrid select.rs{border:0;background:transparent;font-size:.72rem;padding:6px 2px;width:100%;min-width:64px;color:inherit;cursor:pointer}.rgrid select.rs:disabled{cursor:default;opacity:.7}
 .rgrid td.r-cus{box-shadow:inset 0 0 0 2px var(--brand)}
+.mg-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.mg{background:var(--surface,#fff);color:var(--fg);border-radius:16px;max-width:520px;width:100%;padding:18px 20px;box-shadow:0 12px 40px rgba(0,0,0,.35);max-height:90vh;overflow:auto}
+.mg h3{margin:0 0 6px;font-size:1.2rem}.mg h3.bad{color:var(--bad)}.mg h3.warn{color:#a35b00}.mg ul{padding-left:20px;margin:8px 0 12px}.mg li{margin:4px 0}.mg-ack{display:flex;gap:8px;align-items:flex-start;margin:10px 0;font-weight:600}.mg-ack input{width:20px;height:20px;flex:none;margin-top:2px}
 .pager{gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
 td.iss{min-width:170px}.iss-l{font-size:.75rem;color:var(--bad);margin-top:3px;line-height:1.35}
 .iss-box ul{margin:6px 0 8px;padding-left:20px}.iss-box li.bad{color:var(--bad)}
@@ -243,6 +246,7 @@ const APPLY_POS={
   'พนักงานนำจ่ายพัสดุรถเล็ก (DC-SPT)':['พนักงานนำจ่ายพัสดุ','SPT'],'พนักงานนำจ่ายพัสดุรถใหญ่ (DC-SPT+C)':['พนักงานนำจ่ายพัสดุ','SPT+C'],
   'พนักงานรับพัสดุรถเล็ก (CV-SPT)':['พนักงานรับพัสดุ','SPT'],'พนักงานรับพัสดุรถใหญ่ (CV-SPT+C)':['พนักงานรับพัสดุ','SPT+C'],
   'พนักงานขับรถบริษัท (TR)':['พนักงานขับรถบริษัท',''],'บัญชี':['บัญชี',''],'ประสานงาน':['ประสานงาน','']};
+{const v=APPLY_POS['ผู้จัดการภาค (RM)'];delete APPLY_POS['ผู้จัดการภาค (RM)'];APPLY_POS['ผู้จัดการภาค (RM)']=v}
 const LEGACY_APPLY={'แอดมินธุรการ':['ADMIN',''],'คัดแยกพัสดุ':['คัดแยก',''],'นำจ่ายพัสดุรถมอเตอร์ไซค์':['พนักงานนำจ่ายพัสดุ','SPT'],'นำจ่ายพัสดุรถยนต์หรือสี่ล้อ':['พนักงานนำจ่ายพัสดุ','SPT+C'],'รับพัสดุรถมอเตอร์ไซค์':['พนักงานรับพัสดุ','SPT'],'รับพัสดุรถยนต์หรือสี่ล้อ':['พนักงานรับพัสดุ','SPT+C'],'พนักงานขับรถบริษัท':['พนักงานขับรถบริษัท',''],'พาร์ทไทม์':['คัดแยก',''],'การตลาด':['การตลาด','']};
 const appPos=l=>APPLY_POS[l]||LEGACY_APPLY[l]||[l||'',''];
 const STD_POS=[...POSITIONS],STD_APPLY=JSON.parse(JSON.stringify(APPLY_POS));
@@ -1080,6 +1084,7 @@ function _admView(){
   const blPend=S.blReq.filter(q=>q.status==='รออนุมัติ').length;
   const pendA=S.apps.filter(a=>(a.status==='รอพิจารณา'||a.status==='นัดสัมภาษณ์')&&inScope(a.branch)).length;
   const tabs=[['apps','ผู้สมัคร',pendA],['reg','ทะเบียนพนักงาน',pendE],['leave','ใบลา',pendL],['resign','ลาออก / เลิกจ้าง',pendR],['move','โยกย้าย / เปลี่ยนตำแหน่ง',S.moves.filter(m=>m.status==='รออนุมัติ'&&(inScope(m.from)||inScope(m.to))).length],['eval','ประเมินพนักงาน',evDue],['hc','อัตรากำลัง',hcPend],['warn','ใบเตือน',0],['jt','รหัส J&T',jtTodo],['ins','บัตรประกัน',insTodo],['asset','ทรัพย์สินบริษัท',assetOwed+openRepairs().length],['dep','เงินประกัน',can('dep')?rfDue:0],['exp','ใกล้หมดอายุ',ex.length],['time','ลงเวลาทำงาน',0]];
+  {const mn=S.emp.filter(e=>inScope(e.branch)&&minorTasks(e).length).length;if(mn||S.emp.some(e=>inScope(e.branch)&&minorAtStart(e)))tabs.push(['minor','ลูกจ้างอายุต่ำกว่า 18',mn])}
   tabs.push(['pt','พาร์ทไทม์',S.emp.filter(e=>isPT(e)&&e.status==='รอตรวจสอบ'&&inScope(e.branch)).length]);
   if(canMoney())tabs.push(['ctr','สัญญา '+CTR_YEAR.ver,S.contracts.filter(c=>c.status===CTR_ST.emp).length+S.emp.filter(e=>e.status!=='พ้นสภาพ'&&ctrKindOf(e)&&!ctrOf(e.id,ctrKindOf(e))).length]);
   tabs.push(['gap','เอกสารไม่ครบ',S.emp.filter(e=>e.status!=='พ้นสภาพ'&&inScope(e.branch)&&docGaps(e).some(x=>!gapNotified(e,x[0]))).length]);
@@ -1090,7 +1095,7 @@ function _admView(){
   if(can('import'))tabs.push(['pdpa','PDPA',S.dsr.filter(r=>!['เสร็จสิ้น','ปฏิเสธ'].includes(r.status)).length+S.breach.filter(b=>b.status!=='ปิดเรื่อง').length+pdpaDue().length],['black','แบล็กลิสต์',blPend],['qr','ลิงก์ & QR',0]);
   if(can('users'))tabs.push(['users','สิทธิ์ผู้ใช้',0]);
   if(!tabs.some(t=>t[0]===S.admTab))S.admTab='apps';
-  const F={ctr:ctrAdm,gap:gapAdm,uni:uniAdm,pt:ptAdm,chat:chatAdm,fix:fixAdm,pdpa:pdpaAdm,move:moveAdm,apps:appsAdm,reg:regTable,leave:leaveAdm,resign:resignAdm,ins:insAdm,dep:depAdm,exp:()=>expAdm(ex),time:attAdm,users:usersAdm,warn:warnAdm,eval:evalAdm,docs:docsAdm,ack:ackAdm,hc:hcAdm,jt:jtAdm,asset:assetAdm,black:blackAdm,qr:qrAdm};
+  const F={minor:minorAdm,ctr:ctrAdm,gap:gapAdm,uni:uniAdm,pt:ptAdm,chat:chatAdm,fix:fixAdm,pdpa:pdpaAdm,move:moveAdm,apps:appsAdm,reg:regTable,leave:leaveAdm,resign:resignAdm,ins:insAdm,dep:depAdm,exp:()=>expAdm(ex),time:attAdm,users:usersAdm,warn:warnAdm,eval:evalAdm,docs:docsAdm,ack:ackAdm,hc:hcAdm,jt:jtAdm,asset:assetAdm,black:blackAdm,qr:qrAdm};
   return `<div class="row"><div style="min-width:0"><h1>หลังบ้าน</h1><p class="muted">${esc(S.role.name)} · ${ROLE_NAME[S.role.role]}${S.role.branch?' · เห็นเฉพาะสาขา '+S.role.branch:' · เห็นทุกสาขา'} · ข้อมูล ณ ${th(TODAY)}</p></div><button class="btn ghost sm" id="adm-out" style="margin-left:auto">ออกจากระบบ</button></div>
   <div class="stats">
     <div class="stat"><b>${act.length}</b><span>พนักงานปัจจุบัน</span></div>
@@ -1328,7 +1333,8 @@ function ptAdm(){const L=S.emp.filter(e=>isPT(e)&&inScope(e.branch));const P=per
   return `<h2>ทะเบียนพาร์ทไทม์</h2><p class="muted">พาร์ทไทม์เป็น "ประเภทการจ้าง" ใช้ได้กับทุกตำแหน่ง · ข้อมูลทั้งหมดอยู่ในทะเบียนพนักงานเดียวกัน (กดชื่อเพื่อดู/แก้ไข) · วันที่มาและชั่วโมงนับจากการลงเวลางวด ${esc(P.name)}${spv?' · SPV เพิ่มได้เฉพาะสาขาตัวเอง แล้วรอ HR ตรวจ':''}</p>
   <div class="row" style="flex-wrap:wrap">${['ทำงาน','รอตรวจสอบ','พ้นสภาพ','ทั้งหมด'].map(k=>`<button class="btn ${f===k?'':'ghost'} sm" data-ptf="${k}">${k} (${k==='ทั้งหมด'?L.length:L.filter(e=>e.status===k).length})</button>`).join('')}<span style="margin-left:auto"></span><button class="btn sm" id="pt-new">${S.ptNew?'ปิด':'+ เพิ่มพาร์ทไทม์'}</button></div>
   ${S.ptNew?`<section class="panel"><h3>เพิ่มพาร์ทไทม์</h3><div class="fields">
-    ${nameFields('pt-name','',{title:'pt-title'})}<label class="f">ชื่อเล่น<input id="pt-nick"></label>
+    ${nameFields('pt-name','',{title:'pt-title'})}
+    <label class="f">วันเกิด *<input type="date" id="pt-dob" max="${iso(TODAY)}"></label><label class="f">ชื่อเล่น<input id="pt-nick"></label>
     <label class="f">เลขบัตรประชาชน *<input id="pt-id" inputmode="numeric" maxlength="13"></label><label class="f">เบอร์โทร *<input id="pt-phone" inputmode="tel" maxlength="10"></label>
     <label class="f">สาขา<select id="pt-br">${brs.map(b=>`<option>${esc(b)}</option>`).join('')}</select></label>
     <label class="f">ตำแหน่ง<select id="pt-pos">${Object.keys(APPLY_POS).map(k=>`<option>${esc(k)}</option>`).join('')}</select></label>
@@ -1358,6 +1364,7 @@ function dataIssues(e){if(!e||e.status==='พ้นสภาพ')return [];if(e.
   if(!e.start)add('d:start','ไม่มีวันเริ่มงาน');else if(e.start<OPEN_DATE)add('d:start','วันเริ่มงานก่อนบริษัทเปิด (1 ธ.ค. 2565)');
   if(!e.branch||e.branch==='-')add('d:branch','ไม่มีสาขา');
   const wait=[];DOC_REVIEW.forEach(k=>{const c=docState(e,k);if(!c)return;if(c.st==='bad')add(k==='card'?'f2':k==='bank'?'f4':k,'รูป'+(DOC_LABELS[k]||k)+' ต้องส่งใหม่: '+c.why);else if(c.st==='wait')wait.push(DOC_LABELS[k]||k)});
+  minorTasks(e).forEach(x=>add('lab:'+x.k,'ลูกจ้างอายุต่ำกว่า 18: ยังไม่'+x.t.split(' (')[0]+'กรมแรงงาน (ภายใน '+th(x.due)+')'));
   if(wait.length)out.push(['chk','รอตรวจรูป: '+wait.join(', '),'wait']);
   return out}
 const EMP_FIX=k=>/^f\d$/.test(k)||['d:acct','d:addr','d:emerg','d:jms','d:lic','d:phone'].includes(k);
@@ -1384,6 +1391,42 @@ function iqBind(){if(iqBind.on)return;iqBind.on=1;document.addEventListener('cha
   if(Math.min(q.W,q.H)<600)w.push('รูปเล็กเกินไป (ความละเอียดต่ำ)');if(q.sharp<60)w.push('รูปอาจเบลอ');if(q.bright<55)w.push('รูปมืดเกินไป');if(q.bright>235)w.push('รูปสว่างจ้า / มีแสงสะท้อน');
   m.className='iq '+(w.length?'bad':'ok');m.textContent=w.length?'⚠ '+w.join(' · ')+' — ถ่ายใหม่ให้เห็นชัด อ่านออกทุกตัวอักษร':'✓ ความคมชัดผ่านเบื้องต้น ตรวจอีกครั้งว่าเอกสารเต็มกรอบ อ่านออกทุกตัว'})}
 const DOC_HINT=`<div class="note doc-hint"><b>รูปเอกสารต้องชัด อ่านออกทุกตัวอักษร</b><ul><li>ถ่าย<b>ใกล้ ๆ ให้เอกสารเต็มกรอบ</b> ไม่ถ่ายไกล ไม่ถือไว้กลางห้อง</li><li>ไม่เบลอ ไม่มีแสงสะท้อน ไม่มีนิ้วบัง ไม่ตัดขอบ เห็นครบทุกมุม</li><li>รูปที่ไม่ชัด / ไม่ครบ ฝ่ายบุคคลจะ<b>ตีกลับให้ส่งใหม่</b></li></ul><div class="dh-ex"><span class="dh ok"><i></i>✓ เต็มกรอบ ชัด</span><span class="dh bad"><i></i>✗ ถ่ายไกล เล็ก อ่านไม่ออก</span></div></div>`;
+
+// ===== ลูกจ้างอายุต่ำกว่า 18 ปี (พ.ร.บ.คุ้มครองแรงงาน ม.44 45 47 48) =====
+const MINOR_NO_POS=['คัดแยก'];   // ต้องทำงานกลางคืน → เด็กอายุต่ำกว่า 18 ทำไม่ได้ (ม.47)
+const ageAt=(dob,d)=>{if(!dob)return null;const b=D(dob),t=D(d||iso(TODAY));let a=t.getFullYear()-b.getFullYear();if(t.getMonth()<b.getMonth()||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate()))a--;return a};
+function minorEval(x){const d=x.start||iso(TODAY);if(!x.dob)return{lvl:'nodob',age:null,msgs:['ไม่มีวันเกิด ระบบตรวจอายุไม่ได้ ให้ตรวจวันเกิดจากบัตรประชาชนก่อนรับ']};
+  const ag=ageAt(x.dob,d),a18=age18(x.dob),pl=posLabel(x.pos||'');
+  if(ag<15)return{lvl:'block',age:ag,msgs:[`อายุ <b>${ag} ปี</b> ณ วันเริ่มงาน ${th(d)} — ต่ำกว่า 15 ปี`,'กฎหมายห้ามจ้างเด็กอายุต่ำกว่า 15 ปี <b>ไม่รับทุกกรณี</b> (พ.ร.บ.คุ้มครองแรงงาน มาตรา 44)']};
+  if(ag<18&&MINOR_NO_POS.includes(x.pos))return{lvl:'block',age:ag,msgs:[`อายุ <b>${ag} ปี</b> (ต่ำกว่า 18 ปี) <b>รับตำแหน่ง${esc(pl)}ไม่ได้</b>`,'ตำแหน่งนี้ต้องทำงานกลางคืน กฎหมายห้ามเด็กอายุต่ำกว่า 18 ปีทำงานเวลา 22.00–06.00 น. (มาตรา 47)',`เลือกตำแหน่งอื่นที่ทำงานกลางวัน หรือรอให้อายุครบ 18 ปี (${th(a18)})`]};
+  if(ag<18)return{lvl:'minor',age:ag,due:iso(addDays(D(d),15)),msgs:[`อายุ <b>${ag} ปี</b> ต่ำกว่า 18 ปี (ครบ 18 ปีวันที่ ${th(a18)})`,'ต้องมี<b>หนังสือยินยอมจากผู้ปกครอง</b>',`<b>ต้องแจ้งพนักงานตรวจแรงงานภายใน 15 วัน</b> นับจากวันเริ่มงาน (ภายใน ${th(iso(addDays(D(d),15)))}) และแจ้งอีกครั้งภายใน 7 วันเมื่อออกจากงาน (มาตรา 45)`,'ห้ามทำงาน 22.00–06.00 น. · ห้ามทำล่วงเวลาและวันหยุด · ทำงาน 4 ชม. ต้องพัก 1 ชม. · ห้ามงานอันตราย (มาตรา 46–49)']};
+  return{lvl:'ok',age:ag}}
+function minorGate(x,go){const r=minorEval(x);if(r.lvl==='ok')return go();
+  const old=document.getElementById('mg-modal');if(old)old.remove();const w=document.createElement('div');w.id='mg-modal';w.className='mg-back';
+  const bad=r.lvl==='block';
+  w.innerHTML=`<div class="mg" role="alertdialog" aria-modal="true" aria-labelledby="mg-t"><h3 id="mg-t" class="${bad?'bad':'warn'}">${bad?'⛔ รับเข้าทำงานไม่ได้':r.lvl==='minor'?'⚠️ ผู้เยาว์ อายุต่ำกว่า 18 ปี':'⚠️ ตรวจอายุไม่ได้'}</h3><p><b>${esc(x.name||'')}</b>${x.pos?' · '+esc(posLabel(x.pos)):''}</p><ul>${r.msgs.map(m=>`<li>${m}</li>`).join('')}</ul>
+   ${bad?'':`<label class="mg-ack"><input type="checkbox" id="mg-ok"><span>${r.lvl==='minor'?'รับทราบ จะดำเนินการตามกฎหมาย และ<b>แจ้งพนักงานตรวจแรงงานภายใน 15 วัน</b> (บันทึกได้ที่แท็บ "ลูกจ้างอายุต่ำกว่า 18")':'ตรวจบัตรประชาชนแล้ว อายุ 18 ปีขึ้นไป'}</span></label>`}
+   <div class="row" style="justify-content:flex-end;gap:8px">${bad?'<button class="btn" id="mg-x">ปิด</button>':'<button class="btn ghost" id="mg-x">ยกเลิก</button><button class="btn ok" id="mg-go" disabled>ยืนยันรับ</button>'}</div></div>`;
+  document.body.appendChild(w);const close=()=>w.remove();w.querySelector('#mg-x').onclick=close;w.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+  const ok=w.querySelector('#mg-ok'),g=w.querySelector('#mg-go');if(ok)ok.onchange=()=>{g.disabled=!ok.checked};if(g)g.onclick=()=>{close();go()};(g?ok:w.querySelector('#mg-x')).focus()}
+function minorAtStart(e){return !!(e&&e.dob&&e.start&&ageAt(e.dob,e.start)<18)}
+function minorTasks(e){if(!minorAtStart(e))return [];const L=[];
+  if(!e.labIn&&e.status!=='รอตรวจสอบ')L.push({k:'in',due:iso(addDays(D(e.start),15)),t:'แจ้งเข้า (เริ่มงาน '+th(e.start)+')'});
+  if(e.status==='พ้นสภาพ'&&e.endDate&&ageAt(e.dob,e.endDate)<18&&!e.labOut)L.push({k:'out',due:iso(addDays(D(e.endDate),7)),t:'แจ้งออก (ออก '+th(e.endDate)+')'});
+  return L}
+const dueTxt=d=>{const n=daysBetween(TODAY,D(d));return n<0?`<span class="pill p-bad">เกินกำหนด ${-n} วัน</span>`:n<=3?`<span class="pill p-bad">เหลือ ${n} วัน</span>`:`<span class="pill p-warn">เหลือ ${n} วัน</span>`};
+function minorAdm(){const L=S.emp.filter(e=>inScope(e.branch)&&minorAtStart(e)&&(ageAt(e.dob)<18||minorTasks(e).length||e.labIn&&!e.labOut&&e.status==='พ้นสภาพ'));
+  const todo=L.filter(e=>minorTasks(e).length);const f=S.mnF||'todo';const show=f==='todo'?todo:L;
+  const row=e=>{const T=minorTasks(e),ag=ageAt(e.dob);const form=S.mnRec&&S.mnRec.id===e.id;
+    return `<tr><td>${e.id}</td><td>${esc(e.name)}<br><small class="muted">${esc(posLabel(e.pos,e.type))} · ${e.branch}</small></td><td>${th(e.dob)}<br><small>อายุ ${ag} ปี · ครบ 18 ${th(age18(e.dob))}</small></td><td>${th(e.start)}${e.endDate?'<br><small>ออก '+th(e.endDate)+'</small>':''}</td>
+     <td>${e.labIn?`<span class="pill p-ok">แจ้งเข้าแล้ว ${th(e.labIn.date)}</span><br><small class="muted">${esc(e.labIn.ref||'')} · ${esc(e.labIn.by||'')}</small>`:T.find(x=>x.k==='in')?`ภายใน ${th(T.find(x=>x.k==='in').due)} ${dueTxt(T.find(x=>x.k==='in').due)}`:'-'}</td>
+     <td>${e.labOut?`<span class="pill p-ok">แจ้งออกแล้ว ${th(e.labOut.date)}</span><br><small class="muted">${esc(e.labOut.ref||'')}</small>`:T.find(x=>x.k==='out')?`ภายใน ${th(T.find(x=>x.k==='out').due)} ${dueTxt(T.find(x=>x.k==='out').due)}`:e.status==='พ้นสภาพ'?'-':'<small class="muted">ยังทำงานอยู่</small>'}</td>
+     <td>${T.map(x=>`<button class="btn sm" data-mnrec="${e.id}|${x.k}">บันทึกว่า${x.k==='in'?'แจ้งเข้า':'แจ้งออก'}แล้ว</button>`).join(' ')}${e.guardian?'':'<br><span class="pill p-bad">ไม่มีหนังสือยินยอมผู้ปกครอง</span>'}</td></tr>
+     ${form?`<tr><td colspan="7"><div class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap"><b>บันทึก${S.mnRec.k==='in'?'แจ้งเข้า':'แจ้งออก'} · ${esc(e.name)}</b><label class="f" style="max-width:180px">วันที่แจ้ง<input type="date" id="mn-d" value="${iso(TODAY)}" max="${iso(TODAY)}"></label><label class="f" style="max-width:260px">เลขที่รับแจ้ง / หมายเหตุ<input id="mn-ref" placeholder="เช่น เลขที่หนังสือ / แจ้งออนไลน์"></label><button class="btn ok sm" id="mn-save">บันทึก</button><button class="btn ghost sm" id="mn-x">ยกเลิก</button></div></td></tr>`:''}`};
+  return `<h2>ลูกจ้างอายุต่ำกว่า 18 ปี</h2><p class="muted">ตาม พ.ร.บ.คุ้มครองแรงงาน: รับเด็กอายุ 15–17 ปีเข้าทำงาน ต้อง<b>แจ้งพนักงานตรวจแรงงานภายใน 15 วัน</b>นับจากวันเริ่มงาน และ<b>แจ้งภายใน 7 วัน</b>เมื่อออกจากงาน (ม.45) · ห้ามจ้างอายุต่ำกว่า 15 ปี (ม.44) · ห้ามทำงาน 22.00–06.00 น. (ม.47) จึงรับตำแหน่งคัดแยกไม่ได้ · ห้ามล่วงเวลา / วันหยุด (ม.48)</p>
+   ${todo.length?`<div class="note warn"><b>ต้องแจ้งกรมแรงงาน ${todo.length} คน</b> · แจ้งที่สำนักงานสวัสดิการและคุ้มครองแรงงานจังหวัดที่สาขาตั้งอยู่ แล้วกด "บันทึกว่าแจ้งแล้ว"</div>`:'<div class="note ok">ไม่มีรายการค้างแจ้ง</div>'}
+   <div class="row" style="gap:8px">${[['todo','ค้างแจ้ง ('+todo.length+')'],['all','ทั้งหมด ('+L.length+')']].map(([k,t])=>`<button class="btn ${f===k?'':'ghost'} sm" data-mnf="${k}">${t}</button>`).join('')}</div>
+   <div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ</th><th>วันเกิด / อายุ</th><th>เริ่มงาน</th><th>แจ้งเข้า (15 วัน)</th><th>แจ้งออก (7 วัน)</th><th></th></tr>${show.map(row).join('')||'<tr><td colspan="7" class="muted">ไม่มี</td></tr>'}</table></div>`}
 function regTable(){
   const list=S.emp.filter(e=>inScope(e.branch));
   const sel=S.selEmp&&list.find(e=>e.id===S.selEmp);
@@ -1759,7 +1802,7 @@ function bindHr2(){
     if(HC_POS[pos]){const h=hcStatus(to,pos);if(!h.canAdd){toast('สาขา '+to+' '+HC_POS[pos]+'เกินเกณฑ์แล้ว ย้ายเข้าไม่ได้ ต้องขอเพิ่มคนก่อน');return}}
     const m={no:'MV-'+String(seq.mv++).padStart(4,'0'),emp:e.id,from:e.branch,to,fromPos:e.pos,toPos:pos,date:$('#mv-date').value,reason:rs,by:S.role.name,status:'รออนุมัติ'};S.moves.push(m);S.moveEmp=null;
     if(can('import')){applyMove(m);toast('ย้ายไปสาขา '+to+' แล้ว'+(e.jmsMove?' · ต้องขอรหัส J&T สาขาใหม่':''))}else toast('ส่งคำขอโยกย้ายให้ HR/แอดมินแล้ว');render()});
-  document.querySelectorAll('[data-mvok]').forEach(b=>b.onclick=()=>{const m=S.moves.find(x=>x.no===b.dataset.mvok);if(b.dataset.s==='ok'){applyMove(m);toast('อนุมัติโยกย้ายแล้ว')}else{m.status='ไม่อนุมัติ';toast('ไม่อนุมัติแล้ว')}render()});
+  document.querySelectorAll('[data-mvok]').forEach(b=>b.onclick=()=>{const m=S.moves.find(x=>x.no===b.dataset.mvok);if(b.dataset.s==='ok'&&!b.__mg){const e=E(m.emp);minorGate({name:e.name,dob:e.dob,pos:m.toPos,start:m.date||iso(TODAY)},()=>{b.__mg=1;b.onclick();b.__mg=0});return}if(b.dataset.s==='ok'){applyMove(m);toast('อนุมัติโยกย้ายแล้ว')}else{m.status='ไม่อนุมัติ';toast('ไม่อนุมัติแล้ว')}render()});
   document.querySelectorAll('[data-fxnew]').forEach(b=>b.onclick=()=>{S.fixNew=S.fixNew===b.dataset.fxnew?null:b.dataset.fxnew;render()});
   document.querySelectorAll('[data-fxsend]').forEach(b=>b.onclick=()=>{const it=[...document.querySelectorAll('.fx-it:checked')].map(x=>x.value);const m=$('#fx-txt').value.trim();if(!it.length)return toast('เลือกอย่างน้อย 1 เรื่อง');if(!m)return toast('พิมพ์ข้อความถึงพนักงาน');
     S.fixReq.push({no:'FX-'+String(TODAY.getFullYear()+543).slice(2)+'-'+String(seq.fx++).padStart(4,'0'),emp:b.dataset.fxsend,date:iso(TODAY),by:S.role.name,items:it,status:'รอพนักงานแก้',log:[{at:nowStamp(),by:S.role.name,t:'adm',msg:m}]});S.fixNew=null;toast('ส่งแจ้งพนักงานแล้ว');render()});
@@ -2236,7 +2279,9 @@ function bindAdm(){
     const dup=S.emp.find(e=>e.idCard===id);if(dup)return toast('เลขบัตรนี้มีในทะเบียนแล้ว ('+dup.id+' '+dup.name+')');
     const [pos,type]=appPos(v('pt-pos'));const t=v('pt-title');const spv=S.role.role==='spv';
     if(startErr(v('pt-start'))){toast(startErr(v('pt-start')));return}
-    const e=mk(seq.pe++,{ptime:true,name:t+v('pt-name'),nick:v('pt-nick'),sex:t==='นาย'?'ชาย':'หญิง',idCard:id,phone:ph,branch:v('pt-br'),pos,type,acct:v('pt-acct').replace(/\D/g,''),start:v('pt-start'),jms:'',status:spv?'รอตรวจสอบ':'ทำงาน',profileDone:false,source:'เพิ่มพาร์ทไทม์โดย '+S.role.name,updated:iso(TODAY)});
+    if(!v('pt-dob'))return toast('ใส่วันเกิด (ใช้ตรวจอายุตามกฎหมายแรงงาน)');
+    if(!window.__ptmg){minorGate({name:t+v('pt-name'),dob:v('pt-dob'),pos,start:v('pt-start')},()=>{window.__ptmg=1;$('#pt-save').click();window.__ptmg=0});return}
+    const e=mk(seq.pe++,{ptime:true,dob:v('pt-dob'),name:t+v('pt-name'),nick:v('pt-nick'),sex:t==='นาย'?'ชาย':'หญิง',idCard:id,phone:ph,branch:v('pt-br'),pos,type,acct:v('pt-acct').replace(/\D/g,''),start:v('pt-start'),jms:'',status:spv?'รอตรวจสอบ':'ทำงาน',profileDone:false,source:'เพิ่มพาร์ทไทม์โดย '+S.role.name,updated:iso(TODAY)});
     S.emp.push(e);S.ptNew=false;toast('เพิ่ม '+e.id+' แล้ว'+(spv?' · รอ HR ตรวจ':''));render()});
   on('#org-std',()=>{const used=new Set(S.emp.filter(e=>e.status!=='พ้นสภาพ').map(e=>e.pos));const keep=POSITIONS.filter(p=>used.has(p)&&!STD_POS.includes(p)&&p!=='พาร์ทไทม์');
     POSITIONS.splice(0,POSITIONS.length,...STD_POS,...keep);Object.keys(APPLY_POS).forEach(k=>delete APPLY_POS[k]);Object.assign(APPLY_POS,JSON.parse(JSON.stringify(STD_APPLY)));
@@ -2918,12 +2963,15 @@ function bind(){
   document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{S.page=b.dataset.go;if(b.dataset.go!=='oldreg')S.oldDone=null;S.photo=null;S.applied=null;S.shot=null;S.kind=null;render();scrollTo(0,0)});
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{S.admTab=b.dataset.tab;S.tabQ='';render()});
   document.querySelectorAll('[data-sel]').forEach(b=>b.onclick=()=>{S.selEmp=b.dataset.sel;render();if(S.admTab==='reg'){const d=$('#reg-det');if(d&&d.scrollIntoView)d.scrollIntoView({block:'start',behavior:'smooth'})}});
+  document.querySelectorAll('[data-mnf]').forEach(b=>b.onclick=()=>{S.mnF=b.dataset.mnf;render()});
+  document.querySelectorAll('[data-mnrec]').forEach(b=>b.onclick=()=>{const[id,k]=b.dataset.mnrec.split('|');S.mnRec={id,k};render()});
+  {const sv=$('#mn-save');if(sv)sv.onclick=()=>{const e=E(S.mnRec.id),d=$('#mn-d').value;if(!d)return toast('ใส่วันที่แจ้ง');e[S.mnRec.k==='in'?'labIn':'labOut']={date:d,ref:$('#mn-ref').value.trim(),by:S.role.name,at:nowStamp()};e.updated=iso(TODAY);toast('บันทึก'+(S.mnRec.k==='in'?'แจ้งเข้า':'แจ้งออก')+'แล้ว');S.mnRec=null;render()};const x=$('#mn-x');if(x)x.onclick=()=>{S.mnRec=null;render()}}
   document.querySelectorAll('[data-issf]').forEach(b=>b.onclick=()=>{const[k,v]=b.dataset.issf.split('|');document.querySelectorAll('.reg-f').forEach(f=>{f.value=f.dataset.k===k?v:''});const f=document.querySelector(`.reg-f[data-k="${k}"]`);if(f)f.dispatchEvent(new Event('change'));const t=document.querySelector('#reg-count');if(t&&t.scrollIntoView)t.scrollIntoView({block:'start'})});
   document.querySelectorAll('[data-issnote]').forEach(b=>b.onclick=()=>{const e=E(b.dataset.issnote);const n=issNotify(e);toast(n?'แจ้ง '+e.name+' ให้แก้ '+n+' เรื่องแล้ว (ขึ้นในหน้าพนักงาน + แท็บแจ้งแก้ไข)':'แจ้งไปแล้ว');render()});
   document.querySelectorAll('[data-docok]').forEach(b=>b.onclick=()=>{const[id,k]=b.dataset.docok.split('|');const e=E(id);docSet(e,k,'ok');S.docRej=null;e.updated=iso(TODAY);toast('ตรวจรูป'+(DOC_LABELS[k]||k)+': ชัด ใช้ได้');render()});
   document.querySelectorAll('[data-docbad]').forEach(b=>b.onclick=()=>{const[id,k]=b.dataset.docbad.split('|');S.docRej=S.docRej&&S.docRej.id===id&&S.docRej.k===k?null:{id,k};render()});
   document.querySelectorAll('[data-docwhy]').forEach(b=>b.onclick=()=>{const{id,k}=S.docRej||{};const e=E(id);if(!e)return;docSet(e,k,'bad',b.dataset.docwhy);S.docRej=null;e.updated=iso(TODAY);const n=issNotify(e);toast('ตีกลับรูป'+(DOC_LABELS[k]||k)+' ('+b.dataset.docwhy+')'+(n?' · แจ้งพนักงานให้ส่งใหม่แล้ว':''));render()});
-  document.querySelectorAll('[data-verify]').forEach(b=>b.onclick=()=>{const e=E(b.dataset.verify);e.status='ทำงาน';e.updated=iso(TODAY);toast('ยืนยันเข้าทะเบียนแล้ว');render()});
+  document.querySelectorAll('[data-verify]').forEach(b=>b.onclick=()=>{const e=E(b.dataset.verify);if(!b.__mg){minorGate({name:e.name,dob:e.dob,pos:e.pos,start:e.start},()=>{b.__mg=1;b.onclick();b.__mg=0});return}e.status='ทำงาน';e.updated=iso(TODAY);toast('ยืนยันเข้าทะเบียนแล้ว');render()});
   {const b=$('#ls-save');if(b)b.onclick=()=>{document.querySelectorAll('.ls-nd').forEach(x=>{if(x.value!=='')LEAVE_CFG.notice[x.dataset.k]=Math.max(0,+x.value||0)});if($('#ls-sm').value!=='')LEAVE_CFG.sickMin=Math.max(0,+$('#ls-sm').value||0);LEAVE_CFG.pos=[...document.querySelectorAll('.ls-pos:checked')].map(x=>x.value);document.querySelectorAll('.ls-on').forEach(x=>LEAVE_CFG.on[x.value]=x.checked);document.querySelectorAll('.ls-q').forEach(x=>{if(x.value!=='')LEAVE[x.dataset.k].paid=+x.value});S.lvSetOpen=true;toast('บันทึกตั้งค่าการลาแล้ว');render()}}
   document.querySelectorAll('[data-lvrev]').forEach(b=>b.onclick=()=>{S.lvRev=b.dataset.lvrev;render();const x=$('#lv-box');if(x&&x.scrollIntoView)x.scrollIntoView({block:'start'})});
   {const _x=$('#lv-close');if(_x)_x.onclick=()=>{S.lvRev=null;render()}}
@@ -2934,7 +2982,7 @@ function bind(){
   document.querySelectorAll('[data-apst]').forEach(b=>b.onclick=()=>{S.apps.find(x=>x.no===S.selApp).status=b.dataset.apst;toast('บันทึกสถานะ '+b.dataset.apst);render()});
   ['#ap-pos','#ap-pt'].forEach(id=>{const el=$(id);if(el)el.onchange=()=>{const a=S.apps.find(x=>x.no===el.dataset.no);S.apPick=S.apPick||{};S.apPick[a.no]={key:$('#ap-pos').value,pt:$('#ap-pt').value==='1'};render()}});
   const apt=$('#ap-paytype');if(apt)apt.onchange=()=>{$('#ap-ratelab').textContent=PAY_TYPES[apt.value];$('#ap-rate').value=defAmt(apt.value)};
-  document.querySelectorAll('[data-apok]').forEach(b=>b.onclick=()=>{const a=S.apps.find(x=>x.no===b.dataset.apok);
+  document.querySelectorAll('[data-apok]').forEach(b=>b.onclick=()=>{const a=S.apps.find(x=>x.no===b.dataset.apok);{const _p=appPos(apPick(a).key)[0];if(!b.__mg){minorGate({name:a.title+a.name,dob:a.dob,pos:_p,start:($('#ap-start')||{}).value},()=>{b.__mg=1;b.onclick();b.__mg=0});return}}
     if(S.emp.some(e=>e.idCard===a.idCard&&e.status==='ทำงาน')){toast('เลขบัตรนี้มีในทะเบียนแล้ว');return}
     const pk=apPick(a),[pos,type]=appPos(pk.key);const br0=$('#ap-br').value;
     if(HC_POS[pos]){const h=hcStatus(br0,pos);if(!h.canAdd){toast('สาขา '+br0+' '+HC_POS[pos]+'เกินเกณฑ์ ต้องขอเพิ่มคนก่อน');return}if(h.act>=h.allow&&!(($('#ap-req')||{}).value)){toast('สาขาเต็มเกณฑ์ ต้องเลือกคำขอเพิ่มคนที่อนุมัติแล้ว');return}}
@@ -2957,6 +3005,7 @@ function bind(){
       if(!idValid(g('#a-id')))miss.push('เลขบัตรประชาชนที่ถูกต้อง');
       if(g('#a-phone')&&!/^0\d{9}$/.test(g('#a-phone')))miss.push('เบอร์โทร 10 หลัก');
       const ag=g('#a-dob')?ageOf(g('#a-dob')):null;if(ag!==null&&ag<15){$('#a-msg').textContent='อายุต่ำกว่า 15 ปี กฎหมายห้ามจ้างงาน';$('#a-msg').style.color='var(--bad)';return}
+      if(ag!==null&&ag<18&&MINOR_NO_POS.includes(appPos(p)[0])&&!(S.page==='oldreg'||S.page==='oldentry')){$('#a-msg').textContent='อายุต่ำกว่า 18 ปี สมัครตำแหน่งนี้ไม่ได้ เพราะต้องทำงานกลางคืน (กฎหมายห้ามเด็กทำงาน 22.00–06.00 น.) เลือกตำแหน่งอื่น';$('#a-msg').style.color='var(--bad)';toast('อายุต่ำกว่า 18 ปี สมัครตำแหน่งนี้ไม่ได้');return}
       const minor=ag!==null&&ag<18;
       if(minor){if(!g('#g-name'))miss.push('ชื่อผู้ปกครอง');if(!idValid(g('#g-id')))miss.push('เลขบัตรผู้ปกครองที่ถูกต้อง');if(!/^0\d{9}$/.test(g('#g-phone')))miss.push('เบอร์ผู้ปกครอง 10 หลัก');if(!$('#a-f7').files.length&&!$('#a-fill').dataset.used)miss.push('รูปบัตรประชาชนผู้ปกครอง');if(!$('#g-ok').checked)miss.push('ติ๊กยินยอมของผู้ปกครอง')}
       if(![...document.querySelectorAll('.a-con')].every(c=>c.checked))miss.push('ติ๊กยอมรับครบ 6 ข้อ');
