@@ -159,6 +159,7 @@ tr.dim td{opacity:.55}
 .dx-o{position:absolute;right:0;top:0;width:64px;height:100%;opacity:0;border:0;padding:0;margin:0;cursor:pointer;z-index:2;-webkit-appearance:none;appearance:none}.dx-o:disabled{pointer-events:none}
 .rgrid select.rs{border:0;background:transparent;font-size:.72rem;padding:6px 2px;width:100%;min-width:64px;color:inherit;cursor:pointer}.rgrid select.rs:disabled{cursor:default;opacity:.7}
 .rgrid td.r-cus{box-shadow:inset 0 0 0 2px var(--brand)}
+.stat.atk{text-align:left;cursor:pointer;font:inherit;color:inherit;background:var(--surface)}.stat.atk:hover{border-color:var(--brand)}.stat.atk.on{border:2px solid var(--brand);box-shadow:0 0 0 3px rgba(176,20,31,.12)}
 .nm{font-size:.9rem;color:var(--muted)}.nm input{color:var(--fg)}.nm .nm-t{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}.nm .nm-r{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:560px){.nm .nm-r{grid-template-columns:1fr}}
 .nm .nm-r label{display:flex;flex-direction:column;gap:4px}.nm .nm-m{display:block;margin-top:4px}.nm .nm-m.bad{color:var(--bad);font-weight:600}.nm input.bad{border:2px solid var(--bad)!important;background:#fff5f5}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
@@ -2406,15 +2407,29 @@ function attCheck(){const F=S.cf||{},t=attToday(),y=iso(addDays(D(t),-1)),P0=per
    ${L.length?`<h3>รายการทั้งหมด (${L.length})</h3><div class="tablewrap"><table><tr><th>วันที่</th><th>ชื่อ</th><th>สาขา</th><th>กะ</th><th>เข้า</th><th>ออก</th><th>เรื่อง</th><th></th></tr>${L.sort((a,b)=>b.d.localeCompare(a.d)||a.e.name.localeCompare(b.e.name)).map(x=>`<tr><td>${th(x.d)}</td><td>${esc(x.e.name)}<br><small class="muted">${x.e.id}</small></td><td>${esc(x.e.branch)}</td><td>${esc(shiftOn(x.e,x.d).sh||shiftOf(x.e))}</td><td>${x.p&&x.p.in||'-'}</td><td>${x.p&&x.p.out||'-'}</td><td><span class="pill ${x.k==='late'?'p-warn':'p-bad'}">${esc(x.t)}</span></td><td><button class="btn ghost sm" data-attcell="${x.e.id}|${x.d}">แก้ / ใส่เหตุผล</button></td></tr>`).join('')}</table></div>`:''}
    ${S.attCell?attCellBox():''}
    <p class="muted">"แก้ / ใส่เหตุผล" = SPV/HR ใส่สถานะ เช่น ลา ทำงานนอกสถานที่ ยกเว้นค่าปรับสาย (ฝนตก ยางแตก) ระบบคำนวณใหม่ทันที · ไม่ลงเวลาออก ใช้ตรวจเฉย ๆ ไม่มีค่าปรับในระเบียบเดิม</p>`}
+const LEAVE_ST=['ลาป่วย','ลากิจ','ลาพักร้อน','ลาไม่รับค่าจ้าง','ลาครึ่งวันเช้า','ลาครึ่งวันบ่าย'];
+function atCats(e,x,d,fut){const c=new Set();
+  if(fut){const lv=LEAVE_ST.includes(x.st);if(lv)c.add('leave');else if(x.off||['สลับวันหยุด','สลับวันหยุด นข.'].includes(x.st))c.add('off');else c.add('work');return c}
+  if(x.work)c.add('work');if(x.late)c.add('late');if(x.leave)c.add('leave');if(x.off&&!x.work)c.add('off');if(x.absent)c.add('absent');return c}
 function attToday_(){
-  const d=attToday(),list=attScope().filter(e=>e.status==='ทำงาน');
-  const rows=list.map(e=>{const x=dayInfo(e,d),p=x.p;const sh=(x.auto?x.sh:isFlex(e)?ATT.flexShifts[0]:(shiftOn(e,d).sh||shiftOf(e))).split('-');const nowM=NOW().getHours()*60+NOW().getMinutes();
-    const stt=x.st?`<span class="pill p-n">${x.st}</span>`:x.off&&!p?'<span class="pill p-n">วันหยุดประจำ</span>':p&&p.in?(x.late?`<span class="pill p-warn">สาย ${x.late} นาที</span>`:'<span class="pill p-ok">มาแล้ว</span>'):p&&p.out?'<span class="pill p-warn">ไม่ลงเวลาเข้า</span>':nowM>hm(sh[0])+ATT.grace?'<span class="pill p-bad">ยังไม่ลงเวลา</span>':'<span class="pill p-n">ยังไม่ถึงกะ</span>';
-    return `<tr><td>${e.id}</td><td>${esc(e.name)}</td><td>${e.branch}</td><td>${esc(posLabel(e.pos,e.type))}${isPT(e)?' <span class="pill p-n">พาร์ทไทม์</span>':''}</td><td>${shiftOn(e,d).off?'วันหยุด':isFlex(e)?(x.auto?x.sh+' <small class="muted">อัตโนมัติ</small>':'<small class="muted">อัตโนมัติ</small>'):shiftOn(e,d).sh+(shiftOn(e,d).custom?' *':'')}</td><td>${p&&p.in||'-'}</td><td>${p&&p.out||'-'}</td><td class="num">${p&&p.dist!=null?p.dist+' ม.':'-'}</td><td>${p&&(p.photo||p.photoOut)?`<button class="btn ghost sm" data-attph="${e.id}|${d}">ดูรูป</button>`:p?'<small class="muted">รูปตัวอย่าง</small>':'-'}</td><td><button class="btn ghost sm" data-attcell="${e.id}|${d}">ระบุสถานะ</button></td><td>${stt}</td></tr>`}).join('');
-  const c=list.map(e=>dayInfo(e,d));
-  return `<div class="stats"><div class="stat"><b>${c.filter(x=>x.work).length}</b><span>มาทำงาน</span></div><div class="stat ${c.filter(x=>x.late).length?'alert':''}"><b>${c.filter(x=>x.late).length}</b><span>สาย</span></div><div class="stat"><b>${c.filter(x=>x.leave).length}</b><span>ลา</span></div><div class="stat"><b>${c.filter(x=>x.off&&!x.work).length}</b><span>วันหยุดประจำ</span></div><div class="stat ${c.filter(x=>x.absent).length?'alert':''}"><b>${c.filter(x=>x.absent).length}</b><span>ยังไม่ลงเวลา</span></div></div>
+  const t=attToday(),d=S.atd&&S.atd<=iso(addDays(D(t),31))?S.atd:t,fut=d>t,isT=d===t,list=attScope().filter(e=>e.status==='ทำงาน'||(e.endDate&&d<=e.endDate&&e.status!=='ทำงาน'&&(!e.start||d>=e.start)));
+  const nowM=NOW().getHours()*60+NOW().getMinutes();
+  const all=list.map(e=>{const x=dayInfo(e,d);return{e,x,c:atCats(e,x,d,fut)}}).filter(r=>r.x.active);
+  const K=fut?[['work','ต้องมาทำงาน (ตามตาราง)'],['leave','ลา'],['off','วันหยุด']]:[['work','มาทำงาน'],['late','สาย'],['leave','ลา'],['off','วันหยุด'],['absent',isT?'ยังไม่ลงเวลา':'ไม่ลงเวลา / ขาด']];
+  const k=K.some(([a])=>a===S.atk)?S.atk:'';const rowsD=k?all.filter(r=>r.c.has(k)):all;
+  const cnt=a=>all.filter(r=>r.c.has(a)).length;
+  const card=(a,lab,n,alert)=>`<button type="button" class="stat atk${alert?' alert':''}${k===a?' on':''}" data-atk="${a}" aria-pressed="${k===a}"><b>${n}</b><span>${lab}</span></button>`;
+  const order={absent:0,late:1,work:2,leave:3,off:4};const rk=r=>Math.min(...[...r.c].map(c=>order[c]??5),9);
+  const rows=rowsD.sort((a,b)=>rk(a)-rk(b)||a.e.branch.localeCompare(b.e.branch)||a.e.name.localeCompare(b.e.name)).map(({e,x})=>{const p=x.p;const so=shiftOn(e,d);const sh=(x.auto?x.sh:isFlex(e)?ATT.flexShifts[0]:(so.sh||shiftOf(e))).split('-');
+    const stt=fut?(x.st?`<span class="pill p-n">${x.st}</span>`:so.off?'<span class="pill p-n">วันหยุด</span>':'<span class="pill p-ok">ทำงานตามตาราง</span>')
+      :x.st?`<span class="pill p-n">${x.st}</span>`:x.off&&!p?'<span class="pill p-n">วันหยุด</span>':p&&p.in?(x.late?`<span class="pill p-warn">สาย ${x.late} นาที</span>`:'<span class="pill p-ok">มาแล้ว</span>'):p&&p.out?'<span class="pill p-warn">ไม่ลงเวลาเข้า</span>':!isT?'<span class="pill p-bad">ไม่ลงเวลา (ขาด)</span>':nowM>hm(sh[0])+ATT.grace?'<span class="pill p-bad">ยังไม่ลงเวลา</span>':'<span class="pill p-n">ยังไม่ถึงกะ</span>';
+    return `<tr><td>${e.id}</td><td>${esc(e.name)}</td><td>${e.branch}</td><td>${esc(posLabel(e.pos,e.type))}${isPT(e)?' <span class="pill p-n">พาร์ทไทม์</span>':''}</td><td>${so.off?'วันหยุด':isFlex(e)?(x.auto?x.sh+' <small class="muted">อัตโนมัติ</small>':'<small class="muted">อัตโนมัติ</small>'):so.sh+(so.custom?' *':'')}</td><td>${p&&p.in||'-'}</td><td>${p&&p.out||'-'}</td><td class="num">${p&&p.dist!=null?p.dist+' ม.':'-'}</td><td>${p&&(p.photo||p.photoOut)?`<button class="btn ghost sm" data-attph="${e.id}|${d}">ดูรูป</button>`:p?'<small class="muted">รูปตัวอย่าง</small>':'-'}</td><td><button class="btn ghost sm" data-attcell="${e.id}|${d}">ระบุสถานะ</button></td><td>${stt}</td></tr>`}).join('');
+  const lab=k?K.find(([a])=>a===k)[1]:'';
+  return `<div class="row atd-bar" style="gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn ghost sm" id="atd-prev">◀ วันก่อน</button><label class="f" style="max-width:200px">ดูวันที่<input type="date" id="atd" value="${d}" max="${iso(addDays(D(t),31))}"></label><button type="button" class="btn ghost sm" id="atd-next" ${d>=iso(addDays(D(t),31))?'disabled':''}>วันถัดไป ▶</button>${isT?'':`<button type="button" class="btn sm" id="atd-today">กลับมาวันนี้</button>`}<b style="align-self:center">${isT?'วันนี้ · ':''}วัน${WD[D(d).getDay()]}ที่ ${th(d)}${fut?' <span class="pill p-n">ล่วงหน้า (ตามตาราง)</span>':''}</b></div>
+  <div class="stats">${card('',  'ทั้งหมด',all.length,false)}${K.map(([a,l])=>card(a,l,cnt(a),(a==='late'||a==='absent')&&cnt(a)>0)).join('')}</div>
+  <p class="muted" style="margin:6px 0 10px">${k?`กำลังแสดงเฉพาะ <b>${lab}</b> ${rowsD.length} คน · กดการ์ดเดิมอีกครั้ง หรือ "ทั้งหมด" เพื่อดูทุกคน`:'กดที่การ์ดเพื่อกรองรายชื่อ'}</p>
   ${S.attCell?attCellBox():''}
-  <div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ</th><th>สาขา</th><th>ตำแหน่ง</th><th>กะ</th><th>เข้า</th><th>ออก</th><th class="num">ห่างสาขา</th><th>รูป</th><th></th><th>สถานะ</th></tr>${rows||'<tr><td colspan="11" class="muted">ไม่มีพนักงานที่ต้องลงเวลา</td></tr>'}</table></div>`;
+  <div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ</th><th>สาขา</th><th>ตำแหน่ง</th><th>กะ</th><th>เข้า</th><th>ออก</th><th class="num">ห่างสาขา</th><th>รูป</th><th></th><th>สถานะ</th></tr>${rows||`<tr><td colspan="11" class="muted">${k?'ไม่มีใคร'+lab:'ไม่มีพนักงานที่ต้องลงเวลา'}</td></tr>`}</table></div>`;
 }
 function attGrid(P){
   const list=attScope();const days=periodDays(P);const br=S.attBr||S.role.branch||'';
@@ -2484,6 +2499,10 @@ function bindAtt(){
   const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn};
   document.querySelectorAll('[data-attv]').forEach(b=>b.onclick=()=>{S.attView=b.dataset.attv;S.attCell=null;S.attEmp=null;render()});
   {const s=$('#att-br');if(s)s.onchange=()=>{S.attBr=s.value;S.attCell=null;render()}}
+  document.querySelectorAll('[data-atk]').forEach(b=>b.onclick=()=>{const k=b.dataset.atk;S.atk=S.atk===k?'':k;S.attCell=null;render()});
+  {const a=$('#atd'),mv=n=>{const t=attToday(),c=S.atd||t,m=iso(addDays(D(t),31));let v=iso(addDays(D(c),n));if(v>m)v=m;S.atd=v===t?null:v;S.attCell=null;render()};
+   if(a)a.onchange=()=>{if(!a.value)return;const t=attToday();S.atd=a.value===t?null:a.value;S.attCell=null;render()};
+   const p=$('#atd-prev'),n=$('#atd-next'),td=$('#atd-today');if(p)p.onclick=()=>mv(-1);if(n)n.onclick=()=>mv(1);if(td)td.onclick=()=>{S.atd=null;S.attCell=null;render()}}
   {const cset=(k,v)=>{S.cf=Object.assign({},S.cf,{[k]:v});S.attCell=null;render()};['from','to','k','pos'].forEach(k=>{const el=$('#cf-'+k);if(el)el.onchange=()=>cset(k,el.value)});
    document.querySelectorAll('[data-cfr]').forEach(b=>b.onclick=()=>{const[a,z]=b.dataset.cfr.split('|');S.cf=Object.assign({},S.cf,{from:a,to:z});render()});
    document.querySelectorAll('[data-cfk]').forEach(b=>b.onclick=()=>cset('k',(S.cf||{}).k===b.dataset.cfk?'':b.dataset.cfk));
