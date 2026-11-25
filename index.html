@@ -155,7 +155,7 @@ tr.dim td{opacity:.55}
 .lb[hidden]{display:none}
 [hidden]{display:none!important}
 @media(max-width:700px){.chat-grid{grid-template-columns:1fr!important}}
-.lb img{max-width:100%;max-height:80vh;border-radius:6px;background:#fff}
+.lb img{max-width:100%;max-height:86vh;border-radius:6px;background:#fff;object-fit:contain}.lb p{color:#fff;margin:0}#app img:not(.no-zoom){cursor:zoom-in}
 .lb p{color:#fff;margin:0}
 .lb .btn{align-self:flex-end;background:#fff}
 .doc-addr{font-size:.78rem;color:var(--muted);margin:-6px 0 10px}
@@ -1090,7 +1090,7 @@ function clockView(){if(!(S.who&&E(S.who)))return realLoginEmp();
   return `<section class="panel"><h2>ลงเวลาทำงาน</h2>
     <div class="who"><b>${esc(me.name)}</b><span class="muted">${esc(me.pos)} · สาขา ${me.branch}</span><button class="btn ghost sm" id="logout" style="margin-left:auto">ไม่ใช่ฉัน</button></div>
     <div class="row"><div><div class="muted">${th(NOW())} · เวลาจากระบบ</div><div class="clock" id="clk">--:--:--</div></div>
-      <div>กะวันนี้ <b>${shiftOn(me,attToday()).off?'วันหยุด':isFlex(me)?'ระบบจับกะจากเวลาที่ลงเข้า':shiftOn(me,attToday()).sh}</b>${isFlex(me)&&!shiftOn(me,attToday()).off?`<br><small class="muted">กะที่มี: ${ATT.flexShifts.join(', ')}</small>`:''}<br>${st.rec?`เข้า <b>${st.rec.in||'ไม่มี'}</b>${st.rec.out?' · ออก <b>'+st.rec.out+'</b>':''}`:'<span class="muted">ยังไม่ได้ลงเวลากะนี้</span>'}</div></div>
+      <div>กะวันนี้ <b>${shiftOn(me,attToday()).off?'วันหยุด':isFlex(me)?'ระบบจับกะจากเวลาที่ลงเข้า':shiftOn(me,attToday()).sh}</b>${isFlex(me)&&!shiftOn(me,attToday()).off?`<br><small class="muted">กะที่มี: ${ATT.flexShifts.join(', ')}</small>`:''}${(()=>{const r=earlyRule(me,attToday());return r&&!st.rec?`<br><small class="muted">ลงเวลาเข้าได้ตั้งแต่ <b>${r.from} น.</b> (ก่อนกะไม่เกิน ${r.min/60} ชม.)</small>`:''})()}<br>${st.rec?`เข้า <b>${st.rec.in||'ไม่มี'}</b>${st.rec.out?' · ออก <b>'+st.rec.out+'</b>':''}`:'<span class="muted">ยังไม่ได้ลงเวลากะนี้</span>'}</div></div>
     ${myWeek(me)}
     ${st.done?'<div class="note ok">ลงเวลาเข้า-ออกกะนี้ครบแล้ว</div>':`
     <div class="kind" role="radiogroup" aria-label="ลงเวลา">
@@ -2761,6 +2761,9 @@ function attCfg(){const ad=can('users');const dis=ad?'':'disabled';
   <div class="f full"><span>กะเวลาทำงานที่ให้เลือกในตาราง</span><input type="hidden" id="cf-sh" value="${ATT.shifts.join(', ')}">
   <div class="chips">${ATT.shifts.map(x=>`<span class="chip on">${shShort(x)}${dis?'':`<button type="button" class="x" data-shdel="${x}" aria-label="ลบกะ ${x}">✕</button>`}</span>`).join('')}</div>
   ${dis?'':`<div class="row" style="gap:8px;align-items:flex-end;flex-wrap:wrap"><label class="f" style="max-width:140px">เวลาเข้า<input type="time" id="cf-shs" value="07:00"></label><label class="f" style="max-width:140px">เวลาออก<input type="time" id="cf-she" value="16:00"></label><button type="button" class="btn sm" id="cf-shadd">+ เพิ่มกะ</button></div><small class="muted">เพิ่ม / ลบ แล้วมีผลทันที · ลบกะแล้ว คนที่ใช้กะนั้นอยู่ยังใช้ต่อได้ แค่ไม่ขึ้นเป็นปุ่มให้เลือก</small>`}</div></div>
+  <h3>ลงเวลาเข้าก่อนเวลากะได้ไม่เกิน</h3><p class="muted">กันการลงเวลาเร็วผิดปกติ เช่น นำจ่ายกะ 07:00 ตั้ง 2 ชม. → ลงได้ตั้งแต่ 05:00 ถ้ามาตี 2 ระบบไม่ให้ลง · ใช้กับตำแหน่งที่ติ๊ก</p>
+  <div class="fields"><label class="f" style="max-width:220px">ไม่เกิน (ชั่วโมง)<input id="cf-early" inputmode="decimal" value="${earlyCfg().min/60}" ${dis}></label></div>
+  <div class="checks" style="flex-direction:row;flex-wrap:wrap;gap:14px">${POSITIONS.map(p=>`<label><input type="checkbox" class="cf-early" value="${p}" ${(earlyCfg().pos||[]).includes(p)?'checked':''} ${dis}> ${p}</label>`).join('')}</div>
   <h3>ตำแหน่งที่จับกะอัตโนมัติจากเวลาลงเข้า</h3><p class="muted">สำหรับตำแหน่งที่สลับกะกันบ่อย ไม่ต้องจัดกะล่วงหน้า (ตารางเข้างานกำหนดแค่ ทำงาน/หยุด) · ระบบเลือกกะที่เวลาเริ่มใกล้เวลาลงเข้าที่สุด แล้วคิดสายจากกะนั้น · ตำแหน่งที่ไม่ติ๊กใช้กะตามตารางเข้างาน</p>
   <div class="checks" style="flex-direction:row;flex-wrap:wrap;gap:14px">${POSITIONS.map(p=>`<label><input type="checkbox" class="cf-flex" value="${p}" ${ATT.flexPos.includes(p)?'checked':''} ${dis}> ${p}</label>`).join('')}</div>
   <div class="fields"><label class="f full">กะที่ใช้จับอัตโนมัติ (คั่นด้วย ,)<input id="cf-fs" value="${ATT.flexShifts.join(', ')}" ${dis}><small class="muted">ควรห่างกันอย่างน้อย 4 ชม. ถ้ากะเริ่มใกล้กันมาก คนที่มาสายเยอะจะถูกนับเป็นกะถัดไปแทน</small></label></div>
@@ -2840,12 +2843,16 @@ function bindAtt(){
     const ti=$('#cf-ti').value.split(',').map(x=>x.split(':').map(Number)).filter(x=>x.length===2&&!isNaN(x[0])&&!isNaN(x[1])).sort((a,b)=>a[0]-b[0]);if(ti.length)ATT.tiers=ti;
     const sh=$('#cf-sh').value.split(',').map(x=>x.trim()).filter(x=>/^\d\d:\d\d-\d\d:\d\d$/.test(x));if(sh.length)ATT.shifts=sh;
     {const F={};let bad='';document.querySelectorAll('.cf-fix').forEach(i=>{const v=i.value.trim();if(!v)return;const n=normShift(v);if(!n||n==='หยุด'||n==='AUTO'){bad=i.dataset.k;return}F[i.dataset.k]=n});if(bad){toast('เวลา '+bad+' ไม่ถูกต้อง ใส่แบบ 07:00-16:00');return}ATT.fixed=F;ATT.freeGeo=[...document.querySelectorAll('.cf-free:checked')].map(x=>x.dataset.id).filter(id=>F['EMP:'+id])}
-    ATT.pos=[...document.querySelectorAll('.cf-pos:checked')].map(x=>x.value);ATT.flexPos=[...document.querySelectorAll('.cf-flex:checked')].map(x=>x.value);
+    ATT.pos=[...document.querySelectorAll('.cf-pos:checked')].map(x=>x.value);ATT.flexPos=[...document.querySelectorAll('.cf-flex:checked')].map(x=>x.value);{const h=parseFloat(($('#cf-early')||{}).value);ATT.earlyIn={min:Math.round((isNaN(h)?2:Math.max(0,Math.min(12,h)))*60),pos:[...document.querySelectorAll('.cf-early:checked')].map(x=>x.value)}}
     const fs=$('#cf-fs').value.split(',').map(x=>normShift(x)).filter(x=>x&&x!=='หยุด'&&x!=='AUTO');if(fs.length)ATT.flexShifts=fs;toast('บันทึกตั้งค่าแล้ว');render()});
 }
 // ===== ตารางเข้างาน (กะ/วันหยุดรายวัน) =====
 ATT.roster={};S.rosterLog=[];ATT.flexPos=['คัดแยก'];ATT.flexShifts=['00:00-09:00','08:00-17:00','12:00-21:00'];
 const isFlex=e=>!fixedOf(e)&&ATT.flexPos.includes(e.pos);
+// ลงเวลาเข้าก่อนกะได้ไม่เกิน X ชม. (เช่น นำจ่าย กะ 07:00 → ลงได้ตั้งแต่ 05:00 · ลงตี 2 ไม่ได้)
+const earlyCfg=()=>ATT.earlyIn||{min:120,pos:['พนักงานนำจ่ายพัสดุ']};
+function earlyRule(e,d){const C=earlyCfg();if(!e||!C.min||!(C.pos||[]).includes(e.pos)||isFlex(e))return null;const so=shiftOn(e,d);if(so.off)return null;const s=shStart(e,d);if(isNaN(s))return null;const f=((s-C.min)%1440+1440)%1440;return{s,min:C.min,from:String(Math.floor(f/60)).padStart(2,'0')+':'+String(f%60).padStart(2,'0')}}
+function tooEarly(e,d,t){const r=earlyRule(e,d);if(!r)return null;const m=hm(t);let diff=r.s-m;if(diff<-720)diff+=1440;if(diff>720)diff-=1440;return diff>r.min?r:null}
 // ตำแหน่งกะยืดหยุ่น: เลือกกะที่เวลาเริ่มใกล้เวลาลงเข้ามากที่สุด
 function detectShift(m){let best=null;ATT.flexShifts.forEach(sh=>{const s0=hm(sh.split('-')[0]);[-1,0,1].forEach(o=>{const c=s0+o*1440,dd=Math.abs(m-c);if(!best||dd<best.dd||(dd===best.dd&&c<best.c))best={sh,c,o,dd}})});return best}
 const OFF_WORDS=['หยุด','off','OFF','Off','วันหยุด','x','X'];
@@ -3333,6 +3340,7 @@ function bind(){
     const g=geoState(e);if(!g.ok){toast('อยู่นอกรัศมีสาขา '+e.branch+' ลงเวลาไม่ได้');return}
     const sg=needSig('sg-punch');if(!sg)return;delete S.sigs['sg-punch'];
     const st=attState(e),kind=S.kind||st.kind,t=S.shot.t.slice(0,5),at=new Date().toISOString();
+    if(kind==='in'){const te=tooEarly(e,st.wd,t);if(te){toast('ยังลงเวลาเข้างานไม่ได้ · กะเริ่ม '+String(Math.floor(te.s/60)).padStart(2,'0')+':'+String(te.s%60).padStart(2,'0')+' ลงได้ตั้งแต่ '+te.from+' น.');return}}
     if(kind==='in'){if(st.rec){toast('ลงเวลาเข้ากะนี้แล้ว');return}S.punch.push({emp:e.id,date:st.wd,in:t,out:'',inOk:true,outOk:false,dist:g.dist,...gpsF(),photo:S.shot.img,sigIn:sg,at});
       const s0=isFlex(e)?detectShift(hm(t)).c:shStart(e,st.wd);let m=hm(t);if(m-s0>720)m-=1440;const late=Math.max(0,m-s0-ATT.grace);toast('บันทึกเข้างาน '+t+(late?' · สายเกิน '+late+' นาที':''))}
     else if(st.open){Object.assign(st.open,{...gpsF('Out'),out:t,outOk:true,photoOut:S.shot.img,sigOut:sg,distOut:g.dist,atOut:at});toast('บันทึกออกงาน '+t)}
@@ -3352,6 +3360,13 @@ function bind(){
 }
 
 $('#lb-x').onclick=()=>{$('#lb').hidden=true};$('#lb').onclick=ev=>{if(ev.target.id==='lb')$('#lb').hidden=true};
+// กดรูปไหนก็ได้ (รูปลงเวลา เอกสาร ทรัพย์สิน ฯลฯ) → ดูรูปใหญ่ · ไม่มีปุ่มดาวน์โหลด
+const lbOpen=(src,t)=>{$('#lb-img').src=src;$('#lb-t').textContent=t||'';$('#lb-dl').hidden=true;$('#lb').hidden=false};
+document.addEventListener('click',ev=>{const im=ev.target.closest&&ev.target.closest('#app img');if(!im||im.closest('[data-zoom],[data-dzoom],a,button,label,.no-zoom'))return;
+  const src=im.currentSrc||im.src;ev.preventDefault();ev.stopPropagation();
+  if(src&&!/^drive:/.test(src))return lbOpen(src,im.alt);
+  if(im.dataset.drive&&window.REAL&&REAL.blob)REAL.blob(im.dataset.drive).then(u=>u&&u.startsWith('data:image')&&lbOpen(u,im.alt)).catch(()=>toast('โหลดรูปไม่สำเร็จ'))},true);
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!$('#lb').hidden)$('#lb').hidden=true});
 S.resign.find(r=>r.no==='RS-69-0001').approvedDate='2026-09-11';
 const PAGES=['apply','emp','clock','oldentry','oldreg','update','leave','resign','card'];
 function fromHash(){const h=location.hash.slice(1);if(h==='bo'){if(!S.role){S.view='adm';render()}return}if(PAGES.includes(h)){S.view='emp';S.page=['apply','clock','oldentry'].includes(h)?h:h==='oldreg'?'oldentry':'emp';S.who=null;S.shot=null;render()}}
