@@ -1520,7 +1520,7 @@ function regTable(){
   ${nBad||nChk?`<div class="note warn"><b>ต้องตรวจ:</b> ${nBad?`ข้อมูล / เอกสารไม่ครบหรือไม่ถูกต้อง <b>${nBad} คน</b> <button class="btn sm" data-issf="iss|ต้องแก้">ดูเฉพาะคนที่ต้องแก้</button>`:''} ${nChk?`มีรูปเอกสารรอตรวจ <b>${nChk} คน</b> <button class="btn ghost sm" data-issf="chk|มีรูปรอตรวจ">ดูเฉพาะรูปรอตรวจ</button>`:''}</div>`:''}${regSearch}${regFilters}<p class="muted" id="reg-count"></p>
   <div class="tablewrap"><table id="reg-tbl"><tr><th>รหัส</th><th>ชื่อ</th><th>ข้อมูล / เอกสาร</th><th>สถานะ</th><th>สาขา</th><th>ตำแหน่ง</th><th>เริ่มงาน</th><th>อายุงาน</th><th>ทดลองงาน</th><th>ที่มา</th><th>แก้ไขล่าสุด</th></tr>${rows}</table></div><div class="row pager" id="reg-pager"></div><div id="reg-det"></div>
   ${sel?`<div class="panel" style="background:var(--bg)"><div class="row"><h3>${esc(sel.name)}</h3>${statusPill(sel.status)}${sel.status==='รอตรวจสอบ'?`<button class="btn ok sm" data-verify="${sel.id}">ยืนยันเข้าทะเบียน</button>`:''}
-      ${isBlack(sel.idCard)?'<span class="pill p-bad">แบล็กลิสต์</span>':''}${sel.dob&&ageOf(sel.dob)<18?'<span class="pill p-warn">อายุต่ำกว่า 18</span>':''}${canEE()?`<button class="btn sm" data-empedit="${sel.id}">${S.empEdit===sel.id?'ปิดหน้าแก้ไข':'แก้ไขข้อมูลพนักงาน'}</button>`:''}${can('import')&&dupOf(sel).length?`<button class="btn bad sm" data-empdel="${sel.id}" title="ลบได้เฉพาะรายการที่ซ้ำกับคนอื่น">🗑 ลบรายการซ้ำนี้</button>`:''}</div>
+      ${isBlack(sel.idCard)?'<span class="pill p-bad">แบล็กลิสต์</span>':''}${sel.dob&&ageOf(sel.dob)<18?'<span class="pill p-warn">อายุต่ำกว่า 18</span>':''}${canEE()?`<button class="btn sm" data-empedit="${sel.id}">${S.empEdit===sel.id?'ปิดหน้าแก้ไข':'แก้ไขข้อมูลพนักงาน'}</button>`:''}${can('import')?`<button class="btn bad sm" data-empdel="${sel.id}" title="ลบพนักงานรายการนี้ออกจากทะเบียน (เช่น ส่งชื่อมา 2 รอบ)">🗑 ลบรายการนี้</button>`:''}</div>
     ${issBox(sel)}${guardKv(sel)}${fixPanel(sel)}${S.empEdit===sel.id&&canEE()?empEditForm(sel):''}
     ${sel.status==='ทำงาน'?`<div class="row"><button class="btn ghost sm" data-towarn="${sel.id}">ออกใบเตือน</button><button class="btn ghost sm" data-tm2="${sel.id}">เลิกจ้าง / ตัดออก</button><button class="btn ghost sm" data-tomove="${sel.id}">โยกย้าย / เปลี่ยนตำแหน่ง</button></div>`:''}
     ${S.moveEmp===sel.id?moveForm(sel):''}
@@ -1958,9 +1958,9 @@ function bindHr2(){
   document.querySelectorAll('[data-fxf]').forEach(b=>b.onclick=()=>{S.fxF=b.dataset.fxf;render()});
   document.querySelectorAll('[data-fxopen]').forEach(b=>b.onclick=()=>{S.admTab='reg';S.selEmp=b.dataset.fxopen;render();setTimeout(()=>{const x=document.querySelector('[data-fxnew]');if(x)x.scrollIntoView({block:'center'})},50)});
   document.querySelectorAll('[data-empedit]').forEach(b=>b.onclick=()=>{S.empEdit=S.empEdit===b.dataset.empedit?null:b.dataset.empedit;render()});
-  document.querySelectorAll('[data-empdel]').forEach(b=>b.onclick=()=>{if(!can('import'))return;const e=E(b.dataset.empdel),dp=dupOf(e);if(!e||!dp.length)return toast('ลบได้เฉพาะรายการที่ซ้ำเท่านั้น');
-    if(b.dataset.sure!=='1'){b.dataset.sure='1';const np=S.punch.filter(p=>p.emp===e.id).length;b.textContent='ยืนยันลบ '+e.id+(np?' (มีลงเวลา '+np+' วัน!)':'')+' · เก็บ '+dp.map(x=>x.id).join(', ')+' ไว้';return}
-    S.emp=S.emp.filter(x=>x.id!==e.id);S.selEmp=dp[0].id;S.empEdit=null;toast('ลบ '+e.id+' แล้ว');render()});
+  document.querySelectorAll('[data-empdel]').forEach(b=>b.onclick=()=>{if(!can('import'))return;const e=E(b.dataset.empdel),dp=dupOf(e);if(!e)return;
+    if(b.dataset.sure!=='1'){b.dataset.sure='1';const np=S.punch.filter(p=>p.emp===e.id).length;b.textContent='ยืนยันลบ '+e.id+' '+e.name+(np?' (มีลงเวลา '+np+' วัน!)':'')+(dp.length?' · เก็บ '+dp.map(x=>x.id).join(', ')+' ไว้':'');return}
+    S.emp=S.emp.filter(x=>x.id!==e.id);S.selEmp=dp[0]?dp[0].id:null;S.empEdit=null;toast('ลบ '+e.id+' แล้ว');render()});
   document.querySelectorAll('[data-eesave]').forEach(b=>b.onclick=()=>{if(!canEE())return;const sv=!can('import');const e=E(b.dataset.eesave),v=id=>{const x=$('#'+id);return x?x.value.trim():''};
     const nid=v('ee-id').replace(/\D/g,''),nac=v('ee-acct').replace(/\D/g,'');
     {const er=nmErr('ee-name');if(er)return toast(er)}if(!v('ee-name'))return toast('กรอกชื่อ-นามสกุล');
