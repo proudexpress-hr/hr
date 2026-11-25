@@ -174,7 +174,7 @@ tr.dim td{opacity:.55}
 .rgrid select.rs{border:0;background:transparent;font-size:.72rem;padding:6px 2px;width:100%;min-width:64px;color:inherit;cursor:pointer}.rgrid select.rs:disabled{cursor:default;opacity:.7}
 .rgrid td.r-cus{box-shadow:inset 0 0 0 2px var(--brand)}
 .mg-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
-.mg{background:var(--surface,#fff);color:var(--fg);border-radius:16px;max-width:520px;width:100%;padding:18px 20px;box-shadow:0 12px 40px rgba(0,0,0,.35);max-height:90vh;overflow:auto}
+.hp{margin:6px 0 0 1.2em;padding:0;line-height:1.7}.hp li{margin:4px 0}.mg{background:var(--surface,#fff);color:var(--fg);border-radius:16px;max-width:520px;width:100%;padding:18px 20px;box-shadow:0 12px 40px rgba(0,0,0,.35);max-height:90vh;overflow:auto}
 .mg h3{margin:0 0 6px;font-size:1.2rem}.mg h3.bad{color:var(--bad)}.mg h3.warn{color:#a35b00}.mg ul{padding-left:20px;margin:8px 0 12px}.mg li{margin:4px 0}.mg-ack{display:flex;gap:8px;align-items:flex-start;margin:10px 0;font-weight:600}.mg-ack input{width:20px;height:20px;flex:none;margin-top:2px}
 .pager{gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
 td.iss{min-width:170px}.iss-l{font-size:.75rem;color:var(--bad);margin-top:3px;line-height:1.35}
@@ -851,6 +851,7 @@ function applyView(mode){
     <label class="f">วันที่เริ่มงาน *<input type="date" id="a-start" min="${OPEN_DATE}" max="${iso(TODAY)}"><small class="muted">จำวันที่ไม่ได้ ให้เลือกวันที่ 1 ของเดือนที่เริ่ม · เริ่มได้ตั้งแต่ ${OPEN_TXT} (วันที่บริษัทเปิด)</small></label>
     <label class="f">รหัส J&T / JMS *<input id="a-jms" placeholder="เช่น 301714T000118"></label>
     <label class="f">ชื่อในระบบ JMS *<input id="a-jmsname" placeholder="ชื่อตามที่ขึ้นในระบบ J&T"></label>
+    <label class="f full" style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="a-nojms" style="width:auto"> งานของฉันไม่ใช้รหัส J&T (JMS) · ไม่ต้องกรอก 2 ช่องบน</label>
     <div class="f full"><span class="muted">ของบริษัทที่ถืออยู่ตอนนี้ (ใส่จำนวน ไม่มีเว้นว่าง)</span><div class="oa">${OLD_ASSETS.map((t,i)=>`<label>${t}<input class="a-asset" data-t="${t}" inputmode="numeric" placeholder="0"></label>`).join('')}</div></div>`):sec(1,'ตำแหน่งที่สมัคร',`
     <label class="f">ตำแหน่ง *<select id="a-pos">${opt(Object.keys(APPLY_POS))}</select></label><label class="f">ประเภทการจ้าง<select id="a-ptime"><option value="">ประจำ</option><option value="1">พาร์ทไทม์</option></select></label>
     <label class="f">สาขาที่สะดวก *<select id="a-branch">${opt(BRANCHES)}</select></label>
@@ -991,8 +992,8 @@ function updateView(e,who){
       <label class="f">ตำแหน่ง<select id="u-pos">${POSITIONS.map(p=>`<option value="${esc(p)}" ${p===e.pos?'selected':''}>${esc(posLabel(p))}</option>`).join('')}</select></label>
       <label class="f">ประเภทรถ (นำจ่าย)<select id="u-type">${['','SPT','SPT+C'].map(t=>`<option value="${t}" ${t===(e.type||'')?'selected':''}>${t||'-'}</option>`).join('')}</select></label>
       <label class="f">วันเริ่มงาน<input type="date" id="u-start" min="${OPEN_DATE}" max="${iso(TODAY)}" value="${esc(e.start||'')}"></label>`:''}
-    <label class="f">รหัส J&T (JMS)${JMS_POS.test(e.pos)||isNew?' *':''}<input id="u-jms" value="${esc(e.jms||'')}" placeholder="เช่น 301714T000118"></label>
-    <label class="f">ชื่อในระบบ JMS${JMS_POS.test(e.pos)||isNew?' *':''}<input id="u-jmsname" value="${esc(e.jmsName||'')}" placeholder="ชื่อตามที่ขึ้นในระบบ J&T"></label>
+    <label class="f">รหัส J&T (JMS)${needJms(e)||isNew?' *':''}<input id="u-jms" value="${esc(e.jms||'')}" placeholder="เช่น 301714T000118"></label>
+    <label class="f">ชื่อในระบบ JMS${needJms(e)||isNew?' *':''}<input id="u-jmsname" value="${esc(e.jmsName||'')}" placeholder="ชื่อตามที่ขึ้นในระบบ J&T"></label>
     <label class="f">เบอร์โทร<input id="u-phone" value="${esc(e.phone)}" inputmode="tel"></label>
     <label class="f">เลขบัญชีกสิกรไทย<input id="u-acct" value="${esc(e.acct)}" inputmode="numeric"></label>
     ${bk2Fields('u',e.bk2||{})}
@@ -1042,7 +1043,7 @@ function cardView(e,who){
     <label><input type="checkbox" id="cd-ok2"> รับทราบว่าบัตรเป็นของบริษัท ต้องคืนให้หัวหน้างานเมื่อพ้นสภาพ ก่อนรับเงินประกันคืน</label></div>
     <div class="note">ถ่ายรูปหน้าตัวเองคู่กับบัตรประกันที่ได้รับ (กล้องเท่านั้น)</div>
     <div class="cam">${S.shot?`<img src="${S.shot.img}" alt="รูปที่ถ่าย">`:`<div class="vf"><video id="vf-video" playsinline muted autoplay hidden></video><canvas id="vf-sim" width="300" height="400"></canvas></div>`}
-      <div class="row" style="align-self:flex-end">${S.shot?`<button class="btn ok" id="cd-send">ยืนยันรับบัตร</button><button class="btn ghost" id="c-retake">ถ่ายใหม่</button>`:`<button class="btn" id="c-snap">ถ่ายรูป</button><input type="file" id="c-file" accept="image/*" capture="user" hidden><button class="btn ghost sm" id="c-sim" title="สำหรับทดสอบบนคอมพิวเตอร์">ทดลองด้วยภาพจำลอง</button>`}</div></div>
+      <div class="row" style="align-self:flex-end">${S.shot?`<button class="btn ok" id="cd-send">ยืนยันรับบัตร</button><button class="btn ghost" id="c-retake">ถ่ายใหม่</button>`:`<button class="btn" id="c-snap">ถ่ายรูป</button><button type="button" class="btn ghost sm" data-hpcam="1" title="กล้องไม่เปิด / ถ่ายไม่ได้">❓ กล้องใช้ไม่ได้</button><button type="button" class="btn ghost sm" data-hpgps="">❓ GPS ใช้ไม่ได้</button><input type="file" id="c-file" accept="image/*" capture="user" hidden><button class="btn ghost sm" id="c-sim" title="สำหรับทดสอบบนคอมพิวเตอร์">ทดลองด้วยภาพจำลอง</button>`}</div></div>
     <small class="muted" id="cam-msg"></small>${sigPad('sg-card','ลายมือชื่อผู้รับบัตร')}</section>`;
 }
 function resignView(e,who){
@@ -1107,8 +1108,8 @@ function clockView(){if(!(S.who&&E(S.who)))return realLoginEmp();
           <button class="btn ghost sm" id="c-loc">ทดลอง: เปลี่ยนตำแหน่ง</button></div></div>
         ${S.shot?`<div>ถ่ายเมื่อ <b>${S.shot.t}</b> <span class="muted">(ต้องยืนยันภายใน 60 วินาที)</span></div>${sigPad('sg-punch','ลายมือชื่อ')}
           <div class="row"><button class="btn ${kind==='in'?'ok':''}" id="c-punch" ${g.ok?'':'disabled'}>ยืนยันลงเวลา${kind==='in'?'เข้างาน':'ออกงาน'} ${S.shot.t.slice(0,5)}</button><button class="btn ghost" id="c-retake">ถ่ายใหม่</button></div>`
-        :g.ok?`<div class="row"><button class="btn" id="c-snap">ถ่ายรูป</button><input type="file" id="c-file" accept="image/*" capture="user" hidden><button class="btn ghost sm" id="c-sim" title="ระบบจริงไม่มีปุ่มนี้">ทดลองด้วยภาพจำลอง (บนคอม)</button></div><small class="muted" id="cam-msg"></small>`
-        :g.acc||g.nogps?`<div class="note warn" style="margin:0"><b>${g.nogps?'ยังหาตำแหน่งไม่ได้':'ตำแหน่งยังไม่แม่นพอ'}</b> ระบบจึงยังให้ลงเวลาไม่ได้ (ยังไม่ได้แปลว่าอยู่นอกสาขา) <button type="button" class="btn sm" id="c-gpsre" style="margin:6px 0">🔄 หาตำแหน่งใหม่</button><br>วิธีแก้: ① เปิดตำแหน่ง/GPS ในมือถือ และเปิด <b>"ตำแหน่งที่แม่นยำ"</b> (Android: ตั้งค่า → ตำแหน่ง → บริการตำแหน่ง → ความแม่นยำของตำแหน่ง Google → เปิด · iPhone: ตั้งค่า → ความเป็นส่วนตัว → บริการหาตำแหน่ง → Safari/LINE → ตำแหน่งที่แน่นอน → เปิด) ② เปิด Wi-Fi ไว้ (ไม่ต้องต่อก็ได้) ③ ออกไปยืนที่โล่งนอกหลังคาเหล็กสักครู่ แล้วโหลดหน้าใหม่</div>`:`<div class="note warn" style="margin:0">อยู่นอกรัศมีสาขาของคุณ กดลงเวลาไม่ได้ · ต้องมาที่สาขา ${me.branch} เท่านั้น · ถ้าได้รับมอบหมายให้ไปทำงานที่อื่น ให้แจ้ง SPV บันทึก "ทำงานนอกสถานที่"</div>`}
+        :g.ok?`<div class="row"><button class="btn" id="c-snap">ถ่ายรูป</button><button type="button" class="btn ghost sm" data-hpcam="1" title="กล้องไม่เปิด / ถ่ายไม่ได้">❓ กล้องใช้ไม่ได้</button><button type="button" class="btn ghost sm" data-hpgps="">❓ GPS ใช้ไม่ได้</button><input type="file" id="c-file" accept="image/*" capture="user" hidden><button class="btn ghost sm" id="c-sim" title="ระบบจริงไม่มีปุ่มนี้">ทดลองด้วยภาพจำลอง (บนคอม)</button></div><small class="muted" id="cam-msg"></small>`
+        :g.acc||g.nogps?`<div class="note warn" style="margin:0"><b>${g.nogps?'ยังหาตำแหน่งไม่ได้':'ตำแหน่งยังไม่แม่นพอ'}</b> ระบบจึงยังให้ลงเวลาไม่ได้ (ยังไม่ได้แปลว่าอยู่นอกสาขา) <button type="button" class="btn sm" id="c-gpsre" style="margin:6px 0">🔄 หาตำแหน่งใหม่</button> <button type="button" class="btn ghost sm" data-hpgps="${g.acc?'acc':(S.gpsCode||'')}" style="margin:6px 0">❓ ดูวิธีแก้</button><br>วิธีแก้: ① เปิดตำแหน่ง/GPS ในมือถือ และเปิด <b>"ตำแหน่งที่แม่นยำ"</b> (Android: ตั้งค่า → ตำแหน่ง → บริการตำแหน่ง → ความแม่นยำของตำแหน่ง Google → เปิด · iPhone: ตั้งค่า → ความเป็นส่วนตัว → บริการหาตำแหน่ง → Safari/LINE → ตำแหน่งที่แน่นอน → เปิด) ② เปิด Wi-Fi ไว้ (ไม่ต้องต่อก็ได้) ③ ออกไปยืนที่โล่งนอกหลังคาเหล็กสักครู่ แล้วโหลดหน้าใหม่</div>`:`<div class="note warn" style="margin:0">อยู่นอกรัศมีสาขาของคุณ กดลงเวลาไม่ได้ · ต้องมาที่สาขา ${me.branch} เท่านั้น · ถ้าได้รับมอบหมายให้ไปทำงานที่อื่น ให้แจ้ง SPV บันทึก "ทำงานนอกสถานที่"</div>`}
       </div>
     </div>`}
     ${myPeriodBox(me)}
@@ -1209,7 +1210,8 @@ function appsAdm(){
       <label class="f">ตำแหน่งที่อนุมัติ<select id="ap-pos" data-no="${a.no}">${(APPLY_POS[pk.key]?[]:[pk.key]).concat(Object.keys(APPLY_POS)).map(k=>`<option value="${esc(k)}" ${k===pk.key?'selected':''}>${esc(k)}</option>`).join('')}</select>${pk.key!==a.pos?`<small style="color:var(--warn)">ผู้สมัครเลือกมา: ${esc(a.pos)}</small>`:'<small class="muted">แก้ได้ ถ้าผู้สมัครกดตำแหน่งผิด</small>'}</label>
       <label class="f">ประเภทการจ้าง<select id="ap-pt" data-no="${a.no}"><option value="0" ${pk.pt?'':'selected'}>ประจำ / สัญญาจ้าง</option><option value="1" ${pk.pt?'selected':''}>พาร์ทไทม์</option></select>${pk.pt!==!!a.ptime?`<small style="color:var(--warn)">ผู้สมัครเลือกมา: ${a.ptime?'พาร์ทไทม์':'ประจำ'}</small>`:''}</label>
       <label class="f">สาขาที่อนุมัติ<select id="ap-br" ${S.role.branch?'disabled':''}>${BRANCHES.map(b=>`<option ${b===a.branch?'selected':''}>${b}</option>`).join('')}</select></label>
-      <label class="f">วันเริ่มงาน<input type="date" id="ap-start" min="${OPEN_DATE}" max="${iso(TODAY)}" value="${a.avail}"></label>
+      <label class="f">วันเริ่มงาน<input type="date" id="ap-start" min="${OPEN_DATE}" max="${iso(addDays(TODAY,60))}" value="${a.avail}"><small class="muted">อนุมัติล่วงหน้าได้ (ไม่เกิน 60 วัน) เพื่อเปิดรหัส J&T ก่อนเข้างาน</small></label>
+      <label class="f">ต้องใช้รหัส J&T (JMS)<select id="ap-jms"><option value="yes" ${JMS_POS.test(appPos(pk.key)[0])?'selected':''}>ต้องใช้ → ขึ้น "รอรับรหัส J&T"</option><option value="no" ${JMS_POS.test(appPos(pk.key)[0])?'':'selected'}>ไม่ต้องใช้รหัส</option></select></label>
       <label class="f">ประเภทค่าตอบแทน<select id="ap-paytype">${Object.keys(PAY_TYPES).map(t=>`<option ${t===defPay(appPos(pk.key)[0])?'selected':''}>${t}</option>`).join('')}</select></label>
       <label class="f"><span id="ap-ratelab">${PAY_TYPES[defPay(appPos(pk.key)[0])]}</span><input id="ap-rate" inputmode="decimal" value="${defAmt(defPay(appPos(pk.key)[0]))}"></label>
       ${(()=>{const o=openReqs(a.branch,appPos(pk.key)[0]);return `<label class="f">ปิดคำขอเพิ่มคน<select id="ap-req">${o.map(r=>`<option value="${r.no}">${r.no} · ได้ ${fillsOf(r).length}/${r.qty} · อนุมัติ ${th(r.approvedDate||r.date)}</option>`).join('')}<option value="">ไม่ผูกกับคำขอ (แทนคนออก ฯลฯ)</option></select><small class="muted">${o.length?'ผูกเพื่อวัดผลการหาคนของ HR':'ไม่มีคำขอที่เปิดอยู่ของสาขา/ตำแหน่งนี้'}</small></label>`})()}</div>
@@ -1509,7 +1511,7 @@ function minorAdm(){const L=S.emp.filter(e=>inScope(e.branch)&&minorAtStart(e)&&
 function regTable(){
   const list=S.emp.filter(e=>inScope(e.branch));
   const sel=S.selEmp&&list.find(e=>e.id===S.selEmp);
-  const rows=list.map(e=>`<tr data-br="${e.branch}" data-pos="${esc(e.pos)}" data-st="${e.status}" data-prob="${e.status==='ทำงาน'&&!isPT(e)?probation(e):''}" data-src="${esc((e.source||'').split(' (')[0])}" data-vt="${esc(e.type||'ไม่ใช้รถ')}" data-iss="${e.status==='พ้นสภาพ'?'':issBad(e).length?'ต้องแก้':'ครบ'}" data-chk="${dataIssues(e).some(x=>x[0]==='chk')?'มีรูปรอตรวจ':''}" data-q="${esc([e.id,e.name,e.phone,e.idCard,e.jms,e.jmsName,e.branch,e.pos].join(' ').toLowerCase())}"><td>${e.id}</td><td><button class="back" data-sel="${e.id}">${esc(e.name)}</button></td><td class="iss">${issCell(e)}</td><td>${statusPill(e.status)}${isBlack(e.idCard)?' <span class="pill p-bad">แบล็กลิสต์</span>':''}</td><td>${e.branch}</td><td>${esc(e.pos)}${e.type?` <span class="pill p-n">${e.type}</span>`:''}</td><td>${e.start?th(e.start):'<span class="muted">ไม่ทราบ</span>'}</td><td>${tenure(e)}</td><td>${e.status==='ทำงาน'&&!isPT(e)?probPill(e):'-'}</td><td>${esc(e.source)}</td><td>${th(e.updated)}</td></tr>`).join('');
+  const rows=list.map(e=>`<tr data-br="${e.branch}" data-pos="${esc(e.pos)}" data-st="${e.status}" data-prob="${e.status==='ทำงาน'&&!isPT(e)?probation(e):''}" data-src="${esc((e.source||'').split(' (')[0])}" data-vt="${esc(e.type||'ไม่ใช้รถ')}" data-iss="${e.status==='พ้นสภาพ'?'':issBad(e).length?'ต้องแก้':'ครบ'}" data-chk="${dataIssues(e).some(x=>x[0]==='chk')?'มีรูปรอตรวจ':''}" data-q="${esc([e.id,e.name,e.phone,e.idCard,e.jms,e.jmsName,e.branch,e.pos].join(' ').toLowerCase())}"><td>${e.id}</td><td><button class="back" data-sel="${e.id}">${esc(e.name)}</button></td><td class="iss">${issCell(e)}</td><td>${statusPill(e.status)}${jmsStage(e)==='รอรับรหัส J&T'?' <span class="pill p-warn">รอรับรหัส J&T</span>':''}${isBlack(e.idCard)?' <span class="pill p-bad">แบล็กลิสต์</span>':''}</td><td>${e.branch}</td><td>${esc(e.pos)}${e.type?` <span class="pill p-n">${e.type}</span>`:''}</td><td>${e.start?th(e.start):'<span class="muted">ไม่ทราบ</span>'}</td><td>${tenure(e)}</td><td>${e.status==='ทำงาน'&&!isPT(e)?probPill(e):'-'}</td><td>${esc(e.source)}</td><td>${th(e.updated)}</td></tr>`).join('');
   const nBad=list.filter(e=>e.status!=='พ้นสภาพ'&&issBad(e).length).length,nChk=list.filter(e=>e.status!=='พ้นสภาพ'&&dataIssues(e).some(x=>x[0]==='chk')).length;
   const mvP=S.moves.filter(m=>m.status==='รออนุมัติ'&&(inScope(m.from)||inScope(m.to)));
   const opts=(k,vals,lab)=>`<label class="f">${lab}<select class="reg-f" data-k="${k}"><option value="">ทั้งหมด</option>${vals.map(v=>`<option ${(S.regF||{})[k]===v?'selected':''}>${esc(v)}</option>`).join('')}</select></label>`;
@@ -1519,7 +1521,7 @@ function regTable(){
   return `${mvP.length?`<div class="note warn"><b>คำขอโยกย้าย / เปลี่ยนตำแหน่งรออนุมัติ ${mvP.length} รายการ</b> · ดูและอนุมัติที่แท็บ "โยกย้าย / เปลี่ยนตำแหน่ง"</div>`:''}<div class="row"><h2>ทะเบียนพนักงาน</h2><span class="muted">${list.length} คน · กดชื่อเพื่อดูรายละเอียด</span></div>
   ${nBad||nChk?`<div class="note warn"><b>ต้องตรวจ:</b> ${nBad?`ข้อมูล / เอกสารไม่ครบหรือไม่ถูกต้อง <b>${nBad} คน</b> <button class="btn sm" data-issf="iss|ต้องแก้">ดูเฉพาะคนที่ต้องแก้</button>`:''} ${nChk?`มีรูปเอกสารรอตรวจ <b>${nChk} คน</b> <button class="btn ghost sm" data-issf="chk|มีรูปรอตรวจ">ดูเฉพาะรูปรอตรวจ</button>`:''}</div>`:''}${regSearch}${regFilters}<p class="muted" id="reg-count"></p>
   <div class="tablewrap"><table id="reg-tbl"><tr><th>รหัส</th><th>ชื่อ</th><th>ข้อมูล / เอกสาร</th><th>สถานะ</th><th>สาขา</th><th>ตำแหน่ง</th><th>เริ่มงาน</th><th>อายุงาน</th><th>ทดลองงาน</th><th>ที่มา</th><th>แก้ไขล่าสุด</th></tr>${rows}</table></div><div class="row pager" id="reg-pager"></div><div id="reg-det"></div>
-  ${sel?`<div class="panel" style="background:var(--bg)"><div class="row"><h3>${esc(sel.name)}</h3>${statusPill(sel.status)}${sel.status==='รอตรวจสอบ'?`<button class="btn ok sm" data-verify="${sel.id}">ยืนยันเข้าทะเบียน</button>`:''}
+  ${sel?`<div class="panel" style="background:var(--bg)"><div class="row"><h3>${esc(sel.name)}</h3>${statusPill(sel.status)}${jmsStage(sel)==='รอรับรหัส J&T'?' <span class="pill p-warn">รอรับรหัส J&T</span>':''}${sel.status==='รอตรวจสอบ'?`<button class="btn ok sm" data-verify="${sel.id}">ยืนยันเข้าทะเบียน</button>`:''}
       ${isBlack(sel.idCard)?'<span class="pill p-bad">แบล็กลิสต์</span>':''}${sel.dob&&ageOf(sel.dob)<18?'<span class="pill p-warn">อายุต่ำกว่า 18</span>':''}${canEE()?`<button class="btn sm" data-empedit="${sel.id}">${S.empEdit===sel.id?'ปิดหน้าแก้ไข':'แก้ไขข้อมูลพนักงาน'}</button>`:''}${can('import')?`<button class="btn bad sm" data-empdel="${sel.id}" title="ลบพนักงานรายการนี้ออกจากทะเบียน (เช่น ส่งชื่อมา 2 รอบ)">🗑 ลบรายการนี้</button>`:''}</div>
     ${issBox(sel)}${guardKv(sel)}${fixPanel(sel)}${S.empEdit===sel.id&&canEE()?empEditForm(sel):''}
     ${sel.status==='ทำงาน'?`<div class="row"><button class="btn ghost sm" data-towarn="${sel.id}">ออกใบเตือน</button><button class="btn ghost sm" data-tm2="${sel.id}">เลิกจ้าง / ตัดออก</button><button class="btn ghost sm" data-tomove="${sel.id}">โยกย้าย / เปลี่ยนตำแหน่ง</button></div>`:''}
@@ -1529,7 +1531,7 @@ function regTable(){
     <dt>ชื่อเล่น</dt><dd>${esc(sel.nick||'-')}</dd><dt>เพศ</dt><dd>${esc(sel.sex||'-')}</dd><dt>วันเกิด</dt><dd>${th(sel.dob)}${sel.dob?' (อายุ '+ageOf(sel.dob)+' ปี)':''}</dd><dt>สัญชาติ</dt><dd>${esc(sel.nat||'-')}</dd>${sel.sex==='หญิง'?'':`<dt>สถานะทหาร</dt><dd>${esc(sel.military||'-')}</dd>`}
     <dt>เบอร์</dt><dd>${sel.phone}</dd><dt>ที่อยู่</dt><dd>${esc(sel.address||'-')}${sel.pin?` · <a href="${/^https?:\/\//.test(sel.pin)?esc(sel.pin):'https://maps.google.com/?q='+encodeURIComponent(sel.pin)}" target="_blank" rel="noopener">แผนที่บ้าน</a>`:''}</dd><dt>ผู้ติดต่อฉุกเฉิน</dt><dd>${esc(sel.emerg||'-')}</dd><dt>บัญชีกสิกร</dt><dd>${pdShow(sel,'acct')}</dd><dt>บัญชีสำรอง</dt><dd>${bk2Text(sel.bk2)}</dd><dt>รหัส JMS</dt><dd>${sel.jms||'-'}${sel.jmsName?' · '+esc(sel.jmsName):''}</dd>
     <dt>ใบขับขี่</dt><dd>${sel.licNo||'-'} ${sel.licExp?'(หมด '+th(sel.licExp)+')':''}</dd><dt>ทะเบียนรถ</dt><dd>${esc(sel.plate||'-')}${sel.taxExp?' (ภาษี/พ.ร.บ. หมด '+th(sel.taxExp)+')':''}</dd>
-    <dt>บัตรประกัน</dt><dd>${insNeed(sel)?insStage(sel):'ไม่อยู่ในกลุ่มทำประกัน'}${sel.insSelf?' · พนักงานแจ้งว่า: '+sel.insSelf:''}</dd>${canMoney()?`<dt>เงินประกันสะสม</dt><dd>${money(depSum(sel.id))} บาท</dd>`:''}<dt>รหัส J&T</dt><dd>${esc(sel.jms||'-')} ${jmsStage(sel)?`<span class="pill ${jmsStage(sel)==='ต้องแจ้งปิด'?'p-bad':'p-n'}">${jmsStage(sel)}</span>`:''}</dd><dt>ใบเตือน 12 เดือน</dt><dd>${warnsOf(sel.id).map(w=>w.level+' ('+th(w.date)+')').join(', ')||'-'}</dd><dt>ประวัติโยกย้าย</dt><dd>${S.moves.filter(m=>m.emp===sel.id).map(m=>`${m.no}: ${m.from}${m.fromPos!==m.toPos?' '+esc(m.fromPos):''} → ${m.to}${m.fromPos!==m.toPos?' '+esc(m.toPos):''} (${th(m.date)}${m.status!=='มีผลแล้ว'?' · '+m.status:''})`).join('<br>')||'-'}${sel.trialPos&&TODAY<=D(sel.trialPos.until)?`<br><span class="pill p-warn">ทดลองงานตำแหน่ง ${esc(sel.trialPos.pos)} ถึง ${th(sel.trialPos.until)}</span>`:''}</dd><dt>ประวัติลาออก</dt><dd>${S.resign.filter(r=>r.emp===sel.id).map(r=>(r.kind||'ลาออก')+' '+th(r.submitted)+' → '+r.status).join(', ')||'-'}</dd><dt>ลายเซ็นล่าสุด</dt><dd>${sigImg(sel.sign)}</dd>${sel.docs&&sel.docs.card&&sel.docs.card!=='x'?`<dt>เอกสารพาร์ทไทม์</dt><dd><img class="thumb" style="display:inline-block" src="${sel.docs.card}" alt="บัตรประชาชน"> <img class="thumb" style="display:inline-block" src="${sel.docs.bank}" alt="สมุดบัญชี"></dd>`:''}<dt>ทรัพย์สินที่ถืออยู่</dt><dd>${held(sel.id).map(a=>a.type+' '+esc(a.detail)+' ×'+a.qty).join(', ')||'-'}</dd>
+    <dt>บัตรประกัน</dt><dd>${insNeed(sel)?insStage(sel):'ไม่อยู่ในกลุ่มทำประกัน'}${sel.insSelf?' · พนักงานแจ้งว่า: '+sel.insSelf:''}</dd>${canMoney()?`<dt>เงินประกันสะสม</dt><dd>${money(depSum(sel.id))} บาท</dd>`:''}<dt>รหัส J&T</dt><dd>${esc(sel.jms||'-')} ${jmsStage(sel)?`<span class="pill ${jmsStage(sel)==='ต้องแจ้งปิด'?'p-bad':jmsStage(sel)==='รอรับรหัส J&T'?'p-warn':'p-n'}">${jmsStage(sel)}</span>`:''} ${needJms(sel)?'':'<span class="pill p-n">ไม่ใช้รหัส JMS</span>'}${canEE()&&sel.status!=='พ้นสภาพ'?` <button type="button" class="btn ghost sm" data-jmsneed="${sel.id}">${needJms(sel)?'เปลี่ยนเป็น: ไม่ต้องใช้รหัส JMS':'เปลี่ยนเป็น: ต้องใช้รหัส JMS'}</button>`:''}</dd><dt>ใบเตือน 12 เดือน</dt><dd>${warnsOf(sel.id).map(w=>w.level+' ('+th(w.date)+')').join(', ')||'-'}</dd><dt>ประวัติโยกย้าย</dt><dd>${S.moves.filter(m=>m.emp===sel.id).map(m=>`${m.no}: ${m.from}${m.fromPos!==m.toPos?' '+esc(m.fromPos):''} → ${m.to}${m.fromPos!==m.toPos?' '+esc(m.toPos):''} (${th(m.date)}${m.status!=='มีผลแล้ว'?' · '+m.status:''})`).join('<br>')||'-'}${sel.trialPos&&TODAY<=D(sel.trialPos.until)?`<br><span class="pill p-warn">ทดลองงานตำแหน่ง ${esc(sel.trialPos.pos)} ถึง ${th(sel.trialPos.until)}</span>`:''}</dd><dt>ประวัติลาออก</dt><dd>${S.resign.filter(r=>r.emp===sel.id).map(r=>(r.kind||'ลาออก')+' '+th(r.submitted)+' → '+r.status).join(', ')||'-'}</dd><dt>ลายเซ็นล่าสุด</dt><dd>${sigImg(sel.sign)}</dd>${sel.docs&&sel.docs.card&&sel.docs.card!=='x'?`<dt>เอกสารพาร์ทไทม์</dt><dd><img class="thumb" style="display:inline-block" src="${sel.docs.card}" alt="บัตรประชาชน"> <img class="thumb" style="display:inline-block" src="${sel.docs.bank}" alt="สมุดบัญชี"></dd>`:''}<dt>ทรัพย์สินที่ถืออยู่</dt><dd>${held(sel.id).map(a=>a.type+' '+esc(a.detail)+' ×'+a.qty).join(', ')||'-'}</dd>
     <dt>ที่มาข้อมูล</dt><dd>${esc(sel.source||'-')}${sel.appNo?' · ใบสมัคร '+esc(sel.appNo):''}${sel.updated?' · อัปเดตล่าสุด '+th(sel.updated):''}</dd>${(sel.editLog||[]).length?`<dt>ประวัติแก้ไขโดยหลังบ้าน</dt><dd>${sel.editLog.slice(-5).reverse().map(l=>th(l.date)+' '+esc(l.by)+' ('+esc(l.f)+')').join('<br>')}</dd>`:''}
     ${sel.endDate?`<dt>วันพ้นสภาพ</dt><dd>${th(sel.endDate)}</dd>`:''}</dl>
     <h3>ไฟล์แนบของพนักงาน</h3>${attachGrid(sel.docs,sel.upl,sel)}
@@ -1898,16 +1900,18 @@ function letterView(){
 }
 // ----- รหัส J&T -----
 const JMS_POS=/นำจ่าย|รับพัสดุ|คัดแยก|ADMIN|SPV/;
-function jmsStage(e){if(!JMS_POS.test(e.pos)&&!e.jms)return '';if(e.status==='รอตรวจสอบ')return '';
+// ต้องใช้รหัส JMS ไหม: ตั้งรายคนได้ (jmsNeed 'yes'/'no') ถ้าไม่ตั้ง ดูจากตำแหน่ง
+const needJms=e=>!e?false:e.jmsNeed==='no'?false:e.jmsNeed==='yes'?true:JMS_POS.test(e.pos||'');
+function jmsStage(e){if(!needJms(e)&&!e.jms)return '';if(e.status==='รอตรวจสอบ')return '';
   if(e.status==='พ้นสภาพ'){if(!e.jms)return '';return e.jmsClosed?'ปิดแล้ว':'ต้องแจ้งปิด'}
-  if(e.jmsMove)return 'ต้องเปลี่ยนรหัส';return e.jms?'ใช้งาน':'รอขอรหัส'}
+  if(e.jmsMove)return 'ต้องเปลี่ยนรหัส';return e.jms?'ใช้งาน':needJms(e)?'รอรับรหัส J&T':''}
 function jtAdm(){
   const list=S.emp.filter(e=>inScope(e.branch)&&jmsStage(e));const f=S.jtF||'ต้องแจ้งปิด';
-  const ST=['ต้องแจ้งปิด','รอขอรหัส','ต้องเปลี่ยนรหัส','ใช้งาน','ปิดแล้ว'];const selfN=list.filter(e=>e.jmsSelf&&e.status==='ทำงาน').length;const cnt={};list.forEach(e=>{const s=jmsStage(e);cnt[s]=(cnt[s]||0)+1});
+  const ST=['ต้องแจ้งปิด','รอรับรหัส J&T','ต้องเปลี่ยนรหัส','ใช้งาน','ปิดแล้ว'];const selfN=list.filter(e=>e.jmsSelf&&e.status==='ทำงาน').length;const cnt={};list.forEach(e=>{const s=jmsStage(e);cnt[s]=(cnt[s]||0)+1});
   const show=list.filter(e=>jmsStage(e)===f);
   const q=(S.jtQ||'').trim();const found=q?S.emp.filter(e=>(e.jms&&e.jms.toUpperCase().includes(q.toUpperCase()))||(e.jmsName&&e.jmsName.includes(q))||(e.jmsOld||[]).some(o=>o.code.toUpperCase().includes(q.toUpperCase()))):[];
   const rows=show.map(e=>{const s=jmsStage(e);let act='';
-    if(s==='รอขอรหัส'&&can('card'))act=`<input id="jt-in-${e.id}" placeholder="รหัส เช่น ${e.branch}T000xxx" style="width:160px"> <input id="jt-nm-${e.id}" placeholder="ชื่อในระบบ JMS" value="${esc(e.name)}" style="width:170px"> <button class="btn sm" data-jtset="${e.id}">บันทึก</button>`;
+    if(s==='รอรับรหัส J&T'&&can('card'))act=`<input id="jt-in-${e.id}" placeholder="รหัส เช่น ${e.branch}T000xxx" style="width:160px"> <input id="jt-nm-${e.id}" placeholder="ชื่อในระบบ JMS" value="${esc(e.name)}" style="width:170px"> <button class="btn sm" data-jtset="${e.id}">บันทึก</button> <button class="btn ghost sm" data-jtno="${e.id}" title="พนักงานคนนี้ไม่ต้องใช้รหัส JMS">ไม่ต้องใช้รหัส</button>`;
     if(s==='ต้องเปลี่ยนรหัส'&&can('card'))act=`<span class="pill p-warn">ย้ายจาก ${e.jmsMove} ไป ${e.branch}</span> <input id="jt-in-${e.id}" placeholder="รหัสใหม่ ${e.branch}T000xxx" style="width:170px"> <input id="jt-nm-${e.id}" value="${esc(e.jmsName||e.name)}" style="width:170px"> <button class="btn sm" data-jtset="${e.id}">บันทึกรหัสใหม่</button>`;
     if(s==='ต้องแจ้งปิด'){const d=e.endDate?daysBetween(D(e.endDate),TODAY):0;act=`<span class="pill ${d>3?'p-bad':'p-warn'}">${d>=0?'ออกมาแล้ว '+d+' วัน':'ออกอีก '+(-d)+' วัน'}</span> ${can('card')?`<button class="btn sm" data-jtclose="${e.id}">แจ้งปิดกับ J&T แล้ว</button>`:''}`}
     if(s==='ปิดแล้ว')act=`ปิด ${th(e.jmsClosed)} · ${esc(e.jmsBy||'')}`;
@@ -1921,6 +1925,8 @@ function jtAdm(){
   <div class="tablewrap"><table><tr><th>รหัส JMS</th><th>ชื่อใน JMS</th><th>รหัส PE</th><th>ชื่อ</th><th>สาขา</th><th>ตำแหน่ง</th><th>สถานะพนักงาน</th><th>วันสุดท้าย</th><th></th></tr>${rows||'<tr><td colspan="9" class="muted">ไม่มีรายการ</td></tr>'}</table></div>`;
 }
 function bindHr2(){
+  document.querySelectorAll('[data-jtno]').forEach(b=>b.onclick=()=>{const e=E(b.dataset.jtno);e.jmsNeed='no';toast(e.name+' · ไม่ต้องใช้รหัส JMS');render()});
+  document.querySelectorAll('[data-jmsneed]').forEach(b=>b.onclick=()=>{const e=E(b.dataset.jmsneed);e.jmsNeed=needJms(e)?'no':'yes';toast(e.name+(e.jmsNeed==='no'?' · ไม่ต้องใช้รหัส JMS':' · ต้องใช้รหัส JMS'));render()});
   const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn};
   const we=$('#wn-emp');if(we)we.onchange=()=>{S.warnEmp=we.value;render()};
   on('#wn-add',()=>{const emp=$('#wn-emp').value,dt=$('#wn-detail').value.trim();if(!emp||!dt){toast('เลือกพนักงานและใส่รายละเอียด');return}
@@ -3151,12 +3157,53 @@ function seedPdpa(){
   S.breach.push({no:'BR-001',found:new Date(Date.now()-30*36e5).toISOString(),what:'มือถือ SPV ที่ล็อกอินหลังบ้านไว้หายระหว่างทาง (มีรายชื่อ เบอร์ เลขบัญชีแบบปิดบางส่วนของพนักงานสาขา 301714)',n:'12',risk:'มีความเสี่ยง (แจ้ง สคส.)',act:'ออกจากระบบทุกอุปกรณ์ เปลี่ยนรหัส Google ของ SPV แล้ว',status:'เปิด',by:'แอดมินบริษัท'});
 }
 // ---------- กล้อง: ถ่ายสดเท่านั้น ----------
+// เปิดกล้องไม่ได้ → บอกวิธีแก้ตามสาเหตุ (เปิดในแอปแชท / ไม่ได้อนุญาต / กล้องถูกแอปอื่นใช้)
+const inApp=()=>/FBAN|FBAV|FB_IAB|FBIOS|Messenger|MessengerLite|Line\/|Instagram|TikTok|KAKAOTALK|; wv\)/i.test(navigator.userAgent||'');
+const isAndroid=()=>/Android/i.test(navigator.userAgent||'');
+// ป๊อปอัปวิธีแก้ กล้อง / GPS ตามรุ่นมือถือ (Android / iPhone / ยี่ห้อ) — เด้งเองเมื่อใช้ไม่ได้ และกดเปิดเองได้
+function devInfo(){const u=navigator.userAgent||'',ios=/iPhone|iPad|iPod/i.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1);
+  const br=ios?'iPhone':/SM-|Samsung/i.test(u)?'Samsung':/CPH\d|OPPO/i.test(u)?'OPPO':/RMX\d|realme/i.test(u)?'realme':/Redmi|Xiaomi|POCO|\bMI\b|\bM2\d{3}/i.test(u)?'Xiaomi':/vivo|\bV2\d{3}/i.test(u)?'vivo':/HUAWEI|HONOR/i.test(u)?'Huawei':'Android';
+  return{ios,br,crios:/CriOS/.test(u),app:inApp()}}
+function helpSteps(kind,why){const d=devInfo(),url=location.href.split('#')[0],L=a=>`<ol class="hp">${a.map(x=>`<li>${x}</li>`).join('')}</ol>`;
+  const chrome='intent://'+url.replace(/^https?:\/\//,'')+'#Intent;scheme=https;package=com.android.chrome;end',bw=d.ios?(d.crios?'Chrome':'Safari'):'Chrome';
+  if(d.app)return `<p><b>คุณเปิดเว็บจากในแอปแชท (LINE / Messenger / Facebook)</b> ซึ่ง${kind==='cam'?'ใช้กล้อง':'ใช้ตำแหน่ง'}ไม่ได้ ต้องเปิดใน <b>${d.ios?'Safari':'Chrome'}</b></p>
+   <div class="row">${d.ios?'':`<a class="btn" href="${chrome}">เปิดใน Chrome</a>`}<button type="button" class="btn ghost" data-hpcopy="1">คัดลอกลิงก์</button></div>
+   ${L([`กด <b>⋮</b> หรือ <b>•••</b> มุมขวาบน (หรือขวาล่าง)`,`เลือก <b>"เปิดในเบราว์เซอร์" / "Open in ${d.ios?'Safari':'Chrome'}"</b>`,'ถ้าไม่มีเมนูนี้ กด "คัดลอกลิงก์" แล้วไปวางในช่องที่อยู่เว็บของ '+(d.ios?'Safari':'Chrome')])}`;
+  const nm=kind==='cam'?'กล้อง':'ตำแหน่ง';
+  const brand={Samsung:kind==='cam'?'ตั้งค่า → ความปลอดภัยและความเป็นส่วนตัว → ความเป็นส่วนตัว → <b>การเข้าถึงกล้อง: เปิด</b>':'ตั้งค่า → ตำแหน่ง → <b>เปิด</b> · และ ความปลอดภัยและความเป็นส่วนตัว → ความเป็นส่วนตัว → <b>การเข้าถึงตำแหน่ง: เปิด</b>',
+    OPPO:`ตั้งค่า → ความเป็นส่วนตัว → ตัวจัดการสิทธิ์ → ${nm} → <b>Chrome → อนุญาต</b>`,realme:`ตั้งค่า → ความเป็นส่วนตัว → ตัวจัดการสิทธิ์ → ${nm} → <b>Chrome → อนุญาต</b>`,
+    Xiaomi:`ตั้งค่า → แอป → สิทธิ์ → ${nm} → <b>Chrome → อนุญาต</b>`,vivo:`ตั้งค่า → แอปและการอนุญาต → ตัวจัดการสิทธิ์ → ${nm} → <b>Chrome → อนุญาต</b>`,Huawei:`ตั้งค่า → แอป → Chrome → สิทธิ์ → <b>${nm} → อนุญาต</b>`}[d.br];
+  if(kind==='cam'){if(/NotReadable|TrackStart|Abort/.test(why||''))return `<p><b>กล้องถูกแอปอื่นใช้อยู่</b></p>${L(['ปิดแอปกล้อง และวิดีโอคอล (LINE / Messenger / Zoom) ให้หมด','กลับมาที่หน้านี้ แล้วกด "ลองใหม่" ด้านล่าง'])}`;
+    return d.ios?`<p><b>iPhone · อนุญาตกล้องให้ ${bw}</b></p>${L(d.crios?['ตั้งค่า → <b>Chrome</b> → <b>กล้อง → เปิด</b>','กลับมาหน้านี้ แล้วกด "โหลดหน้าใหม่"']:['ในหน้าเว็บนี้ กด <b>"AA"</b> ที่ช่องที่อยู่เว็บ → <b>การตั้งค่าเว็บไซต์ → กล้อง → อนุญาต</b>','ถ้ายังไม่ได้: ตั้งค่า → แอป → <b>Safari → กล้อง → อนุญาต</b> (iOS เก่า: ตั้งค่า → Safari → กล้อง)','ตั้งค่า → เวลาหน้าจอ → ข้อจำกัดเนื้อหาและความเป็นส่วนตัว → ดูว่า <b>กล้อง</b> ไม่ได้ถูกปิด','กด "โหลดหน้าใหม่" แล้วกด <b>อนุญาต</b> เมื่อมีหน้าต่างถาม'])}`
+     :`<p><b>${d.br} · อนุญาตกล้องให้ Chrome</b></p>${L(['กดไอคอน <b>🔒 หรือ ⚙</b> ซ้ายของช่องที่อยู่เว็บ → <b>สิทธิ์ → กล้อง → อนุญาต</b>','ตั้งค่ามือถือ → แอปพลิเคชัน → <b>Chrome → การอนุญาต → กล้อง → อนุญาตเฉพาะขณะใช้แอป</b>',brand,'กด "โหลดหน้าใหม่" แล้วกด <b>อนุญาต</b> เมื่อมีหน้าต่างถาม'].filter(Boolean))}`}
+  // GPS
+  const head=why==='acc'?'ตำแหน่งยังไม่แม่นพอ (มือถือส่งตำแหน่งแบบคร่าวๆ)':why==1?'ยังไม่ได้อนุญาตให้เว็บใช้ตำแหน่ง':why==2?'GPS ในมือถือปิดอยู่ / หาตำแหน่งไม่ได้':'ยังหาตำแหน่งไม่ได้';
+  return d.ios?`<p><b>iPhone · ${head}</b></p>${L(['ตั้งค่า → ความเป็นส่วนตัวและความปลอดภัย → <b>บริการหาตำแหน่ง → เปิด</b>',d.crios?'ในหน้าเดียวกัน → <b>Chrome</b> → เลือก <b>ขณะใช้งานแอป</b> + เปิด <b>ตำแหน่งที่แม่นยำ</b>':'ในหน้าเดียวกัน → <b>เว็บไซต์ของ Safari</b> → เลือก <b>ขณะใช้งานแอป</b> + เปิด <b>ตำแหน่งที่แม่นยำ</b>',d.crios?'':'ในหน้าเว็บนี้ กด <b>"AA"</b> → การตั้งค่าเว็บไซต์ → <b>ตำแหน่ง → อนุญาต</b>','เปิด <b>Wi-Fi</b> ไว้ (ไม่ต้องเชื่อมต่อ) และออกไปยืน<b>ที่โล่ง</b> นอกหลังคาเหล็ก','กด "โหลดหน้าใหม่" แล้วกด <b>อนุญาต</b> เมื่อมีหน้าต่างถาม'].filter(Boolean))}`
+   :`<p><b>${d.br} · ${head}</b></p>${L(['ปัดแถบด้านบนลงมา → กดไอคอน <b>📍 ตำแหน่ง</b> ให้เปิด','กดไอคอน <b>🔒</b> ซ้ายช่องที่อยู่เว็บ → <b>สิทธิ์ → ตำแหน่ง → อนุญาต</b>','ตั้งค่า → แอปพลิเคชัน → <b>Chrome → การอนุญาต → ตำแหน่ง</b> → อนุญาตขณะใช้แอป + เปิด <b>ใช้ตำแหน่งที่แม่นยำ</b>','ตั้งค่า → ตำแหน่ง → บริการตำแหน่ง → <b>ความแม่นยำของตำแหน่ง Google → เปิด</b>',brand,'เปิด <b>Wi-Fi</b> ไว้ (ไม่ต้องเชื่อมต่อ) และออกไปยืน<b>ที่โล่ง</b> นอกหลังคาเหล็ก','กด "ลองใหม่" หรือ "โหลดหน้าใหม่"'].filter(Boolean))}`}
+function helpPop(kind,why,force){S.hpShown=S.hpShown||{};const key=kind+'|'+why;if(!force&&S.hpShown[key])return;S.hpShown[key]=1;
+  const old=document.getElementById('hp-modal');if(old)old.remove();const w=document.createElement('div');w.id='hp-modal';w.className='mg-back';
+  w.innerHTML=`<div class="mg" role="alertdialog" aria-modal="true" aria-labelledby="hp-t"><h3 id="hp-t" class="warn">${kind==='cam'?'📷 เปิดกล้องไม่ได้ · ทำตามนี้':'📍 หาตำแหน่งไม่ได้ · ทำตามนี้'}</h3>${helpSteps(kind,why)}
+   <div class="row" style="margin-top:12px"><button type="button" class="btn" data-hpretry="1">ลองใหม่</button><button type="button" class="btn ghost" data-hpreload="1">โหลดหน้าใหม่</button><button type="button" class="btn ghost" data-hpx="1">ปิด</button></div>
+   <p class="muted" style="font-size:13px;margin-top:8px">ทำครบแล้วยังไม่ได้ → แคปหน้าจอส่ง SPV</p></div>`;
+  document.body.appendChild(w);const x=()=>w.remove();
+  w.querySelector('[data-hpx]').onclick=x;w.onclick=e=>{if(e.target===w)x()};w.querySelector('[data-hpreload]').onclick=()=>location.reload();
+  w.querySelector('[data-hpretry]').onclick=()=>{x();if(kind==='cam'){stream=null;startCam()}else{const b=$('#c-gpsre');if(b)b.click();else location.reload()}};
+  const cp=w.querySelector('[data-hpcopy]');if(cp)cp.onclick=()=>{const u=location.href.split('#')[0];try{navigator.clipboard.writeText(u).then(()=>toast('คัดลอกลิงก์แล้ว'))}catch(e){prompt('คัดลอกลิงก์นี้',u)}}}
+function camHelp(){helpPop('cam',S.camErr);const box=$('#cam-msg');if(!box)return;let h=$('#cam-help');if(!h){h=document.createElement('div');h.id='cam-help';h.className='note warn';h.style.marginTop='10px';box.after(h)}
+  const url=location.href.split('#')[0],chrome='intent://'+url.replace(/^https?:\/\//,'')+'#Intent;scheme=https;package=com.android.chrome;end';
+  const ia=inApp(),busy=/NotReadable|TrackStart|Abort/.test(S.camErr||'');
+  h.innerHTML=ia?`<b>📵 เปิดจากแอปแชท (Messenger / LINE / Facebook) ใช้กล้องไม่ได้</b><br>ต้องเปิดเว็บนี้ใน <b>Chrome</b> ${isAndroid()?'กดปุ่มด้านล่างได้เลย':'(iPhone ใช้ Safari)'}<div class="row" style="margin-top:8px">${isAndroid()?`<a class="btn" href="${chrome}">เปิดใน Chrome</a>`:''}<button type="button" class="btn ghost" id="cam-copy">คัดลอกลิงก์</button></div><small>หรือกด ⋮ / ••• มุมขวาบน → "เปิดในเบราว์เซอร์" / "Open in Chrome"</small>`
+   :busy?`<b>กล้องถูกแอปอื่นใช้อยู่</b><br>ปิดแอปกล้อง / วิดีโอคอล (LINE, Messenger) ก่อน แล้วกด "ลองเปิดกล้องอีกครั้ง"<div class="row" style="margin-top:8px"><button type="button" class="btn" id="cam-retry">ลองเปิดกล้องอีกครั้ง</button></div>`
+   :`<b>ยังไม่ได้อนุญาตให้เว็บใช้กล้อง</b><ol style="margin:6px 0 0 1.2em;padding:0"><li>กดไอคอน 🔒 หรือ ⚙ ซ้ายของช่องที่อยู่เว็บ → <b>สิทธิ์ → กล้อง → อนุญาต</b></li><li>ถ้าไม่มีให้กด: ตั้งค่ามือถือ → แอป → <b>Chrome</b> → การอนุญาต → <b>กล้อง → อนุญาต</b></li><li>OPPO / realme: ตั้งค่า → ความเป็นส่วนตัว → ตัวจัดการสิทธิ์ → กล้อง → Chrome → อนุญาต · Samsung: ดูว่าไม่ได้ปิด "การเข้าถึงกล้อง" ในแผงด่วน</li></ol><div class="row" style="margin-top:8px"><button type="button" class="btn" id="cam-retry">ลองเปิดกล้องอีกครั้ง</button><button type="button" class="btn ghost" id="cam-reload">โหลดหน้าใหม่</button></div>`;
+  const r=$('#cam-retry');if(r)r.onclick=()=>{stream=null;startCam()};const rl=$('#cam-reload');if(rl)rl.onclick=()=>location.reload();
+  const cp=$('#cam-copy');if(cp)cp.onclick=()=>{try{navigator.clipboard.writeText(url).then(()=>toast('คัดลอกลิงก์แล้ว · ไปวางใน Chrome'))}catch(e){prompt('คัดลอกลิงก์นี้ไปเปิดใน Chrome',url)}}}
 let stream=null,simT=null;
 async function startCam(){
   const v=$('#vf-video'),c=$('#vf-sim');
-  if(!stream){try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false})}catch(e){stream=null}}
-  if(stream&&v){v.srcObject=stream;v.hidden=false;c.hidden=true;return}
+  if(!stream){try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});S.camErr=null}catch(e){stream=null;S.camErr=(e&&e.name)||'x'}}
+  if(stream&&v){v.srcObject=stream;v.hidden=false;c.hidden=true;const h=$('#cam-help');if(h)h.remove();return}
   if($('#cam-msg'))$('#cam-msg').textContent='กด "ถ่ายรูป" ระบบจะเปิดกล้องมือถือให้ถ่ายทันที · รูปเก่าในเครื่องใช้ไม่ได้';
+  if(S.camErr)camHelp();
   const g=c.getContext('2d');let k=0;clearInterval(simT);
   simT=setInterval(()=>{if(!document.body.contains(c)){clearInterval(simT);return}k++;
     g.fillStyle='#2a2524';g.fillRect(0,0,300,400);
@@ -3166,7 +3213,7 @@ async function startCam(){
     g.fillStyle='#fff';g.font='14px Sarabun,sans-serif';g.fillText('กด ถ่ายรูป เพื่อเปิดกล้อง',12,24)},120);
 }
 function stopCam(){clearInterval(simT);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}}
-function snap(){if(S.page!=='card'&&S.who&&!geoState(E(S.who)).ok){toast('อยู่นอกรัศมีสาขา ลงเวลาไม่ได้');return}const v=$('#vf-video');if(v&&!v.hidden)return stamp(v);toast('เปิดกล้องไม่ได้ · กดอนุญาตให้เว็บใช้กล้อง แล้วโหลดหน้าใหม่');startCam&&startCam()}
+function snap(){if(S.page!=='card'&&S.who&&!geoState(E(S.who)).ok){toast('อยู่นอกรัศมีสาขา ลงเวลาไม่ได้');return}const v=$('#vf-video');if(v&&!v.hidden)return stamp(v);toast(inApp()?'เปิดจากแอปแชท ใช้กล้องไม่ได้ · กด "เปิดใน Chrome" ด้านล่าง':'เปิดกล้องไม่ได้ · ดูวิธีแก้ด้านล่างปุ่มถ่ายรูป');stream=null;startCam&&startCam()}
 function fromFile(inp){const f=inp.files&&inp.files[0];if(!f)return;inp.value='';
   if(!/^image\//.test(f.type||'image/')){toast('ต้องเป็นรูปถ่ายเท่านั้น');return}
   const age=Date.now()-(f.lastModified||0);if(age>60000||age<-60000){toast('ใช้ได้เฉพาะรูปที่เพิ่งถ่ายจากกล้องตอนนี้ · รูปเก่าในเครื่องใช้ไม่ได้');return}
@@ -3214,11 +3261,11 @@ function bind(){
     const pk=apPick(a),[pos,type]=appPos(pk.key);const br0=$('#ap-br').value;
     if(HC_POS[pos]){const h=hcStatus(br0,pos);if(!h.canAdd){toast('สาขา '+br0+' '+HC_POS[pos]+'เกินเกณฑ์ ต้องขอเพิ่มคนก่อน');return}if(h.act>=h.allow&&!(($('#ap-req')||{}).value)){toast('สาขาเต็มเกณฑ์ ต้องเลือกคำขอเพิ่มคนที่อนุมัติแล้ว');return}}
     const n=seq.pe++;
-    if(startErr($('#ap-start').value)){toast(startErr($('#ap-start').value));return}if(pk.key!==a.pos){a.posApplied=a.pos;a.pos=pk.key}if(pk.pt!==!!a.ptime){a.ptApplied=!!a.ptime;a.ptime=pk.pt}
+    {const sv=$('#ap-start').value,er=!sv?'กรุณาใส่วันเริ่มงาน':sv<OPEN_DATE?startErr(sv):D(sv)>addDays(TODAY,60)?'วันเริ่มงานล่วงหน้าได้ไม่เกิน 60 วัน':'';if(er){toast(er);return}}if(pk.key!==a.pos){a.posApplied=a.pos;a.pos=pk.key}if(pk.pt!==!!a.ptime){a.ptApplied=!!a.ptime;a.ptime=pk.pt}
     const e=mk(n,{ptime:pk.pt,name:a.title+a.name,phone:a.phone,sex:a.sex,dob:a.dob||'',nick:a.nick||'',nat:a.nat||'',military:a.military||'',pin:a.pin||'',branch:$('#ap-br').value,pos,type,start:$('#ap-start').value,acct:a.acct,bk2:a.bk2||null,address:a.addr,emerg:a.emerg,licNo:a.licNo||'',licExp:a.licExp||'',plate:a.plate||'',taxExp:a.taxExp||'',payType:$('#ap-paytype').value,payAmt:+$('#ap-rate').value||0,dailyRate:toDaily($('#ap-paytype').value,+$('#ap-rate').value||0),source:'สมัครใหม่ ('+a.no+')',updated:iso(TODAY)});
-    e.idCard=a.idCard;e.docs=Object.assign({},a.docs);e.appNo=a.no;if(a.guardian)e.guardian=a.guardian;e.sign=a.sign;e.profileDone=true;S.emp.push(e);a.status='อนุมัติ';a.empId=e.id;if(a.ackAt)ackRec(e.id,a.sign,a.ackAt);
+    e.idCard=a.idCard;e.docs=Object.assign({},a.docs);e.appNo=a.no;{const jn=($('#ap-jms')||{}).value;if(jn)e.jmsNeed=jn}if(a.guardian)e.guardian=a.guardian;e.sign=a.sign;e.profileDone=true;S.emp.push(e);a.status='อนุมัติ';a.empId=e.id;if(a.ackAt)ackRec(e.id,a.sign,a.ackAt);
     const rq=($('#ap-req')||{}).value;if(rq){const r=S.hcReq.find(x=>x.no===rq);r.fills=r.fills||[];r.fills.push({emp:e.id,date:iso(TODAY),app:a.no})}
-    toast('อนุมัติแล้ว ออกรหัส '+e.id+(rq?' · ปิดคำขอ '+rq:'')+(type?' · เพิ่มในรายชื่อรับบัตรประกัน':''));render()});
+    toast('อนุมัติแล้ว ออกรหัส '+e.id+(rq?' · ปิดคำขอ '+rq:'')+(jmsStage(e)==='รอรับรหัส J&T'?' · สถานะ: รอรับรหัส J&T':'')+(type?' · เพิ่มในรายชื่อรับบัตรประกัน':''));render()});
   if($('#a-pos')){
     const sync=()=>{const p=$('#a-pos').value,veh=NEEDS_VEHICLE(p);$('#a-veh').hidden=!veh;$('#a-f5w').hidden=!veh;$('#a-milwrap').hidden=$('#a-title').value!=='นาย';const ag=ageOf($('#a-dob').value);$('#a-guard').hidden=!(ag!==null&&ag<18)};
     $('#a-pos').onchange=sync;$('#a-title').onchange=sync;$('#a-dob').addEventListener('change',sync);$('#a-dob').addEventListener('input',sync);sync();
@@ -3246,9 +3293,9 @@ function bind(){
         if(!S.who&&S.page==='oldentry'&&!oldRegOpen()){$('#a-msg').textContent='ช่วงเพิ่มข้อมูลพนักงานเดิมปิดแล้ว';return}
         if(!/^0\d{9}$/.test(g('#a-phone'))){$('#a-msg').textContent='ใส่เบอร์โทร 10 หลัก (ใช้เป็นรหัสเข้าสู่ระบบ)';$('#a-msg').style.color='var(--bad)';return}
         if(e&&e.status==='พ้นสภาพ'){$('#a-msg').textContent='เลขบัตรนี้พ้นสภาพแล้ว';return}
-        const jms=g('#a-jms').toUpperCase();if(JMS_POS.test(appPos(p)[0])&&(!jms||!g('#a-jmsname'))){$('#a-msg').textContent='กรอกรหัส JMS และชื่อในระบบ JMS ให้ครบ';$('#a-msg').style.color='var(--bad)';return}const dup=jms&&S.emp.find(x=>x.jms===jms&&x.idCard!==id);if(dup){$('#a-msg').textContent='รหัส JMS นี้มีคนใช้แล้ว ตรวจสอบอีกครั้ง';return}
+        const jms=g('#a-jms').toUpperCase();if(JMS_POS.test(appPos(p)[0])&&!($('#a-nojms')||{}).checked&&(!jms||!g('#a-jmsname'))){$('#a-msg').textContent='กรอกรหัส JMS และชื่อในระบบ JMS ให้ครบ';$('#a-msg').style.color='var(--bad)';return}const dup=jms&&S.emp.find(x=>x.jms===jms&&x.idCard!==id);if(dup){$('#a-msg').textContent='รหัส JMS นี้มีคนใช้แล้ว ตรวจสอบอีกครั้ง';return}
         const [pos,type]=appPos(p);const merged=!!e;if(!e){e=mk(seq.pe++,{});e.idCard=id;S.emp.push(e)}
-        Object.assign(e,{ptime:!!g('#a-ptime'),name:g('#a-title')+g('#a-name'),sex:g('#a-title')==='นาย'?'ชาย':'หญิง',dob:g('#a-dob'),phone:g('#a-phone'),branch:g('#a-branch'),pos,type,start:g('#a-start'),jms,jmsSelf:jms?iso(TODAY):'',acct:g('#a-acct'),bk2:readBk2('a'),jmsName:g('#a-jmsname'),address:g('#a-addr'),nick:g('#a-nick'),nat:g('#a-nat'),military:g('#a-title')==='นาย'?g('#a-mil'):'',pin:g('#a-pin'),emerg:g('#a-ename')+' ('+g('#a-erel')+') '+g('#a-ephone'),status:merged&&e.status==='ทำงาน'?'ทำงาน':'รอตรวจสอบ',source:merged&&e.source?e.source:'พนักงานเดิม (กรอกย้อนหลัง)',profileDone:true,updated:iso(TODAY)});
+        Object.assign(e,{ptime:!!g('#a-ptime'),name:g('#a-title')+g('#a-name'),sex:g('#a-title')==='นาย'?'ชาย':'หญิง',dob:g('#a-dob'),phone:g('#a-phone'),branch:g('#a-branch'),pos,type,start:g('#a-start'),jms,jmsSelf:jms?iso(TODAY):'',acct:g('#a-acct'),bk2:readBk2('a'),jmsName:g('#a-jmsname'),jmsNeed:($('#a-nojms')||{}).checked&&!jms?'no':undefined,address:g('#a-addr'),nick:g('#a-nick'),nat:g('#a-nat'),military:g('#a-title')==='นาย'?g('#a-mil'):'',pin:g('#a-pin'),emerg:g('#a-ename')+' ('+g('#a-erel')+') '+g('#a-ephone'),status:merged&&e.status==='ทำงาน'?'ทำงาน':'รอตรวจสอบ',source:merged&&e.source?e.source:'พนักงานเดิม (กรอกย้อนหลัง)',profileDone:true,updated:iso(TODAY)});
         if(veh)Object.assign(e,{licNo:g('#a-lic'),licExp:licVal('a-licexp'),plate:g('#a-plate'),taxExp:g('#a-taxexp')});
         document.querySelectorAll('.a-asset').forEach(i=>{const n=+i.value||0;if(n>0)S.assets.push({no:'AS-'+String(seq.as++).padStart(4,'0'),emp:e.id,type:i.dataset.t,detail:'พนักงานแจ้งเอง รอหัวหน้าตรวจ',qty:n,issued:e.start,by:'พนักงานแจ้งเอง',returned:''})});
         if(guardian)e.guardian=guardian;e.sign=sg;e.docs=Object.assign({},e.docs,await readDocs());delete S.sigs['sg-guard'];ackRec(e.id,sg,nowStamp());pdpaRec(e.id,e.name,'ลงทะเบียนพนักงานเดิม');delete S.sigs['sg-apply'];S.who=e.id;S.newReg=null;S.page='oldreg';S.oldDone={name:e.name,id:e.id,merged};render();scrollTo(0,0);return}
@@ -3277,7 +3324,7 @@ function bind(){
     if(!/^0\d{9}$/.test(ph))return msg('ใส่เบอร์โทร 10 หลัก');
     S.who=null;S.newReg={id,ph};S.oldDone=null;S.page='oldreg';render();scrollTo(0,0)});
   on('#u-save','onclick',async()=>{const e=E(S.who);const g=id=>$(id)?$(id).value.trim():undefined;const jm=(g('#u-jms')||'').toUpperCase(),jn=g('#u-jmsname')||'';const posNow=e.status==='ลงทะเบียนใหม่'?g('#u-pos'):e.pos;
-    if(JMS_POS.test(posNow)&&(!jm||!jn)){toast('กรอกรหัส JMS และชื่อในระบบ JMS ให้ครบ');return}
+    if(JMS_POS.test(posNow)&&e.jmsNeed!=='no'&&(!jm||!jn)){toast('กรอกรหัส JMS และชื่อในระบบ JMS ให้ครบ');return}
     if(jm){const dup=S.emp.find(x=>x.jms===jm&&x.id!==e.id);if(dup){toast('รหัส JMS นี้มีคนใช้แล้ว ตรวจสอบอีกครั้ง หรือติดต่อหัวหน้างาน');return}}
     const sg=needSig('sg-upd');if(!sg)return;e.sign=sg;delete S.sigs['sg-upd'];{const fl=[...($('#u-files')?$('#u-files').files:[])];for(const f of fl)(e.upl=e.upl||[]).push({t:'อัปเดต '+th(TODAY)+' · '+f.name,v:await readImg(f)})}
     if(jm&&(jm!==e.jms||jn!==e.jmsName)){if(e.jms&&e.jms!==jm)(e.jmsOld=e.jmsOld||[]).push({code:e.jms,closed:iso(TODAY)});e.jms=jm;e.jmsName=jn;e.jmsSelf=iso(TODAY);e.jmsMove=null}
@@ -3367,6 +3414,7 @@ document.addEventListener('click',ev=>{const im=ev.target.closest&&ev.target.clo
   if(src&&!/^drive:/.test(src))return lbOpen(src,im.alt);
   if(im.dataset.drive&&window.REAL&&REAL.blob)REAL.blob(im.dataset.drive).then(u=>u&&u.startsWith('data:image')&&lbOpen(u,im.alt)).catch(()=>toast('โหลดรูปไม่สำเร็จ'))},true);
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!$('#lb').hidden)$('#lb').hidden=true});
+document.addEventListener('click',ev=>{const b=ev.target.closest&&ev.target.closest('[data-hpgps],[data-hpcam]');if(!b)return;if(b.dataset.hpcam!=null)helpPop('cam',S.camErr||'',true);else helpPop('gps',b.dataset.hpgps,true)});
 S.resign.find(r=>r.no==='RS-69-0001').approvedDate='2026-09-11';
 const PAGES=['apply','emp','clock','oldentry','oldreg','update','leave','resign','card'];
 function fromHash(){const h=location.hash.slice(1);if(h==='bo'){if(!S.role){S.view='adm';render()}return}if(PAGES.includes(h)){S.view='emp';S.page=['apply','clock','oldentry'].includes(h)?h:h==='oldreg'?'oldentry':'emp';S.who=null;S.shot=null;render()}}
@@ -3474,7 +3522,8 @@ REAL.afterBind=function(){
   // GPS จริงในหน้าลงเวลา
   {const rb=$('#c-gpsre');if(rb)rb.onclick=()=>{if(REAL.gpsW!=null)navigator.geolocation.clearWatch(REAL.gpsW);REAL.gpsW=null;S.gpsErr=null;S.gps=null;S.gpsShown=false;REAL.gpsLo=0;_render()}}
   if($('.cam')&&S.page!=='card'&&!REAL.gpsW&&navigator.geolocation){const ok=p=>{S.gpsErr=null;const was=S.gps&&geoState(E(S.who)).ok;S.gps={lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy),at:Date.now()};const now=geoState(E(S.who)).ok;if((was!==now||!S.gpsShown)&&!S.shot){S.gpsShown=true;_render()}else{const pl=document.querySelector('.cam .pill');if(pl)pl.textContent=geoState(E(S.who)).txt}};
-    REAL.gpsW=navigator.geolocation.watchPosition(ok,e=>{if(S.gps)return;S.gpsErr=e.code===1?'ไม่ได้อนุญาตให้เว็บนี้ใช้ตำแหน่ง · กดไอคอนด้านซ้ายช่องที่อยู่เว็บ → สิทธิ์ → ตำแหน่ง → อนุญาต':e.code===2?'มือถือหาตำแหน่งไม่ได้ · เปิด "ตำแหน่ง (GPS)" ในมือถือก่อน':'รอสัญญาณ GPS นานเกินไป · ออกไปที่โล่ง แล้วกด "หาตำแหน่งใหม่"';_render();
+    clearTimeout(REAL.hpT);REAL.hpT=setTimeout(()=>{if(!$('.cam'))return;if(!S.gps)helpPop('gps',S.gpsCode||3);else if(S.gps.acc>ATT.accMax)helpPop('gps','acc')},15000);
+    REAL.gpsW=navigator.geolocation.watchPosition(ok,e=>{if(S.gps)return;S.gpsCode=e.code;if(e.code!==3)setTimeout(()=>helpPop('gps',e.code),300);S.gpsErr=e.code===1?'ไม่ได้อนุญาตให้เว็บนี้ใช้ตำแหน่ง · กดไอคอนด้านซ้ายช่องที่อยู่เว็บ → สิทธิ์ → ตำแหน่ง → อนุญาต':e.code===2?'มือถือหาตำแหน่งไม่ได้ · เปิด "ตำแหน่ง (GPS)" ในมือถือก่อน':'รอสัญญาณ GPS นานเกินไป · ออกไปที่โล่ง แล้วกด "หาตำแหน่งใหม่"';_render();
       if(e.code!==1&&!REAL.gpsLo){REAL.gpsLo=1;navigator.geolocation.getCurrentPosition(ok,()=>{},{enableHighAccuracy:false,maximumAge:60000,timeout:15000})}},{enableHighAccuracy:true,maximumAge:5000,timeout:30000})}
   if(!$('.cam')&&REAL.gpsW!=null){navigator.geolocation.clearWatch(REAL.gpsW);REAL.gpsW=null}
 };
