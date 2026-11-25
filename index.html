@@ -1429,11 +1429,11 @@ const DOC_BAD=['ไม่ชัด / เบลอ','ถ่ายไกล อ่
 const docSig=v=>typeof v!=='string'?'':v.startsWith('drive:')?v:v.length+':'+v.slice(-40);
 function docState(e,k){const v=(e.docs||{})[k];if(!v||v==='x')return null;const c=(e.docCheck||{})[k];if(!c||c.sig!==docSig(v))return {st:'wait'};return c}
 // ข้อมูลพนักงานซ้ำ: เลขบัตรเดียวกัน หรือ ชื่อ+เบอร์เดียวกัน
-const dupKey=e=>{const id=String(e.idCard||'').replace(/\D/g,'');return{id:id.length===13?id:'',np:String(e.name||'').replace(/\s+/g,'')+'|'+String(e.phone||'').replace(/\D/g,'')}};
-function dupOf(e){if(!e)return[];const a=dupKey(e);return S.emp.filter(x=>x.id!==e.id&&(()=>{const b=dupKey(x);return (a.id&&a.id===b.id)||(a.np.length>12&&a.np===b.np)})())}
+const dupKey=e=>{const id=String(e.idCard||'').replace(/\D/g,'');return{id:id.length===13?id:'',nm:String(e.name||'').replace(/\s+/g,'')}};
+function dupOf(e){if(!e)return[];const a=dupKey(e),sv=(S.dupSrv||{})[e.id]||[];return S.emp.filter(x=>x.id!==e.id&&(sv.includes(x.id)||(()=>{const b=dupKey(x);return (a.id&&a.id===b.id)||(a.nm.length>4&&a.nm===b.nm)})()))}
 function dataIssues(e){if(!e||e.status==='พ้นสภาพ')return [];if(e.profileDone===false)return [['d:profile','พนักงานยังกรอกข้อมูลไม่เสร็จ','bad']];
   const out=docGaps(e).map(([k,t])=>[k,'ขาด'+(t.startsWith('รูป')||t.startsWith('ข้อมูล')?'':' ')+t,'bad']);const add=(k,t,l='bad')=>{if(!out.some(x=>x[0]===k))out.push([k,t,l])};
-  {const dp=dupOf(e);if(dp.length)add('d:dup','ข้อมูลซ้ำกับ '+dp.map(x=>x.id).join(', ')+' (ส่งชื่อมา 2 รอบ)')}
+  {const dp=dupOf(e);if(dp.length)add('d:dup','ชื่อ/เลขบัตรซ้ำกับ '+dp.map(x=>x.id+' ('+x.branch+')').join(', ')+' · ตรวจแล้วลบรายการที่ผิด')}
   const thNat=!e.nat||e.nat==='ไทย',p=nmSplit(e.name);
   if(!p.t||!p.f||!p.l)add('d:name','ชื่อไม่ครบ ต้องมีคำนำหน้า ชื่อ นามสกุล');else if(thNat&&(!NM_TH.test(p.f)||!NM_TH.test(p.l)))add('d:name','ชื่อ-นามสกุลไม่ใช่ภาษาไทย');
   const id=String(e.idCard||'');if(!id)add('d:id','ไม่มีเลขบัตรประชาชน');else if(!/[x*]/i.test(id)&&thNat&&!idValid(id.replace(/\D/g,'')))add('d:id','เลขบัตรประชาชนไม่ถูกต้อง');
@@ -1959,7 +1959,7 @@ function bindHr2(){
   document.querySelectorAll('[data-fxopen]').forEach(b=>b.onclick=()=>{S.admTab='reg';S.selEmp=b.dataset.fxopen;render();setTimeout(()=>{const x=document.querySelector('[data-fxnew]');if(x)x.scrollIntoView({block:'center'})},50)});
   document.querySelectorAll('[data-empedit]').forEach(b=>b.onclick=()=>{S.empEdit=S.empEdit===b.dataset.empedit?null:b.dataset.empedit;render()});
   document.querySelectorAll('[data-empdel]').forEach(b=>b.onclick=()=>{if(!can('import'))return;const e=E(b.dataset.empdel),dp=dupOf(e);if(!e||!dp.length)return toast('ลบได้เฉพาะรายการที่ซ้ำเท่านั้น');
-    if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='ยืนยันลบ '+e.id+' (เก็บ '+dp.map(x=>x.id).join(', ')+' ไว้)';return}
+    if(b.dataset.sure!=='1'){b.dataset.sure='1';const np=S.punch.filter(p=>p.emp===e.id).length;b.textContent='ยืนยันลบ '+e.id+(np?' (มีลงเวลา '+np+' วัน!)':'')+' · เก็บ '+dp.map(x=>x.id).join(', ')+' ไว้';return}
     S.emp=S.emp.filter(x=>x.id!==e.id);S.selEmp=dp[0].id;S.empEdit=null;toast('ลบ '+e.id+' แล้ว');render()});
   document.querySelectorAll('[data-eesave]').forEach(b=>b.onclick=()=>{if(!canEE())return;const sv=!can('import');const e=E(b.dataset.eesave),v=id=>{const x=$('#'+id);return x?x.value.trim():''};
     const nid=v('ee-id').replace(/\D/g,''),nac=v('ee-acct').replace(/\D/g,'');
@@ -3391,7 +3391,7 @@ REAL.flush=async function(){if(REAL.busy){REAL.again=true;return}const ops=REAL.
 REAL.status=t=>{const el=document.getElementById('rl-status');if(el)el.textContent=t};
 REAL.reset=function(){Object.keys(RC).forEach(c=>S[c]=[]);ATT.mark={};ATT.rain={};ATT.roster={};S.depDed={};S.stock={};BRANCHES.forEach(b=>S.stock[b]=S.stock[b]||{});S.reveal={};S.sigs={}};
 REAL.load=async function(){const since=iso(addDays(periodOf(addDays(periodOf(TODAY).s,-1)).s,0));const r=await api('load',{since});REAL.me=r.me;REAL.reset();
-  Object.keys(RC).forEach(c=>S[c]=r.data[c]||[]);Object.entries(r.maps||{}).forEach(([m,o])=>{if(m==='mark')ATT.mark=o;else if(m==='rain')ATT.rain=o;else if(m==='roster')ATT.roster=o;else if(m==='depDed')S.depDed=o;else if(m==='stock')S.stock=Object.assign(Object.fromEntries(BRANCHES.map(b=>[b,{}])),o)});
+  Object.keys(RC).forEach(c=>S[c]=r.data[c]||[]);if(r.dups)S.dupSrv=r.dups;Object.entries(r.maps||{}).forEach(([m,o])=>{if(m==='mark')ATT.mark=o;else if(m==='rain')ATT.rain=o;else if(m==='roster')ATT.roster=o;else if(m==='depDed')S.depDed=o;else if(m==='stock')S.stock=Object.assign(Object.fromEntries(BRANCHES.map(b=>[b,{}])),o)});
   Object.entries(r.settings||{}).forEach(([n,v])=>rSetApply(n,v));Object.keys(r.seq||{}).forEach(k=>{seq[k]=Math.max(seq[k]||1,r.seq[k])});
   REAL.markSeen();REAL.takeSnap();if(r.me.role==='admin')Object.keys(RSET).forEach(n=>{if(!r.settings[n])REAL.snap.s[n]=''});REAL.loaded=true;return r};
 // ---------- แจ้งเตือนรายการใหม่ (หลังบ้าน) ----------
