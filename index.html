@@ -174,7 +174,7 @@ tr.dim td{opacity:.55}
 .rgrid select.rs{border:0;background:transparent;font-size:.72rem;padding:6px 2px;width:100%;min-width:64px;color:inherit;cursor:pointer}.rgrid select.rs:disabled{cursor:default;opacity:.7}
 .rgrid td.r-cus{box-shadow:inset 0 0 0 2px var(--brand)}
 .mg-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
-.hp{margin:6px 0 0 1.2em;padding:0;line-height:1.7}.hp li{margin:4px 0}.mg{background:var(--surface,#fff);color:var(--fg);border-radius:16px;max-width:520px;width:100%;padding:18px 20px;box-shadow:0 12px 40px rgba(0,0,0,.35);max-height:90vh;overflow:auto}
+.linklike{all:unset;cursor:pointer;color:var(--brand,#b3141f);text-decoration:underline;text-underline-offset:3px}.hp{margin:6px 0 0 1.2em;padding:0;line-height:1.7}.hp li{margin:4px 0}.mg{background:var(--surface,#fff);color:var(--fg);border-radius:16px;max-width:520px;width:100%;padding:18px 20px;box-shadow:0 12px 40px rgba(0,0,0,.35);max-height:90vh;overflow:auto}
 .mg h3{margin:0 0 6px;font-size:1.2rem}.mg h3.bad{color:var(--bad)}.mg h3.warn{color:#a35b00}.mg ul{padding-left:20px;margin:8px 0 12px}.mg li{margin:4px 0}.mg-ack{display:flex;gap:8px;align-items:flex-start;margin:10px 0;font-weight:600}.mg-ack input{width:20px;height:20px;flex:none;margin-top:2px}
 .pager{gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
 td.iss{min-width:170px}.iss-l{font-size:.75rem;color:var(--bad);margin-top:3px;line-height:1.35}
@@ -233,7 +233,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywher
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 // ===== ใส่ URL ของ Apps Script (Deploy > Web app) ระหว่างเครื่องหมาย ' ' =====
-const API_URL='https://script.google.com/macros/s/AKfycbw2Gf7NX4huSWPWLx257MhUwB2EHxhowh0ugVg61_rAaLufeJaAUrvmRqJLkBFLFUFA/exec';
+const API_URL='PASTE_WEB_APP_URL_HERE';
 // ---------- utils ----------
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1158,7 +1158,7 @@ function _admView(){
   const hcPend=(S.role.role==='spv'&&!volOf(S.role.branch,iso(TODAY))?1:0)+(can('users')?S.hcReq.filter(r=>r.status==='รออนุมัติ'&&inScope(r.branch)).length:0);
   const blPend=S.blReq.filter(q=>q.status==='รออนุมัติ').length;
   const pendA=S.apps.filter(a=>(a.status==='รอพิจารณา'||a.status==='นัดสัมภาษณ์')&&inScope(a.branch)).length;
-  const tabs=[['apps','ผู้สมัคร',pendA],['reg','ทะเบียนพนักงาน',pendE],['leave','ใบลา',pendL],['resign','ลาออก / เลิกจ้าง',pendR],['move','โยกย้าย / เปลี่ยนตำแหน่ง',S.moves.filter(m=>m.status==='รออนุมัติ'&&(inScope(m.from)||inScope(m.to))).length],['eval','ประเมินพนักงาน',evDue],['hc','อัตรากำลัง',hcPend],['warn','ใบเตือน',0],['jt','รหัส J&T',jtTodo],['ins','บัตรประกัน',insTodo],['asset','ทรัพย์สินบริษัท',assetOwed+openRepairs().length],['dep','เงินประกัน',can('dep')?rfDue:0],['exp','ใกล้หมดอายุ',ex.length],['time','ลงเวลาทำงาน',0]];
+  const tabs=[['apps','ผู้สมัคร',pendA],['reg','ทะเบียนพนักงาน',pendE],['sum','สรุปจำนวนพนักงาน',0],['leave','ใบลา',pendL],['resign','ลาออก / เลิกจ้าง',pendR],['move','โยกย้าย / เปลี่ยนตำแหน่ง',S.moves.filter(m=>m.status==='รออนุมัติ'&&(inScope(m.from)||inScope(m.to))).length],['eval','ประเมินพนักงาน',evDue],['hc','อัตรากำลัง',hcPend],['warn','ใบเตือน',0],['jt','รหัส J&T',jtTodo],['ins','บัตรประกัน',insTodo],['asset','ทรัพย์สินบริษัท',assetOwed+openRepairs().length],['dep','เงินประกัน',can('dep')?rfDue:0],['exp','ใกล้หมดอายุ',ex.length],['time','ลงเวลาทำงาน',0]];
   {const mn=S.emp.filter(e=>inScope(e.branch)&&minorTasks(e).length).length;if(mn||S.emp.some(e=>inScope(e.branch)&&minorAtStart(e)))tabs.push(['minor','ลูกจ้างอายุต่ำกว่า 18',mn])}
   tabs.push(['pt','พาร์ทไทม์',S.emp.filter(e=>isPT(e)&&e.status==='รอตรวจสอบ'&&inScope(e.branch)).length]);
   if(canMoney())tabs.push(['ctr','สัญญา '+CTR_YEAR.ver,S.contracts.filter(c=>c.status===CTR_ST.emp).length+S.emp.filter(e=>e.status!=='พ้นสภาพ'&&ctrKindOf(e)&&!ctrOf(e.id,ctrKindOf(e))).length]);
@@ -1170,7 +1170,7 @@ function _admView(){
   if(can('import'))tabs.push(['pdpa','PDPA',S.dsr.filter(r=>!['เสร็จสิ้น','ปฏิเสธ'].includes(r.status)).length+S.breach.filter(b=>b.status!=='ปิดเรื่อง').length+pdpaDue().length],['black','แบล็กลิสต์',blPend],['qr','ลิงก์ & QR',0]);
   if(can('users'))tabs.push(['users','สิทธิ์ผู้ใช้',0]);
   if(!tabs.some(t=>t[0]===S.admTab))S.admTab='apps';
-  const F={minor:minorAdm,ctr:ctrAdm,gap:gapAdm,uni:uniAdm,pt:ptAdm,chat:chatAdm,fix:fixAdm,pdpa:pdpaAdm,move:moveAdm,apps:appsAdm,reg:regTable,leave:leaveAdm,resign:resignAdm,ins:insAdm,dep:depAdm,exp:()=>expAdm(ex),time:attAdm,users:usersAdm,warn:warnAdm,eval:evalAdm,docs:docsAdm,ack:ackAdm,hc:hcAdm,jt:jtAdm,asset:assetAdm,black:blackAdm,qr:qrAdm};
+  const F={sum:headSum,minor:minorAdm,ctr:ctrAdm,gap:gapAdm,uni:uniAdm,pt:ptAdm,chat:chatAdm,fix:fixAdm,pdpa:pdpaAdm,move:moveAdm,apps:appsAdm,reg:regTable,leave:leaveAdm,resign:resignAdm,ins:insAdm,dep:depAdm,exp:()=>expAdm(ex),time:attAdm,users:usersAdm,warn:warnAdm,eval:evalAdm,docs:docsAdm,ack:ackAdm,hc:hcAdm,jt:jtAdm,asset:assetAdm,black:blackAdm,qr:qrAdm};
   return `<div class="row"><div style="min-width:0"><h1>หลังบ้าน</h1><p class="muted">${esc(S.role.name)} · ${ROLE_NAME[S.role.role]}${S.role.branch?' · เห็นเฉพาะสาขา '+S.role.branch:' · เห็นทุกสาขา'} · ข้อมูล ณ ${th(TODAY)}</p></div><button class="btn ghost sm" id="adm-out" style="margin-left:auto">ออกจากระบบ</button></div>
   <div class="stats">
     <div class="stat"><b>${act.length}</b><span>พนักงานปัจจุบัน</span></div>
@@ -1215,7 +1215,7 @@ function appsAdm(){
       <label class="f">ประเภทค่าตอบแทน<select id="ap-paytype">${Object.keys(PAY_TYPES).map(t=>`<option ${t===defPay(appPos(pk.key)[0])?'selected':''}>${t}</option>`).join('')}</select></label>
       <label class="f"><span id="ap-ratelab">${PAY_TYPES[defPay(appPos(pk.key)[0])]}</span><input id="ap-rate" inputmode="decimal" value="${defAmt(defPay(appPos(pk.key)[0]))}"></label>
       ${(()=>{const o=openReqs(a.branch,appPos(pk.key)[0]);return `<label class="f">ปิดคำขอเพิ่มคน<select id="ap-req">${o.map(r=>`<option value="${r.no}">${r.no} · ได้ ${fillsOf(r).length}/${r.qty} · อนุมัติ ${th(r.approvedDate||r.date)}</option>`).join('')}<option value="">ไม่ผูกกับคำขอ (แทนคนออก ฯลฯ)</option></select><small class="muted">${o.length?'ผูกเพื่อวัดผลการหาคนของ HR':'ไม่มีคำขอที่เปิดอยู่ของสาขา/ตำแหน่งนี้'}</small></label>`})()}</div>
-      ${(()=>{const rp=appPos(pk.key)[0];if(!HC_POS[rp])return '';const h=hcStatus(a.branch,rp);return h.canAdd?(h.act>=h.allow?`<div class="note warn">สาขา ${a.branch} ${HC_POS[rp]}เต็มเกณฑ์แล้ว แต่มีโควตาอนุมัติพิเศษเหลือ ${h.extra} คน</div>`:''):`<div class="note"><b>สาขา ${a.branch} ตำแหน่ง${HC_POS[rp]}เกินเกณฑ์แล้ว</b> มี ${h.act} คน ควรมี ${h.allow} คน (ยอดเฉลี่ย ${Math.round(h.avg).toLocaleString('th-TH')} ชิ้น/วัน) · อนุมัติไม่ได้จนกว่าแอดมินอนุมัติคำขอเพิ่มคน</div>`})()}<div class="row"><button class="btn ok" data-apok="${a.no}" ${isBlack(a.idCard)||a.blocked||(HC_POS[appPos(pk.key)[0]]&&!hcStatus(a.branch,appPos(pk.key)[0]).canAdd)?'disabled':''}>อนุมัติ → เข้าทะเบียน</button><button class="btn ghost sm" data-apst="นัดสัมภาษณ์">นัดสัมภาษณ์</button><button class="btn ghost sm" data-apst="ไม่ผ่าน">ไม่ผ่าน</button><button class="btn ghost sm" data-apst="สละสิทธิ์">สละสิทธิ์</button></div>`})()}
+      ${(()=>{const rp=appPos(pk.key)[0];if(!HC_POS[rp])return '';const h=hcStatus(a.branch,rp);return h.canAdd?(h.act>=h.allow?`<div class="note warn">สาขา ${a.branch} ${HC_POS[rp]}เต็มเกณฑ์แล้ว แต่มีโควตาอนุมัติพิเศษเหลือ ${h.extra} คน</div>`:''):`<div class="note"><b>สาขา ${a.branch} ตำแหน่ง${HC_POS[rp]}เกินเกณฑ์แล้ว</b> มี ${h.act} คน ควรมี ${h.allow} คน (ยอดเฉลี่ย ${Math.round(h.avg).toLocaleString('th-TH')} ชิ้น/วัน) · ${S.role.role==='admin'?`แอดมินอนุมัติเกินเกณฑ์ได้<label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="ap-over" style="width:auto"> <b>ยืนยันอนุมัติเกินเกณฑ์</b></label><input id="ap-overwhy" placeholder="เหตุผล เช่น ทดแทนคนลาออก / ช่วงพีค" style="margin-top:6px">`:'อนุมัติไม่ได้จนกว่าแอดมินอนุมัติคำขอเพิ่มคน'}</div>`})()}<div class="row"><button class="btn ok" data-apok="${a.no}" ${isBlack(a.idCard)||a.blocked||(HC_POS[appPos(pk.key)[0]]&&!hcStatus(a.branch,appPos(pk.key)[0]).canAdd&&S.role.role!=='admin')?'disabled':''}>อนุมัติ → เข้าทะเบียน</button><button class="btn ghost sm" data-apst="นัดสัมภาษณ์">นัดสัมภาษณ์</button><button class="btn ghost sm" data-apst="ไม่ผ่าน">ไม่ผ่าน</button><button class="btn ghost sm" data-apst="สละสิทธิ์">สละสิทธิ์</button></div>`})()}
   </div>`:''}`;
 }
 function moveForm(e){
@@ -1925,6 +1925,8 @@ function jtAdm(){
   <div class="tablewrap"><table><tr><th>รหัส JMS</th><th>ชื่อใน JMS</th><th>รหัส PE</th><th>ชื่อ</th><th>สาขา</th><th>ตำแหน่ง</th><th>สถานะพนักงาน</th><th>วันสุดท้าย</th><th></th></tr>${rows||'<tr><td colspan="9" class="muted">ไม่มีรายการ</td></tr>'}</table></div>`;
 }
 function bindHr2(){
+  document.querySelectorAll('[data-hsst]').forEach(b=>b.onclick=()=>{S.hsq={st:b.dataset.hsst};render()});
+  document.querySelectorAll('[data-hsgo]').forEach(b=>b.onclick=()=>{const[br,p]=b.dataset.hsgo.split('|');const st=(S.hsq||{st:'ทำงาน'}).st;S.regF={br,pos:p,st:st==='ทำงาน'?'ทำงาน':st==='pend'?'รอตรวจสอบ':''};S.regPg=0;S.admTab='reg';render();scrollTo(0,0)});
   document.querySelectorAll('[data-jtno]').forEach(b=>b.onclick=()=>{const e=E(b.dataset.jtno);e.jmsNeed='no';toast(e.name+' · ไม่ต้องใช้รหัส JMS');render()});
   document.querySelectorAll('[data-jmsneed]').forEach(b=>b.onclick=()=>{const e=E(b.dataset.jmsneed);e.jmsNeed=needJms(e)?'no':'yes';toast(e.name+(e.jmsNeed==='no'?' · ไม่ต้องใช้รหัส JMS':' · ต้องใช้รหัส JMS'));render()});
   const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn};
@@ -2014,6 +2016,20 @@ const HC_POS={'คัดแยก':'คัดแยก','ADMIN':'แอดมิ
 const volOf=(b,d)=>{const v=S.vol.find(x=>x.branch===b&&x.date===d);return v?v.n:null};
 function volAvg(b){const v=[];for(let i=0;i<S.hcDays;i++){const n=volOf(b,iso(addDays(TODAY,-i)));if(n!=null)v.push(n)}return v.length?v.reduce((a,x)=>a+x,0)/v.length:0}
 const headOf=(b,pos)=>S.emp.filter(e=>e.branch===b&&e.pos===pos&&e.status==='ทำงาน').length;
+// สรุปจำนวนพนักงาน: ตำแหน่ง × สาขา (กดตัวเลข → ไปทะเบียนที่กรองไว้)
+function headSum(){const Q=S.hsq||{st:'ทำงาน'},brs=BRANCHES.filter(inScope),stOK=e=>Q.st==='all'?e.status!=='พ้นสภาพ':Q.st==='pend'?e.status==='รอตรวจสอบ':e.status==='ทำงาน';
+  const L=S.emp.filter(e=>brs.includes(e.branch)&&stOK(e)),posL=[...POSITIONS,...new Set(L.map(e=>e.pos).filter(p=>!POSITIONS.includes(p)))];
+  const n=(b,p,f=()=>true)=>L.filter(e=>e.branch===b&&e.pos===p&&f(e)).length,cell=(b,p)=>{const c=n(b,p);if(!c)return '<td class="num muted">-</td>';
+    const pt=n(b,p,isPT),fut=n(b,p,e=>e.start&&D(e.start)>TODAY),h=HC_POS[p]&&b!=='ออฟฟิศ'?hcStatus(b,p):null;
+    return `<td class="num"><button type="button" class="linklike" data-hsgo="${b}|${esc(p)}" style="font-weight:700;font-size:1.05em">${c}</button>${pt?`<br><small class="muted">พาร์ทไทม์ ${pt}</small>`:''}${fut?`<br><small class="muted">รอเริ่มงาน ${fut}</small>`:''}${h&&h.allow?`<br><small style="color:${h.act>h.allow?'var(--bad)':'var(--muted)'}">เกณฑ์ ${h.allow}${h.act>h.allow?' · เกิน '+(h.act-h.allow):''}</small>`:''}</td>`};
+  const rows=posL.filter(p=>brs.some(b=>n(b,p))),tot=b=>L.filter(e=>e.branch===b).length;
+  return `<div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0">สรุปจำนวนพนักงาน · ตำแหน่ง × สาขา</h2><span class="muted">ข้อมูล ณ ${th(TODAY)}</span></div>
+  <div class="chips" style="margin:10px 0">${[['ทำงาน','กำลังทำงาน'],['pend','รอตรวจสอบ'],['all','ทั้งหมด (ยกเว้นพ้นสภาพ)']].map(([k,l])=>`<button type="button" class="chip${Q.st===k?' on':''}" data-hsst="${k}">${l}</button>`).join('')}</div>
+  <p class="muted">กดตัวเลขเพื่อดูรายชื่อในทะเบียน · "เกณฑ์" = จำนวนที่ควรมีตามยอดพัสดุเฉลี่ย (คัดแยก / แอดมิน)</p>
+  <div class="tablewrap"><table><tr><th>ตำแหน่ง</th>${brs.map(b=>`<th class="num">${b}</th>`).join('')}<th class="num">รวม</th></tr>
+  ${rows.map(p=>`<tr><td><b>${esc(posLabel(p,''))||esc(p)}</b></td>${brs.map(b=>cell(b,p)).join('')}<td class="num"><b>${L.filter(e=>e.pos===p).length}</b></td></tr>`).join('')||`<tr><td colspan="${brs.length+2}" class="muted">ไม่มีพนักงาน</td></tr>`}
+  <tr style="background:var(--bg)"><td><b>รวม</b></td>${brs.map(b=>`<td class="num"><b>${tot(b)}</b></td>`).join('')}<td class="num"><b>${L.length}</b></td></tr></table></div>
+  ${(()=>{const ov=S.emp.filter(e=>e.overHc&&brs.includes(e.branch)&&e.status!=='พ้นสภาพ');return ov.length?`<h3>อนุมัติเกินเกณฑ์ (โดยแอดมิน)</h3><div class="tablewrap"><table><tr><th>รหัส</th><th>ชื่อ</th><th>สาขา</th><th>ตำแหน่ง</th><th>เหตุผล</th><th>อนุมัติโดย</th></tr>${ov.map(e=>`<tr><td>${e.id}</td><td>${esc(e.name)}</td><td>${e.branch}</td><td>${esc(posLabel(e.pos,''))}</td><td>${esc(e.overHc.why)} <small class="muted">(ตอนนั้นมี ${e.overHc.act} / เกณฑ์ ${e.overHc.allow})</small></td><td>${esc(e.overHc.by)}<br><small class="muted">${esc(String(e.overHc.at).replace('T',' ').slice(0,16))}</small></td></tr>`).join('')}</table></div>`:''})()}</div>`}
 function hcStatus(b,pos){const avg=volAvg(b),allow=avg?Math.ceil(avg/S.hcRatio[pos]):0,act=headOf(b,pos);
   const extra=S.hcReq.filter(r=>r.branch===b&&r.pos===pos&&r.kind==='เพิ่มคน'&&r.status==='อนุมัติ').reduce((a,r)=>a+r.qty-fillsOf(r).length,0);
   return{avg,allow,act,extra,room:allow-act,canAdd:act<allow||extra>0}}
@@ -3218,16 +3234,19 @@ function fromFile(inp){const f=inp.files&&inp.files[0];if(!f)return;inp.value=''
   if(!/^image\//.test(f.type||'image/')){toast('ต้องเป็นรูปถ่ายเท่านั้น');return}
   const age=Date.now()-(f.lastModified||0);if(age>60000||age<-60000){toast('ใช้ได้เฉพาะรูปที่เพิ่งถ่ายจากกล้องตอนนี้ · รูปเก่าในเครื่องใช้ไม่ได้');return}
   const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{stamp(im);URL.revokeObjectURL(u)};im.onerror=()=>toast('เปิดรูปไม่ได้ ลองถ่ายใหม่');im.src=u}
+// เวลาบนหน้าจอ/รูป = เวลาของเซิร์ฟเวอร์ (ประเทศไทย) ไม่ใช่เวลาที่ตั้งในมือถือ
+let CLK_OFF=0;const sysNow=()=>new Date(Date.now()+CLK_OFF);
+const sysHMS=d=>d.toLocaleTimeString('th-TH',{hour12:false,timeZone:'Asia/Bangkok'}),sysDay=d=>D(d.toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'}));
 function stamp(src){
   const W=480,H=640,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
   const sw=src.videoWidth||src.naturalWidth||src.width,sh=src.videoHeight||src.naturalHeight||src.height;const _x=src.videoHeight||src.height,r=Math.max(W/sw,H/sh);
   g.drawImage(src,(W-sw*r)/2,(H-sh*r)/2,sw*r,sh*r);
-  const now=new Date(),t=now.toLocaleTimeString('th-TH',{hour12:false}),e=E(S.who);
+  const now=sysNow(),t=sysHMS(now),e=E(S.who);
   const kind=S.page==='card'?'รับบัตรประกัน':(S.kind||attState(e).kind)==='in'?'ลงเวลาเข้างาน':'ลงเวลาออกงาน';
   // ประทับเวลา ชื่อ สาขา ลงบนรูป แก้ภายหลังไม่ได้
   g.fillStyle='rgba(0,0,0,.62)';g.fillRect(0,H-96,W,96);g.fillStyle='#fff';
   g.font='bold 26px Sarabun,sans-serif';g.fillText(kind+' '+t,16,H-58);
-  g.font='18px Sarabun,sans-serif';g.fillText('วันที่ '+th(now)+' เวลา '+now.toLocaleTimeString('th-TH',{hour12:false})+' · สาขา '+e.branch,16,H-32);
+  g.font='18px Sarabun,sans-serif';g.fillText('วันที่ '+th(sysDay(now))+' เวลา '+t+' · สาขา '+e.branch,16,H-32);
   g.fillText(e.name+' · '+(S.page==='card'?'บันทึกโดยระบบ':'GPS ห่างสาขา '+geoState(e).dist+' ม.'),16,H-10);
   S.shot={img:c.toDataURL('image/jpeg',.8),t,ms:Date.now()};stopCam();render();
 }
@@ -3258,12 +3277,15 @@ function bind(){
   const apt=$('#ap-paytype');if(apt)apt.onchange=()=>{$('#ap-ratelab').textContent=PAY_TYPES[apt.value];$('#ap-rate').value=defAmt(apt.value)};
   document.querySelectorAll('[data-apok]').forEach(b=>b.onclick=()=>{const a=S.apps.find(x=>x.no===b.dataset.apok);{const _p=appPos(apPick(a).key)[0];if(!b.__mg){minorGate({name:a.title+a.name,dob:a.dob,pos:_p,start:($('#ap-start')||{}).value},()=>{b.__mg=1;b.onclick();b.__mg=0});return}}
     if(S.emp.some(e=>e.idCard===a.idCard&&e.status==='ทำงาน')){toast('เลขบัตรนี้มีในทะเบียนแล้ว');return}
-    const pk=apPick(a),[pos,type]=appPos(pk.key);const br0=$('#ap-br').value;
-    if(HC_POS[pos]){const h=hcStatus(br0,pos);if(!h.canAdd){toast('สาขา '+br0+' '+HC_POS[pos]+'เกินเกณฑ์ ต้องขอเพิ่มคนก่อน');return}if(h.act>=h.allow&&!(($('#ap-req')||{}).value)){toast('สาขาเต็มเกณฑ์ ต้องเลือกคำขอเพิ่มคนที่อนุมัติแล้ว');return}}
+    const pk=apPick(a),[pos,type]=appPos(pk.key);const br0=$('#ap-br').value;let overHc=null;
+    if(HC_POS[pos]&&!hcStatus(br0,pos).canAdd){if(S.role.role!=='admin'){toast('สาขา '+br0+' ตำแหน่ง'+HC_POS[pos]+' เกินเกณฑ์แล้ว · ต้องให้แอดมินอนุมัติ');return}
+      const ok=($('#ap-over')||{}).checked,why=(($('#ap-overwhy')||{}).value||'').trim();if(!ok||!why){toast('อนุมัติเกินเกณฑ์: ติ๊กยืนยัน และใส่เหตุผลก่อน');return}
+      const h=hcStatus(br0,pos);overHc={by:S.role.name,at:nowStamp(),why,act:h.act,allow:h.allow}}
+    if(HC_POS[pos]&&!overHc){const h=hcStatus(br0,pos);if(!h.canAdd){toast('สาขา '+br0+' '+HC_POS[pos]+'เกินเกณฑ์ ต้องขอเพิ่มคนก่อน');return}if(h.act>=h.allow&&!(($('#ap-req')||{}).value)){toast('สาขาเต็มเกณฑ์ ต้องเลือกคำขอเพิ่มคนที่อนุมัติแล้ว');return}}
     const n=seq.pe++;
     {const sv=$('#ap-start').value,er=!sv?'กรุณาใส่วันเริ่มงาน':sv<OPEN_DATE?startErr(sv):D(sv)>addDays(TODAY,60)?'วันเริ่มงานล่วงหน้าได้ไม่เกิน 60 วัน':'';if(er){toast(er);return}}if(pk.key!==a.pos){a.posApplied=a.pos;a.pos=pk.key}if(pk.pt!==!!a.ptime){a.ptApplied=!!a.ptime;a.ptime=pk.pt}
     const e=mk(n,{ptime:pk.pt,name:a.title+a.name,phone:a.phone,sex:a.sex,dob:a.dob||'',nick:a.nick||'',nat:a.nat||'',military:a.military||'',pin:a.pin||'',branch:$('#ap-br').value,pos,type,start:$('#ap-start').value,acct:a.acct,bk2:a.bk2||null,address:a.addr,emerg:a.emerg,licNo:a.licNo||'',licExp:a.licExp||'',plate:a.plate||'',taxExp:a.taxExp||'',payType:$('#ap-paytype').value,payAmt:+$('#ap-rate').value||0,dailyRate:toDaily($('#ap-paytype').value,+$('#ap-rate').value||0),source:'สมัครใหม่ ('+a.no+')',updated:iso(TODAY)});
-    e.idCard=a.idCard;e.docs=Object.assign({},a.docs);e.appNo=a.no;{const jn=($('#ap-jms')||{}).value;if(jn)e.jmsNeed=jn}if(a.guardian)e.guardian=a.guardian;e.sign=a.sign;e.profileDone=true;S.emp.push(e);a.status='อนุมัติ';a.empId=e.id;if(a.ackAt)ackRec(e.id,a.sign,a.ackAt);
+    e.idCard=a.idCard;e.docs=Object.assign({},a.docs);e.appNo=a.no;if(overHc)e.overHc=overHc;{const jn=($('#ap-jms')||{}).value;if(jn)e.jmsNeed=jn}if(a.guardian)e.guardian=a.guardian;e.sign=a.sign;e.profileDone=true;S.emp.push(e);a.status='อนุมัติ';a.empId=e.id;if(a.ackAt)ackRec(e.id,a.sign,a.ackAt);
     const rq=($('#ap-req')||{}).value;if(rq){const r=S.hcReq.find(x=>x.no===rq);r.fills=r.fills||[];r.fills.push({emp:e.id,date:iso(TODAY),app:a.no})}
     toast('อนุมัติแล้ว ออกรหัส '+e.id+(rq?' · ปิดคำขอ '+rq:'')+(jmsStage(e)==='รอรับรหัส J&T'?' · สถานะ: รอรับรหัส J&T':'')+(type?' · เพิ่มในรายชื่อรับบัตรประกัน':''));render()});
   if($('#a-pos')){
@@ -3393,7 +3415,7 @@ function bind(){
     else if(st.open){Object.assign(st.open,{...gpsF('Out'),out:t,outOk:true,photoOut:S.shot.img,sigOut:sg,distOut:g.dist,atOut:at});toast('บันทึกออกงาน '+t)}
     else{S.punch.push({emp:e.id,date:attToday(),in:'',out:t,inOk:false,outOk:true,dist:g.dist,...gpsF('Out'),photoOut:S.shot.img,sigOut:sg,atOut:at});toast('บันทึกออกงาน '+t+' · ไม่มีเวลาเข้า นับไม่ลงเวลาเข้า 1 ครั้ง')}
     S.shot=null;S.kind=null;render()});
-  const tick=()=>{const c=$('#clk');if(c)c.textContent=new Date().toLocaleTimeString('th-TH',{hour12:false})};tick();clearInterval(bind.t);bind.t=setInterval(tick,1000);
+  const tick=()=>{const c=$('#clk');if(c)c.textContent=sysHMS(sysNow())};tick();clearInterval(bind.t);bind.t=setInterval(tick,1000);
   document.querySelectorAll('[data-zoom]').forEach(b=>b.onclick=()=>{if(b.dataset.zoom!=='img'){toast('ไฟล์ PDF · ระบบจริงเปิดจาก Drive');return}$('#lb-img').src=b.dataset.src;$('#lb-t').textContent=b.querySelector('span').textContent;$('#lb').hidden=false});
   { const xb=$('#xls-out');if(xb)xb.onclick=async()=>{if(!window.XLSX){toast('โหลดตัวสร้าง Excel ไม่สำเร็จ');return}
       const wb=XLSX.utils.book_new();let n=0;document.querySelectorAll('section.panel table').forEach(t=>{if(t.closest('.letter,.doc'))return;const c=t.cloneNode(true);c.querySelectorAll('tr[hidden]').forEach(r=>r.remove());c.querySelectorAll('button,input,select,img').forEach(x=>x.replaceWith(x.tagName==='INPUT'||x.tagName==='SELECT'?(x.value||''):x.tagName==='IMG'?'':x.textContent));
@@ -3453,7 +3475,7 @@ REAL.flush=async function(){if(REAL.busy){REAL.again=true;return}const ops=REAL.
   finally{REAL.busy=false;if(REAL.again){REAL.again=false;REAL.flush()}}};
 REAL.status=t=>{const el=document.getElementById('rl-status');if(el)el.textContent=t};
 REAL.reset=function(){Object.keys(RC).forEach(c=>S[c]=[]);ATT.mark={};ATT.rain={};ATT.roster={};S.depDed={};S.stock={};BRANCHES.forEach(b=>S.stock[b]=S.stock[b]||{});S.reveal={};S.sigs={}};
-REAL.load=async function(){const since=iso(addDays(periodOf(addDays(periodOf(TODAY).s,-1)).s,0));const r=await api('load',{since});REAL.me=r.me;REAL.reset();
+REAL.load=async function(){const since=iso(addDays(periodOf(addDays(periodOf(TODAY).s,-1)).s,0));const r=await api('load',{since});REAL.me=r.me;if(r.now){const sv=Date.parse(String(r.now).replace(' ','T')+'+07:00');if(!isNaN(sv))CLK_OFF=sv-Date.now()}REAL.reset();
   Object.keys(RC).forEach(c=>S[c]=r.data[c]||[]);if(r.dups)S.dupSrv=r.dups;Object.entries(r.maps||{}).forEach(([m,o])=>{if(m==='mark')ATT.mark=o;else if(m==='rain')ATT.rain=o;else if(m==='roster')ATT.roster=o;else if(m==='depDed')S.depDed=o;else if(m==='stock')S.stock=Object.assign(Object.fromEntries(BRANCHES.map(b=>[b,{}])),o)});
   Object.entries(r.settings||{}).forEach(([n,v])=>rSetApply(n,v));Object.keys(r.seq||{}).forEach(k=>{seq[k]=Math.max(seq[k]||1,r.seq[k])});
   REAL.markSeen();REAL.takeSnap();if(r.me.role==='admin')Object.keys(RSET).forEach(n=>{if(!r.settings[n])REAL.snap.s[n]=''});REAL.loaded=true;return r};
@@ -3464,7 +3486,7 @@ REAL.seen=null;REAL.lastAct=Date.now();REAL.newItems={};
 REAL.markSeen=function(){REAL.seen={};Object.keys(WATCH).forEach(c=>REAL.seen[c]=new Set((S[c]||[]).map(WK(c))));REAL.newItems={};REAL.banner()};
 REAL.isBo=()=>REAL.me&&!['emp','public'].includes(REAL.me.role);
 REAL.poll=async function(){if(!REAL.isBo()||!REAL.token||!REAL.seen||REAL.busy||document.visibilityState!=='visible')return;if(Date.now()-REAL.lastAct>2*3600e3)return;
-  let r;try{r=await api('load',{since:iso(TODAY)})}catch(e){return}
+  let r;try{r=await api('load',{since:iso(TODAY)})}catch(e){return}if(r&&r.now){const sv=Date.parse(String(r.now).replace(' ','T')+'+07:00');if(!isNaN(sv))CLK_OFF=sv-Date.now()}
   const found={};Object.entries(WATCH).forEach(([c,[lab,f]])=>{const local=new Set((S[c]||[]).map(WK(c)));(r.data[c]||[]).forEach(x=>{const k=WK(c)(x);if(REAL.seen[c].has(k)||local.has(k))return;if(f&&!f(x))return;(found[lab]=found[lab]||new Set()).add(k)})});
   const before=Object.values(REAL.newItems).reduce((a,v)=>a+v.size,0);Object.entries(found).forEach(([l,set])=>{REAL.newItems[l]=new Set([...(REAL.newItems[l]||[]),...set])});
   const after=Object.values(REAL.newItems).reduce((a,v)=>a+v.size,0);
