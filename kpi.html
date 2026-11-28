@@ -109,7 +109,7 @@ async function load(m){K.busy=true;try{K.d=await api('kpiLoad',{month:m||K.month
   const tabs=tabList().map(t=>t[0]);if(!tabs.includes(K.tab))K.tab=tabs[0]}finally{K.busy=false}render()}
 function tabList(){const k=kind(),t=[];if(k!=='rm')t.push(['entry','📝 กรอกผลรายวัน']);t.push(['daily','📅 ผลรายวัน'],['sum','🏆 สรุปคะแนน']);
   if(['spv','admin','hr','rm'].includes(k)||(k==='adm'&&!solo()))t.push(['asg','👥 ผู้รับผิดชอบ']);
-  if(money())t.push(['close','🧾 ปิดเดือน / พิมพ์']);if(k==='admin')t.push(['set','⚙️ ตั้งค่าหัวข้อ']);return t}
+  if(money())t.push(['close','🧾 ปิดเดือน / พิมพ์'],['imp','📥 นำเข้าหลายวัน']);if(k==='admin')t.push(['set','⚙️ ตั้งค่าหัวข้อ']);return t}
 
 function cardify(){$$('.tbl table').forEach(t=>{if(t.classList.contains('set')||t.classList.contains('mx'))return;const th=t.tHead&&t.tHead.rows[0];if(!th)return;const lab=[];[...th.cells].forEach(c=>{for(let i=0;i<(c.colSpan||1);i++)lab.push(c.textContent.trim())});if(lab.length>12)return;
   [...t.tBodies].forEach(b=>[...b.rows].forEach(r=>{let i=0;[...r.cells].forEach(c=>{const sp=c.colSpan||1;if(sp>1||!lab[i])c.classList.add('nol');else c.dataset.l=lab[i];i+=sp})}));t.closest('.tbl').classList.add('cards')})}
@@ -124,13 +124,13 @@ function render(){const app=$('#app');
    ${bs.length>1?`<label class="f">คลัง<select id="k-b">${bs.map(b=>`<option${b===K.branch?' selected':''}>${esc(b)}</option>`).join('')}</select></label>`:''}
    <span class="muted sm" style="margin-left:auto">${K.d.closed?'🔒 เดือนนี้ปิดแล้ว':'เดือนนี้ยังเปิดอยู่'}</span><button class="btn ghost sm" id="k-ref">🔄 โหลดใหม่</button></div>
    <nav class="tabs">${tabList().map(([k,n])=>`<button data-tab="${k}" class="${k===K.tab?'on':''}">${n}</button>`).join('')}</nav>
-   <div id="k-body">${!bs.length?'<div class="note warn">ยังไม่มีคลังที่ตั้งชุด KPI</div>':({entry:entryView,daily:dailyView,sum:sumView,asg:asgView,sub:subView,close:closeView,set:setView}[K.tab]||sumView)()}</div>`;
+   <div id="k-body">${!bs.length?'<div class="note warn">ยังไม่มีคลังที่ตั้งชุด KPI</div>':({entry:entryView,daily:dailyView,sum:sumView,asg:asgView,sub:subView,close:closeView,set:setView,imp:impView}[K.tab]||sumView)()}</div>`;
   $('#k-out').onclick=()=>{const t=K.tok;K.tok='';try{sessionStorage.removeItem('hr_t')}catch(e){}api('logout',{t}).catch(()=>{});K.d=null;render()};
   $('#k-m').onchange=e=>load(e.target.value).catch(x=>toast(x.message));
   if($('#k-b'))$('#k-b').onchange=e=>{K.branch=e.target.value;render()};
   $('#k-ref').onclick=()=>load().then(()=>toast('โหลดข้อมูลล่าสุดแล้ว')).catch(x=>toast(x.message));
   $$('[data-tab]').forEach(b=>b.onclick=()=>{K.tab=b.dataset.tab;render()});
-  ({entry:bindEntry,daily:bindDaily,asg:bindAsg,sub:bindSub,close:bindClose,set:bindSet}[K.tab]||(()=>{}))();cardify();
+  ({entry:bindEntry,daily:bindDaily,asg:bindAsg,sub:bindSub,close:bindClose,set:bindSet,imp:bindImp}[K.tab]||(()=>{}))();cardify();
   $$('[data-img]').forEach(b=>b.onclick=async()=>{try{const u=await api('kpiImg',{id:b.dataset.img});const lb=$('#lb');lb.innerHTML=`<img src="${u}" alt="หลักฐาน">`;lb.hidden=false;lb.onclick=()=>lb.hidden=true}catch(e){toast(e.message)}});
 }
 
@@ -277,6 +277,27 @@ function closeView(){const r=payRows(),tot=r.reduce((a,x)=>a+(+x.total||0),0),pm
 function adjForm(x){const P=K.d.def.program;return `<tr class="noprint"><td colspan="10" style="white-space:normal;text-align:left;background:var(--mid-soft)"><b>รายการหักเพิ่มของ ${esc(x.name)}</b> · ${mLabel(K.month)}
   ${(x.adj||[]).map((a,i)=>`<div class="row sm">• ${a.t==='share'?'ค่าปรับที่บริษัทรับภาระ '+baht(a.amt)+' (หัก '+(P.fineShare*100)+'%)':'หักอื่น ๆ '+baht(a.amt)} ${esc(a.note||'')} <span class="muted">${esc(a.by||'')}</span> <button class="btn ghost sm" data-adjdel="${i}">ลบ</button></div>`).join('')||'<div class="muted sm">ยังไม่มีรายการ</div>'}
   <div class="row" style="margin-top:6px"><select id="aj-t"><option value="share">ค่าปรับ/ค่าเสียหายที่ขอให้บริษัทรับภาระ (SPV จ่าย ${P.fineShare*100}%)</option><option value="other">หักอื่น ๆ (เต็มจำนวน)</option></select><input id="aj-amt" inputmode="decimal" placeholder="จำนวนเงิน (บาท)" style="width:150px"><input id="aj-note" placeholder="รายละเอียด เช่น ค่าปรับพัสดุหาย 12/12" style="flex:1;min-width:180px"><button class="btn sm" id="aj-add">เพิ่ม</button><button class="btn ghost sm" data-adj="">ปิด</button></div></td></tr>`}
+// ---------- นำเข้าผลหลายวัน (แอดมิน/HR): ไฟล์ CSV วันที่,คลัง,ค่า[,ชื่อรูป] + รูปหลักฐาน (ชื่อไฟล์มีวันที่ YYYY-MM-DD) ----------
+function impTopics(){const D=K.d.def,o=[];Object.entries(D.sets).forEach(([sn,st])=>st.kpis.forEach(k=>{if(!k.src&&!k.rmOnly)o.push([sn,k])}));return o}
+function impParse(txt){const out=[];String(txt).replace(/^﻿/,'').split(/\r?\n/).forEach((ln,i)=>{const c=ln.split(/[,\t;]/).map(x=>x.trim().replace(/^"|"$/g,''));if(!c[0]||!/\d/.test(c[0]))return;
+  let d=c[0];const m=d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(m){let y=+m[3];if(y>2400)y-=543;d=y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0')}
+  const v=parseFloat(String(c[2]||'').replace(/[%,\s]/g,''));out.push({line:i+1,date:d,branch:c[1],v:isNaN(v)?null:v,img:c[3]||''})});return out}
+function impView(){const I=K.imp=K.imp||{topic:'',rows:[],files:{},log:[]},T=impTopics();if(!I.topic&&T[0])I.topic=T.find(([,k])=>k.id==='dc1')?'dc1':T[0][1].id;
+  const imgOf=r=>r.img&&I.files[r.img]?r.img:Object.keys(I.files).find(n=>n.includes(r.date))||'',ok=r=>/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&K.d.def.branchSet[r.branch]&&setOf(r.branch).kpis.some(k=>k.id===I.topic)&&r.v!=null;
+  return `<div class="panel"><h2>📥 นำเข้าผลหลายวัน</h2><p class="muted">สำหรับแอดมิน / HR · ใส่ผลย้อนหลังทีละหลายวันหลายคลังพร้อมรูปหลักฐาน · ถ้าวันนั้นมีค่าอยู่แล้ว ระบบจะเขียนทับค่า และเพิ่มรูป (หัวข้อละไม่เกิน 3 รูป)</p>
+  <div class="row"><label class="f">หัวข้อ<select id="imp-t">${T.map(([sn,k])=>`<option value="${esc(k.id)}"${k.id===I.topic?' selected':''}>${esc(sn)} · ${esc(k.name)}</option>`).join('')}</select></label>
+  <label class="f">ไฟล์ข้อมูล (.csv) + รูปหลักฐาน (เลือกพร้อมกันได้)<input type="file" id="imp-f" multiple accept=".csv,.txt,image/*"></label></div>
+  <p class="muted sm">รูปแบบไฟล์: <code>วันที่,คลัง,ค่า,ชื่อรูป</code> เช่น <code>2026-11-23,301714,37.54,2026-11-23.jpg</code> · ถ้าไม่ระบุชื่อรูป ระบบจับคู่รูปที่ชื่อไฟล์มีวันที่นั้น</p>
+  ${I.rows.length?`<div class="tbl"><table><tr><th>วันที่</th><th>คลัง</th><th class="num">ค่า</th><th>รูป</th><th>สถานะ</th></tr>${I.rows.map((r,i)=>`<tr><td>${esc(r.date)}</td><td>${esc(r.branch)}</td><td class="num">${r.v??'-'}</td><td>${imgOf(r)?'📷 '+esc(imgOf(r)):'<span class="muted">ไม่มีรูป</span>'}</td><td>${r.res?esc(r.res):ok(r)?'<span class="muted">พร้อม</span>':'<b style="color:var(--bad)">ข้อมูลไม่ถูกต้อง</b>'}</td></tr>`).join('')}</table></div>
+  <div class="row" style="margin-top:10px"><button class="btn" id="imp-go" ${K.impBusy?'disabled':''}>${K.impBusy?'กำลังบันทึก… '+K.impBusy:'บันทึกเข้าระบบ '+I.rows.filter(ok).length+' รายการ'}</button><button class="btn ghost" id="imp-clr">ล้าง</button></div>`:'<div class="note">ยังไม่ได้เลือกไฟล์</div>'}</div>`}
+function bindImp(){const I=K.imp;const t=$('#imp-t');if(t)t.onchange=()=>{I.topic=t.value;I.rows.forEach(r=>delete r.res);render()};
+  const f=$('#imp-f');if(f)f.onchange=async()=>{for(const x of f.files){if(/\.(csv|txt)$/i.test(x.name))I.rows=impParse(await x.text());else if(/^image\//.test(x.type))I.files[x.name]=x}render()};
+  const c=$('#imp-clr');if(c)c.onclick=()=>{K.imp=null;render()};
+  const g=$('#imp-go');if(g)g.onclick=async()=>{const ok=r=>/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&K.d.def.branchSet[r.branch]&&setOf(r.branch).kpis.some(k=>k.id===I.topic)&&r.v!=null;
+    const L=I.rows.filter(r=>ok(r)&&r.res!=='✅ บันทึกแล้ว');let n=0,cache={};
+    for(const r of L){K.impBusy=(++n)+'/'+L.length;render();try{const nm=r.img&&I.files[r.img]?r.img:Object.keys(I.files).find(x=>x.includes(r.date));let u='';if(nm){u=cache[nm]||(cache[nm]=await readImg(I.files[nm]))}
+      await api('kpiSave',{date:r.date,branch:r.branch,v:{[I.topic]:r.v},imgK:u?{[I.topic]:[u]}:{}});r.res='✅ บันทึกแล้ว'}catch(e){r.res='❌ '+e.message}}
+    K.impBusy=null;const bad=I.rows.filter(r=>r.res&&r.res.startsWith('❌')).length;toast(bad?'บันทึกเสร็จ · ไม่สำเร็จ '+bad+' รายการ':'บันทึกครบ '+L.length+' รายการ');await load().catch(()=>{});K.tab='imp';render()}}
 function bindClose(){const c=$('#c-close'),o=$('#c-open');
   $$('[data-adj]').forEach(b=>b.onclick=()=>{K.adjOpen=b.dataset.adj||null;render()});
   const saveAdj=async items=>{try{await api('kpiAdj',{month:K.month,emp:K.adjOpen,items});await load();toast('บันทึกรายการหักแล้ว')}catch(e){toast(e.message)}};
